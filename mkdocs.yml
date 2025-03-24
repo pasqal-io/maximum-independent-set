@@ -1,6 +1,6 @@
-site_name: Quantum Evolution Kernel
-repo_url: "https://gitlab.pasqal.com/pqs/quantum-evolution-kernel"
-repo_name: "Quantum Evolution Kernel"
+site_name: maximum independent set
+repo_url: "https://gitlab.pasqal.com/pqs/maximum-independent-set"
+repo_name: "maximum independent set"
 
 nav:
   - Overview: index.md
@@ -8,7 +8,7 @@ nav:
     - Installation: installation.md
     - Usage: usage.md
     - Tutorials: tutorials.md
-  - Reference: $api/qek.***
+  - Reference: $api/mis.***
   - Open-source:
     - Licence (MIT-Derived): LICENSE.md
     - Contributor Agreement: CONTRIBUTOR AGREEMENT.md
@@ -70,7 +70,7 @@ plugins:
           docstring_section_style: spacy
 
 watch:
-  - qek
+  - mis
 
 extra:
  version:

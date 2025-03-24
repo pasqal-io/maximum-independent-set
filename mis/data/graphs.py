@@ -18,8 +18,8 @@ import torch_geometric.data as pyg_data
 import torch_geometric.utils as pyg_utils
 from rdkit.Chem import AllChem
 
-from qek.shared.error import CompilationError
-from qek.shared._utils import graph_to_mol
+from mis.shared.error import CompilationError
+from mis.shared._utils import graph_to_mol
 
 logger = logging.getLogger(__name__)
 

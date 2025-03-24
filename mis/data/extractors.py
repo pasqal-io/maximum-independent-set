@@ -28,10 +28,10 @@ from pulser.json.abstract_repr.deserializer import deserialize_device
 from pulser_simulation import QutipEmulator
 from torch.utils.data import Dataset
 
-from qek.data import processed_data
-from qek.data.graphs import BaseGraph, BaseGraphCompiler
-from qek.data.processed_data import ProcessedData
-from qek.shared.error import CompilationError
+from mis.data import processed_data
+from mis.data.graphs import BaseGraph, BaseGraphCompiler
+from mis.data.processed_data import ProcessedData
+from mis.shared.error import CompilationError
 
 logger = logging.getLogger(__name__)
 

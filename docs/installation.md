@@ -4,7 +4,7 @@
 Edit file `pyproject.toml` to add the line
 
 ```toml
-  "quantum-evolution-kernel"
+  "maximum-independent-set"
 ```
 
 to the list of `dependencies`.
@@ -28,7 +28,7 @@ $ . venv/bin/activate
 3. Install the package
 
 ```sh
-$ pip install quantum-evolution-kernel
+$ pip install maximum-independent-set
 # or
-$ pipx install quantum-evolution-kernel
+$ pipx install maximum-independent-set
 ```

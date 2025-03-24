@@ -5,13 +5,13 @@ import pulser as pl
 import pytest
 import torch_geometric.data as pyg_data
 import torch_geometric.datasets as pyg_dataset
-from qek.backends import CompilationError, QutipBackend, BaseBackend
-import qek.data.graphs as qek_graphs
-from qek.shared.retrier import PygRetrier
+from mis.backends import CompilationError, QutipBackend, BaseBackend
+import mis.data.graphs as mis_graphs
+from mis.shared.retrier import PygRetrier
 
 if os.name == "posix":
     # As of this writing, emu-mps only works under Unix.
-    from qek.backends import EmuMPSBackend
+    from mis.backends import EmuMPSBackend
 
 
 @pytest.mark.asyncio
@@ -26,9 +26,9 @@ async def test_async_emulators() -> None:
         for d in PygRetrier().insist(pyg_dataset.TUDataset, root="dataset", name="PTC_FM")
     ]
 
-    compiled: list[tuple[qek_graphs.BaseGraph, pl.Register, pl.Pulse]] = []
+    compiled: list[tuple[mis_graphs.BaseGraph, pl.Register, pl.Pulse]] = []
     for i, data in enumerate(original_ptcfm_data):
-        graph = qek_graphs.PTCFMGraph(data=data, device=pl.AnalogDevice, id=i)
+        graph = mis_graphs.PTCFMGraph(data=data, device=pl.AnalogDevice, id=i)
         try:
             register = graph.compile_register()
             pulse = graph.compile_pulse()

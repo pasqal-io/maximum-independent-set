@@ -15,9 +15,9 @@ from pulser import Pulse, Register, Sequence
 from pulser.devices import Device
 from pulser_simulation import QutipEmulator
 
-from qek.data.extractors import deserialize_device
-from qek.shared.error import CompilationError
-from qek.shared._utils import make_sequence
+from mis.data.extractors import deserialize_device
+from mis.shared.error import CompilationError
+from mis.shared._utils import make_sequence
 
 
 class BaseBackend(abc.ABC):

@@ -16,7 +16,7 @@
 #   cancel-in-progress: true
 
 # jobs:
-#   test_qek:
+#   test_mis:
 #     name: Run unit/integration tests
 #     strategy:
 #       matrix:
@@ -24,7 +24,7 @@
 #         python-version: ["3.10", "3.11", "3.12"]
 #     runs-on: ${{ matrix.os }}
 #     steps:
-#     - name: Checkout QEK
+#     - name: Checkout mis
 #       uses: actions/checkout@v4
 #     - name: Set up Python ${{ matrix.python-version }}
 #       uses: actions/setup-python@v5
@@ -52,7 +52,7 @@
 #         python-version: ["3.10", "3.11", "3.12"]
 #     runs-on: ${{ matrix.os }}
 #     steps:
-#       - name: Checkout QEK
+#       - name: Checkout mis
 #         uses: actions/checkout@v4
 #       - name: Set up Python ${{ matrix.python-version }}
 #         uses: actions/setup-python@v5
@@ -79,7 +79,7 @@
 #         os: [windows-latest]
 #         python-version: ["3.10", "3.11", "3.12"]
 #     steps:
-#       - name: Checkout QEK
+#       - name: Checkout mis
 #         uses: actions/checkout@v4
 #       - name: Set up Python ${{ matrix.python-version }}
 #         uses: actions/setup-python@v5

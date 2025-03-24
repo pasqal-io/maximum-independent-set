@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "quantum-evolution-kernel"
+name = "maximum-independent-set"
 description = "A Python library designed for the machine learning community to help users design quantum-driven similarity metrics for graphs and to use them inside kernel-based machine learning algorithms for graph data.ide the right environment to explore new ideas - both in terms of methodologies and data domain - while always interacting with a simple and intuitive QPU interface."
 readme = "README.md"
 version = "0.2.9"
@@ -11,9 +11,6 @@ requires-python = ">=3.10,<3.13"
 license = { text = "MIT-derived" }
 keywords = ["quantum"]
 authors = [
-  { name = "Shaheen Acheche", email = "shaheen.acheche@pasqal.com" },
-  { name = "Roland Guichard", email = "roland.guichard@pasqal.com" },
-  { name = "David Teller",    email = "david.teller@pasqal.com" },
   { name = "Manu Lahariya",    email = "manu.lahariya@pasqal.com" },
 ]
 classifiers = [
@@ -52,9 +49,9 @@ extras = [
 ]
 
 [project.urls]
-#Documentation = "https://pqs.pages.pasqal.com/quantum-evolution-kernel/"
-Issues = "https://github.com/pasqal-io/quantum-evolution-kernel/issues"
-Source = "https://github.com/pasqal-io/quantum-evolution-kernel"
+#Documentation = "https://pqs.pages.pasqal.com/maximum-independent-set/"
+Issues = "https://github.com/pasqal-io/maximum-independent-set/issues"
+Source = "https://github.com/pasqal-io/maximum-independent-set"
 
 [tool.hatch.envs.default]
 features = ["extras"]
@@ -75,12 +72,12 @@ dependencies = [
 
 [tool.hatch.envs.default.scripts]
 before_tests = "python scripts/before_tests.py"
-test = "pytest -n auto --cov-report=term-missing --cov-config=pyproject.toml --cov=qek --cov=tests --markdown-docs {args}"
+test = "pytest -n auto --cov-report=term-missing --cov-config=pyproject.toml --cov=mis --cov=tests --markdown-docs {args}"
 test_readme = "pytest --markdown-docs README.md"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = """-vvv --cov-report=term-missing --cov-config=pyproject.toml --cov=qek --cov=tests --markdown-docs"""
+addopts = """-vvv --cov-report=term-missing --cov-config=pyproject.toml --cov=mis --cov=tests --markdown-docs"""
 xfail_strict = true
 filterwarnings = [
   "ignore:Call to deprecated create function FieldDescriptor",
@@ -125,7 +122,7 @@ exclude = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["qek"]
+packages = ["mis"]
 
 [tool.coverage.run]
 branch = true

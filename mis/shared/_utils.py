@@ -10,7 +10,7 @@ import numpy.typing as npt
 import pulser
 from pulser import Pulse, Register
 from pulser.devices import Device
-from qek.shared.error import CompilationError
+from mis.shared.error import CompilationError
 import rdkit.Chem as Chem
 
 

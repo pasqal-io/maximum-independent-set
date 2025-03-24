@@ -1,5 +1,5 @@
 """
-The Quantum Evolution Kernel itself, for use in a machine-learning pipeline.
+The maximum independent set itself, for use in a machine-learning pipeline.
 """
 
 from .kernel import QuantumEvolutionKernel
