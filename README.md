@@ -1,7 +1,7 @@
-# Quantum Evolution Kernel
+# maximum independent set
 
 
-The Quantum Evolution Kernel is a Python library designed for the machine learning community to help users design quantum-driven similarity metrics for graphs and to use them inside kernel-based machine learning algorithms for graph data.
+The maximum independent set is a Python library designed for the machine learning community to help users design quantum-driven similarity metrics for graphs and to use them inside kernel-based machine learning algorithms for graph data.
 
 The core of the library is focused on the development of a classification algorithm for molecular-graph dataset as it is presented in the published paper [Quantum feature maps for graph machine learning on a neutral atom quantum processor](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.107.042615).
 
@@ -14,7 +14,7 @@ Users setting their first steps into quantum computing will learn how to impleme
 Edit file `pyproject.toml` to add the line
 
 ```
-  "quantum-evolution-kernel"
+  "maximum-independent-set"
 ```
 
 to the list of `dependencies`.
@@ -38,9 +38,9 @@ $ . venv/bin/activate
 3. Install the package
 
 ```sh
-$ pip install quantum-evolution-kernel
+$ pip install maximum-independent-set
 # or
-$ pipx install quantum-evolution-kernel
+$ pipx install maximum-independent-set
 ```
 
 ## QuickStart
@@ -52,9 +52,9 @@ og_ptcfm = pyg_dataset.TUDataset(root="dataset", name="PTC_FM")
 
 # Setup a quantum feature extractor for this dataset.
 # In this example, we'll use QutipExtractor, to emulate a Quantum Device on our machine.
-import qek.data.graphs as qek_graphs
-import qek.data.extractors as qek_extractors
-extractor = qek_extractors.QutipExtractor(compiler=qek_graphs.PTCFMCompiler())
+import mis.data.graphs as mis_graphs
+import mis.data.extractors as mis_extractors
+extractor = mis_extractors.QutipExtractor(compiler=mis_graphs.PTCFMCompiler())
 
 # Add the graphs, compile them and look at the results.
 extractor.add_graphs(graphs=og_ptcfm)
@@ -70,8 +70,8 @@ y = [data.target for data in processed_dataset]  # Targets
 X_train, X_test, y_train, y_test = train_test_split(X, y, stratify = y, test_size=0.2, random_state=42)
 
 # Train a kernel
-from qek.kernel import QuantumEvolutionKernel as QEK
-kernel = QEK(mu=0.5)
+from mis.kernel import QuantumEvolutionKernel as mis
+kernel = mis(mu=0.5)
 model = SVC(kernel=kernel, random_state=42)
 model.fit(X_train, y_train)
 ```
@@ -80,13 +80,13 @@ model.fit(X_train, y_train)
 
 We have a two parts tutorial:
 
-1. [Using a Quantum Device to extract machine-learning features](https://github.com/pasqal-io/quantum-evolution-kernel/blob/main/examples/tutorial%201%20-%20Using%20a%20Quantum%20Device%20to%20Extract%20Machine-Learning%20Features.ipynb);
-2. [Machine Learning with the Quantum Evolution Kernel](https://github.com/pasqal-io/quantum-evolution-kernel/blob/main/examples/tutorial%202%20-%20Machine-Learning%20with%20the%20Quantum%20EvolutionKernel.ipynb)
+1. [Using a Quantum Device to extract machine-learning features](https://github.com/pasqal-io/maximum-independent-set/blob/main/examples/tutorial%201%20-%20Using%20a%20Quantum%20Device%20to%20Extract%20Machine-Learning%20Features.ipynb);
+2. [Machine Learning with the maximum independent set](https://github.com/pasqal-io/maximum-independent-set/blob/main/examples/tutorial%202%20-%20Machine-Learning%20with%20the%20Quantum%20EvolutionKernel.ipynb)
 
-See also the [full API documentation](https://pasqal-io.github.io/quantum-evolution-kernel/latest/).
+See also the [full API documentation](https://pasqal-io.github.io/maximum-independent-set/latest/).
 
 ## Getting in touch
 
 - [Pasqal Community Portal](https://community.pasqal.com/) (forums, chat, tutorials, examples, code library).
-- [GitHub Repository](https://github.com/pasqal-io/quantum-evolution-kernel) (source code, issue tracker).
+- [GitHub Repository](https://github.com/pasqal-io/maximum-independent-set) (source code, issue tracker).
 - [Professional Support](https://www.pasqal.com/contact-us/) (if you need tech support, custom licenses, a variant of this library optimized for your workload, your own QPU, remote access to a QPU, ...)

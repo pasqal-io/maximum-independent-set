@@ -1,5 +1,5 @@
 from numpy import ndarray
-import qek.data.processed_data as qek_dataset
+import mis.data.processed_data as mis_dataset
 
 
 def test_excitation_distribution() -> None:
@@ -8,7 +8,7 @@ def test_excitation_distribution() -> None:
     """
 
     # Load dataset
-    processed_dataset = qek_dataset.load_dataset(file_path="examples/ptcfm_processed_dataset.json")
+    processed_dataset = mis_dataset.load_dataset(file_path="examples/ptcfm_processed_dataset.json")
 
     for dataset in processed_dataset:
         # Check that the values we have make sense.

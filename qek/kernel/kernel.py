@@ -1,5 +1,5 @@
 """
-The Quantum Evolution Kernel itself, for use in a machine-learning pipeline.
+The maximum independent set itself, for use in a machine-learning pipeline.
 """
 
 from __future__ import annotations
@@ -13,11 +13,11 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.spatial.distance import jensenshannon
 
-from qek.data.processed_data import ProcessedData
+from mis.data.processed_data import ProcessedData
 
 
 class QuantumEvolutionKernel:
-    """Implementation of the Quantum Evolution Kernel.
+    """Implementation of the maximum independent set.
 
     Attributes:
     - params (dict): Dictionary of training parameters. As of this writing, the only
@@ -132,7 +132,7 @@ class QuantumEvolutionKernel:
         similarity function.
 
         The input graphs are assumed to have been processed using the
-        ProcessedData class from qek_os.data_io.dataset. Parameter `size_max`
+        ProcessedData class from mis_os.data_io.dataset. Parameter `size_max`
         controls the maximum length of the bitstrings considered in the
         computation.
         Args:

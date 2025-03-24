@@ -7,7 +7,7 @@ import torch_geometric.datasets as pyg_dataset
 import torch_geometric.utils as pyg_utils
 from torch_geometric.data import Data
 
-from qek.data.graphs import (
+from mis.data.graphs import (
     BaseGraph,
     PTCFMCompiler,
     PTCFMGraph,
@@ -15,7 +15,7 @@ from qek.data.graphs import (
     NXGraphCompiler,
     NXWithPos,
 )
-from qek.shared.retrier import PygRetrier
+from mis.shared.retrier import PygRetrier
 
 
 def test_graph_init() -> None:

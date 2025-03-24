@@ -4,14 +4,14 @@ import os
 import pytest
 import torch_geometric.data as pyg_data
 import torch_geometric.datasets as pyg_dataset
-from qek.data.extractors import QutipExtractor, BaseExtracted
-from qek.shared.retrier import PygRetrier
+from mis.data.extractors import QutipExtractor, BaseExtracted
+from mis.shared.retrier import PygRetrier
 
 if os.name == "posix":
     # As of this writing, emu-mps only works under Unix.
-    from qek.data.extractors import EmuMPSExtractor
+    from mis.data.extractors import EmuMPSExtractor
 
-from qek.data.graphs import PTCFMCompiler
+from mis.data.graphs import PTCFMCompiler
 
 
 @pytest.mark.asyncio

@@ -11,8 +11,8 @@ import logging
 import numpy as np
 import pulser as pl
 
-from qek.data.graphs import EPSILON_RADIUS_UM
-from qek.shared._utils import make_sequence
+from mis.data.graphs import EPSILON_RADIUS_UM
+from mis.shared._utils import make_sequence
 
 logger = logging.getLogger(__name__)
 

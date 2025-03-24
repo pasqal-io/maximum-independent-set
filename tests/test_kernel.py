@@ -1,5 +1,5 @@
-import qek.data.processed_data as qek_dataset
-from qek.kernel import QuantumEvolutionKernel
+import mis.data.processed_data as mis_dataset
+from mis.kernel import QuantumEvolutionKernel
 
 
 def test_kernel() -> None:
@@ -8,15 +8,15 @@ def test_kernel() -> None:
     """
 
     # Load dataset
-    processed_dataset = qek_dataset.load_dataset(file_path="examples/ptcfm_processed_dataset.json")
+    processed_dataset = mis_dataset.load_dataset(file_path="examples/ptcfm_processed_dataset.json")
 
     # Test with various qubit lengths.
     #
     # We expect that a size_max of 5000 qubits should be sufficient to be larger than the number of qubits needed to
     # execute our dataset.
     for size_max in [None, 0, 5000]:
-        qek = QuantumEvolutionKernel(mu=2.0, size_max=size_max)
-        similarities = qek(processed_dataset, processed_dataset)
+        mis = QuantumEvolutionKernel(mu=2.0, size_max=size_max)
+        similarities = mis(processed_dataset, processed_dataset)
         assert len(similarities) == len(processed_dataset)
         assert len(similarities[0]) == len(processed_dataset)
         for i in range(len(similarities)):
