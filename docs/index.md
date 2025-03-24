@@ -1,4 +1,4 @@
-# "maximum independent set"
+# "Maximum independent set"
 
 
 The maximum independent set is a Python library designed for the machine learning community to help users design quantum-driven similarity metrics for graphs and to use them inside kernel-based machine learning algorithms for graph data.
