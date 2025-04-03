@@ -23,17 +23,18 @@ from qoolbox.cost import BitstringCost, create_mis_cost
 from qoolbox.graph.mis import is_independent, is_maximal_independent
 from qoolbox.interpret.postprocess import maximalize
 from qoolbox import MIS_graph
+
 # Define the hex color values in the order provided by PASQAL
 colors = [
-    #"#173035"
-    #,  # Soft Green
+    # "#173035"
+    # ,  # Soft Green
     "#E1F6E9",  # Bright Green
     "#00C887",  # Mint Green
     "#173035",
-    #"#397378",  # Metal Blue
-    #"#92DCE5",  # Neon Blue
-    #"#867BFA",  # Purple
-    #"#FF986E",  # Orange
+    # "#397378",  # Metal Blue
+    # "#92DCE5",  # Neon Blue
+    # "#867BFA",  # Purple
+    # "#FF986E",  # Orange
 ]
 # Create a linear colormap from the colors
 PASQAL_cmap = LinearSegmentedColormap.from_list("custom_palette", colors)
@@ -55,6 +56,7 @@ _DISTANCE = "distance_to_MIS"
 
 class IndepencendenceType(str, Enum):
     """The different independence types for a subset of vertices of a graph."""
+
     NOT = "not"
     INDEPENDENT = "independent"
     MAXIMAL = "maximal"
@@ -68,9 +70,10 @@ _independence_order = [
     IndepencendenceType.NOT.value,
 ]
 
+
 class MISAnalyser:
     """
-    Analyzes and manages multiple independent set (MIS) datasets on graphs with options for postprocessing, 
+    Analyzes and manages multiple independent set (MIS) datasets on graphs with options for postprocessing,
     probability thresholding, cutoff parameters, and custom cost functions.
 
     Attributes:
@@ -85,16 +88,16 @@ class MISAnalyser:
     """
 
     def __init__(
-        self, 
-        graph: Union[nx.Graph, list[nx.Graph]], 
-        data: Union[ResType, list[ResType]], 
-        labels: Union[list[str],str],  # Optional labels for each result
+        self,
+        graph: Union[nx.Graph, list[nx.Graph]],
+        data: Union[ResType, list[ResType]],
+        labels: Union[list[str], str],  # Optional labels for each result
         probability_threshold: Optional[Union[float, list[float], None]] = None,
         probability_cutoff: Optional[Union[float, list[float], None]] = None,
         postprocess: Optional[Union[bool, list[bool], None]] = None,
         cost_function: Optional[BitstringCost] = None,
-        mis_size: Optional[Union[int, list[int], None]] = None, 
-        mis_compute: Optional[bool] = False
+        mis_size: Optional[Union[int, list[int], None]] = None,
+        mis_compute: Optional[bool] = False,
     ):
         """
         Initializes MISAnalyser with multiple dataset options and configuration parameters.
@@ -105,39 +108,38 @@ class MISAnalyser:
             labels (Optional[list[str]]): Labels for each dataset, if applicable.
             probability_threshold (Optional[Union[float, list[float], None]]): Probability thresholds for filtering data.
             probability_cutoff (Optional[Union[float, list[float], None]]): Probability cutoffs for filtering data.
-            postprocess (Optional[Union[bool, list[bool], None]]): Whether to apply postprocessing, specified as a 
+            postprocess (Optional[Union[bool, list[bool], None]]): Whether to apply postprocessing, specified as a
                 single boolean or list.
             cost_function (Optional[BitstringCost]): Cost function to be applied; can be a single instance or list.
             mis_size (Optional[Union[int, list[int], None]]): Size of the MIS, either specified or computed.
             mis_compute (Optional[bool]): If True, calculates MIS size for each graph if not provided.
-        
+
         Raises:
             ValueError: For mismatched lengths of data and labels or for incorrect parameter types.
             TypeError: If inputs do not match the expected types.
         """
         if isinstance(data, list):
-            lendata=len(data)
+            lendata = len(data)
             if not all(isinstance(d, ResType) for d in data):
                 raise ValueError("All elements in 'data' must be of type ResType.")
         elif isinstance(data, ResType):
-            lendata=1
-            data=[data]
+            lendata = 1
+            data = [data]
         else:
             raise ValueError("'data' must be of type ResType.")
 
         if isinstance(labels, list):
-            lenlabels=len(labels)
+            lenlabels = len(labels)
             if not all(isinstance(l, str) for l in labels):
                 raise ValueError("All elements in 'labels' must be of type str.")
-            self.labels=labels
+            self.labels = labels
         elif isinstance(labels, str):
-            lenlabels=1
-            self.labels=[labels]
+            lenlabels = 1
+            self.labels = [labels]
         else:
             raise ValueError("'labels' must be of type str.")
-        if lendata!=lenlabels:
+        if lendata != lenlabels:
             raise ValueError("'data' and 'labels' must have the same length.")
-      
 
         if isinstance(graph, nx.Graph):
             self.graph = [graph] * lendata  # Use the same graph for all datasets
@@ -149,10 +151,10 @@ class MISAnalyser:
             raise TypeError("graph should be a `nx.graph', list of `nx.graph', or None.")
 
         if mis_size == None:
-            if mis_compute==True:
-                self.mis_size=[len(MIS_graph(x).graph["opt-set"]) for x in self.graph]
+            if mis_compute == True:
+                self.mis_size = [len(MIS_graph(x).graph["opt-set"]) for x in self.graph]
             else:
-                self.mis_size = [0] * lendata 
+                self.mis_size = [0] * lendata
         elif isinstance(mis_size, int):
             self.mis_size = [mis_size] * lendata  # Apply the same boolean to all datasets
         elif isinstance(mis_size, list):
@@ -165,7 +167,9 @@ class MISAnalyser:
             raise TypeError("mis_size should be a `int', list of `int' or None")
 
         if postprocess is None or postprocess == []:
-            self.postprocess = [False] * lendata  # Default to False for all datasets if None or empty
+            self.postprocess = [
+                False
+            ] * lendata  # Default to False for all datasets if None or empty
         elif isinstance(postprocess, bool):
             self.postprocess = [postprocess] * lendata  # Apply the same boolean to all datasets
         elif isinstance(postprocess, list):
@@ -182,7 +186,9 @@ class MISAnalyser:
             self.probability_threshold = [probability_threshold] * lendata
         elif isinstance(probability_threshold, list):
             if len(probability_threshold) != lendata:
-                raise ValueError("Length of probability_threshold list must match the number of datasets.")
+                raise ValueError(
+                    "Length of probability_threshold list must match the number of datasets."
+                )
             self.probability_threshold = probability_threshold
         else:
             raise TypeError("probability_threshold should be a float, list of floats, or None.")
@@ -194,104 +200,109 @@ class MISAnalyser:
             self.probability_cutoff = [probability_cutoff] * lendata
         elif isinstance(probability_cutoff, list):
             if len(probability_cutoff) != lendata:
-                raise ValueError("Length of probability_cutoff list must match the number of datasets.")
+                raise ValueError(
+                    "Length of probability_cutoff list must match the number of datasets."
+                )
             self.probability_cutoff = probability_cutoff
         else:
             raise TypeError("probability_cutoff should be a float, list of floats, or None.")
 
-        if isinstance(self.graph,list):
+        if isinstance(self.graph, list):
             self.cost_function = [cost_function or create_mis_cost(x, 1.2) for x in self.graph]
-        else: 
+        else:
             self.cost_function = cost_function or create_mis_cost(self.graph, 1.2)
 
-        self.df = [self.create_mis_dataframe(result, graph, label, p_threshold, p_cutoff, postproc, cost_function, mis_size) 
-                   for result, graph, label, p_threshold, p_cutoff, postproc, cost_function, mis_size 
-                   in zip(
-                       data,
-                       self.graph,
-                       self.labels,
-                       self.probability_threshold,
-                       self.probability_cutoff,
-                       self.postprocess,
-                       self.cost_function,
-                       self.mis_size
-                       )] 
+        self.df = [
+            self.create_mis_dataframe(
+                result, graph, label, p_threshold, p_cutoff, postproc, cost_function, mis_size
+            )
+            for result, graph, label, p_threshold, p_cutoff, postproc, cost_function, mis_size in zip(
+                data,
+                self.graph,
+                self.labels,
+                self.probability_threshold,
+                self.probability_cutoff,
+                self.postprocess,
+                self.cost_function,
+                self.mis_size,
+            )
+        ]
 
     def create_mis_dataframe(
-        self, 
-        result: ResType, 
+        self,
+        result: ResType,
         graph: Union[nx.Graph, list[nx.Graph]],
-        label: Optional[str] = None, 
-        p_threshold: Optional[float] = None, 
-        p_cutoff: Optional[float] = None, 
+        label: Optional[str] = None,
+        p_threshold: Optional[float] = None,
+        p_cutoff: Optional[float] = None,
         postproc: bool = False,
         cost_function: Optional[BitstringCost] = None,
         mis_size: int = 0,
     ) -> pl.DataFrame:
         """
-    Create a polars.DataFrame for studying the Maximum Independent Set (MIS) problem on a graph.
-    
-    This function processes a set of bitstrings, analyzes their probabilities, and appends relevant 
-    analysis data such as costs, independence types, and distances to the MIS. The resulting DataFrame
-    is suitable for further analysis of the MIS problem for a given graph.
+        Create a polars.DataFrame for studying the Maximum Independent Set (MIS) problem on a graph.
 
-    Args:
-        result (ResType): The input result which can be in the form of either a `CoherentResults`, 
-                          `NoisyResults`, or a mapping of bitstrings or strings to probabilities.
-                          This data is used to construct a distribution of bitstrings and their probabilities.
-        
-        label (Optional[str], default=None): A label for the data, which will be added as a column to 
-                                              the resulting DataFrame. If not provided, no label will 
-                                              be added.
+        This function processes a set of bitstrings, analyzes their probabilities, and appends relevant
+        analysis data such as costs, independence types, and distances to the MIS. The resulting DataFrame
+        is suitable for further analysis of the MIS problem for a given graph.
 
-        p_threshold (Optional[float], default=None): A probability threshold. Any bitstring with a 
-                                                     probability lower than this value will be excluded
-                                                     from the final DataFrame. If not provided, no threshold 
-                                                     filtering is applied.
+        Args:
+            result (ResType): The input result which can be in the form of either a `CoherentResults`,
+                              `NoisyResults`, or a mapping of bitstrings or strings to probabilities.
+                              This data is used to construct a distribution of bitstrings and their probabilities.
 
-        p_cutoff (Optional[float], default=None): A cumulative probability cutoff. This controls the
-                                                   percentage of the total probability mass to retain. 
-                                                   Bitstrings whose cumulative probability is less than 
-                                                   this cutoff will be excluded. If not provided, no cutoff
-                                                   filtering is applied.
+            label (Optional[str], default=None): A label for the data, which will be added as a column to
+                                                  the resulting DataFrame. If not provided, no label will
+                                                  be added.
 
-        postproc (bool, default=False): A flag that determines whether postprocessing should be applied to
-                                        the bitstrings in the dataset. If `True`, non-independent bitstrings
-                                        will be processed to make them maximal. If `False`, no postprocessing 
-                                        is done.
+            p_threshold (Optional[float], default=None): A probability threshold. Any bitstring with a
+                                                         probability lower than this value will be excluded
+                                                         from the final DataFrame. If not provided, no threshold
+                                                         filtering is applied.
 
-         Returns:
-            pl.DataFrame: A Polars DataFrame containing the analyzed bitstrings. The columns include:
-                      - `bitstring`: The bitstring representation.
-                      - `probability`: The probability associated with the bitstring.
-                      - `weight`: The weight of the bitstring (number of 1's).
-                      - `cost`: The cost associated with the bitstring (if any).
-                      - `independence_type`: The independence type of the bitstring, one of 
-                        "independent", "maximal", "maximum", or "not".
-                      - `distance_to_MIS`: The distance from the MIS, only present if the `mis_size` 
-                        is provided.
+            p_cutoff (Optional[float], default=None): A cumulative probability cutoff. This controls the
+                                                       percentage of the total probability mass to retain.
+                                                       Bitstrings whose cumulative probability is less than
+                                                       this cutoff will be excluded. If not provided, no cutoff
+                                                       filtering is applied.
+
+            postproc (bool, default=False): A flag that determines whether postprocessing should be applied to
+                                            the bitstrings in the dataset. If `True`, non-independent bitstrings
+                                            will be processed to make them maximal. If `False`, no postprocessing
+                                            is done.
+
+             Returns:
+                pl.DataFrame: A Polars DataFrame containing the analyzed bitstrings. The columns include:
+                          - `bitstring`: The bitstring representation.
+                          - `probability`: The probability associated with the bitstring.
+                          - `weight`: The weight of the bitstring (number of 1's).
+                          - `cost`: The cost associated with the bitstring (if any).
+                          - `independence_type`: The independence type of the bitstring, one of
+                            "independent", "maximal", "maximum", or "not".
+                          - `distance_to_MIS`: The distance from the MIS, only present if the `mis_size`
+                            is provided.
 
         """
-        df = self.bitstring_distribution(result) 
-        df = self.limit_dataframe(df,  pthreshold=p_threshold, pcutoff=p_cutoff)
+        df = self.bitstring_distribution(result)
+        df = self.limit_dataframe(df, pthreshold=p_threshold, pcutoff=p_cutoff)
         if postproc:
             df = self.postprocess_bitstring_distribution(df, graph)
-        if mis_size>0:
+        if mis_size > 0:
             df = self.add_mis_analysis(df, graph, cost_function=cost_function, mis_size=mis_size)
         if label is not None:
-            df = df.with_columns(pl.lit(label).alias(_DATA_TYPE))  
+            df = df.with_columns(pl.lit(label).alias(_DATA_TYPE))
 
         return df
-    
+
     def add_df(
-        self, 
-        new_data: ResType, 
-        new_graph: nx.Graph, 
+        self,
+        new_data: ResType,
+        new_graph: nx.Graph,
         new_label: str,
-        new_probability_threshold: Optional[float] = None, 
-        new_probability_cutoff: Optional[float] = None, 
+        new_probability_threshold: Optional[float] = None,
+        new_probability_cutoff: Optional[float] = None,
         new_postprocess: bool = False,
-        new_mis_size: Optional[int] = None
+        new_mis_size: Optional[int] = None,
     ):
         """
         Adds a new dataframe to the instance by updating each attribute accordingly.
@@ -308,19 +319,19 @@ class MISAnalyser:
         # Validate the new label
         if not isinstance(new_label, str):
             raise ValueError("The new label must be a string.")
-        
+
         # Append the new elements to each attribute
         self.graph.append(new_graph)
         self.labels.append(new_label)
-        
+
         # Handle probability_threshold and probability_cutoff as lists or single values
         self.probability_threshold.append(new_probability_threshold)
         self.probability_cutoff.append(new_probability_cutoff)
-        
+
         # Append postprocess and mis_size with new values, using defaults as necessary
         self.postprocess.append(new_postprocess)
         self.mis_size.append(new_mis_size if new_mis_size is not None else 0)
-        
+
         # Generate the new DataFrame and append it to the list of dataframes
         new_df = self.create_mis_dataframe(
             new_data,
@@ -329,7 +340,7 @@ class MISAnalyser:
             new_probability_threshold,
             new_probability_cutoff,
             new_postprocess,
-            new_mis_size or 0
+            new_mis_size or 0,
         )
         self.df.append(new_df)
 
@@ -345,7 +356,7 @@ class MISAnalyser:
             index = self.labels.index(label)
         except ValueError:
             raise ValueError(f"Label '{label}' not found in the dataset labels.")
-        
+
         # Remove the entry at the found index for each attribute
         self.graph.pop(index)
         self.labels.pop(index)
@@ -358,7 +369,7 @@ class MISAnalyser:
         print(f"Dataset with label '{label}' removed successfully.")
 
     @staticmethod
-    def merge(df: list[pl.DataFrame]) ->  pl.DataFrame:
+    def merge(df: list[pl.DataFrame]) -> pl.DataFrame:
         """
         Merges a list of dataframes into a single dataframe.
         Args:
@@ -368,16 +379,16 @@ class MISAnalyser:
         Raises:
             ValueError: If the input is not a list of dataframes.
         """
-        if isinstance(df,list):
+        if isinstance(df, list):
             return pl.concat(df)
         else:
             raise ValueError("'df' must be a list of dataframes to merge.")
-    
+
     def merge_df(self):
         """
         Merges 'self.df' into a single dataframe.
 
-        This method updates the 'self.df' attribute by merging it with itself using 
+        This method updates the 'self.df' attribute by merging it with itself using
         the `merge` method.
 
         Returns:
@@ -385,9 +396,9 @@ class MISAnalyser:
         """
 
         self.df = self.merge(self.df)
-        
+
     @staticmethod
-    def split(df: pl.DataFrame, column: str) ->  list[pl.DataFrame]:
+    def split(df: pl.DataFrame, column: str) -> list[pl.DataFrame]:
         """
         Splits a dataframe into a list of dataframes based on a specified column.
 
@@ -402,13 +413,12 @@ class MISAnalyser:
         Raises:
             ValueError: If the input is a list of dataframes or the specified column does not exist.
         """
-        if isinstance(df,list):
+        if isinstance(df, list):
             raise ValueError("`df` must be a single dataframe.")
         if column not in df.columns:
             raise ValueError(f"Column '{column}' does not exist in the dataframe.")
         else:
-            return list(df.partition_by(column))  
-
+            return list(df.partition_by(column))
 
     def split_df(self, column: str):
         """
@@ -422,13 +432,14 @@ class MISAnalyser:
         Returns:
             None
         """
-        self.df = self.split(self.df,column=column) 
+        self.df = self.split(self.df, column=column)
 
     @staticmethod
-    def bitstring_distribution(result: ResType,
+    def bitstring_distribution(
+        result: ResType,
     ) -> pl.DataFrame:
         """
-        Converts a set of bitstring samples from various formats into a Polars dataframe 
+        Converts a set of bitstring samples from various formats into a Polars dataframe
         with "bitstring", "probability", and "weight" columns.
 
         Args:
@@ -483,7 +494,8 @@ class MISAnalyser:
         return distr
 
     @staticmethod
-    def add_mis_analysis(df: pl.DataFrame,
+    def add_mis_analysis(
+        df: pl.DataFrame,
         graph: Optional[nx.Graph],
         cost_function: Optional[BitstringCost] = None,
         mis_size: Optional[int] = None,
@@ -609,7 +621,9 @@ class MISAnalyser:
             limit_val = sorted_df[sortby][limit_ind]
             limit_val_inds = np.argwhere(np.isclose(sorted_df[sortby], limit_val)).flatten()
             limit_probs = sorted_df[_PROBABILITY][limit_val_inds]
-            existing_prob = 0 if limit_val_inds[0] == 0 else cumulative_prob[: limit_val_inds[0]][-1]
+            existing_prob = (
+                0 if limit_val_inds[0] == 0 else cumulative_prob[: limit_val_inds[0]][-1]
+            )
             limit_probs *= (1 - pcutoff - existing_prob) / limit_probs.sum()
             probs = np.append(
                 sorted_df[_PROBABILITY][: limit_val_inds[0]].to_numpy(), limit_probs.to_numpy()
@@ -651,7 +665,7 @@ class MISAnalyser:
             dist_postprocessed[b] = f
         return MISAnalyser.bitstring_distribution(dist_postprocessed)
 
-    def _get_dataframe_by_label(self, label: str) -> 'pl.DataFrame':
+    def _get_dataframe_by_label(self, label: str) -> "pl.DataFrame":
         """
         Retrieves a dataframe by its label.
         Args:
@@ -666,7 +680,7 @@ class MISAnalyser:
             return self.df[index]
         except ValueError:
             raise ValueError(f"No dataframe found with label '{label}'")
-        
+
     def get_variance(self, column_name: str) -> list[float]:
         """
         Calculate the variance of a specified column for each dataframe in the class.
@@ -685,7 +699,7 @@ class MISAnalyser:
             else:
                 variances.append(None)
         return variances
-    
+
     def get_distance_variance(self) -> list[float]:
         """
         Calculate the variance of a specified column for each dataframe in the class.
@@ -698,14 +712,14 @@ class MISAnalyser:
 
         variances = []
         for df in self.df:
-            df=df.to_pandas()
-            df=df.groupby(_DISTANCE, as_index=False).agg({_PROBABILITY: "sum"})
-            df = df[df[_DISTANCE]>=0]
-            mean=(df[_DISTANCE]*df[_PROBABILITY]).sum()
-            variance=((df[_DISTANCE]-mean)**2*df[_PROBABILITY]).sum()
+            df = df.to_pandas()
+            df = df.groupby(_DISTANCE, as_index=False).agg({_PROBABILITY: "sum"})
+            df = df[df[_DISTANCE] >= 0]
+            mean = (df[_DISTANCE] * df[_PROBABILITY]).sum()
+            variance = ((df[_DISTANCE] - mean) ** 2 * df[_PROBABILITY]).sum()
             variances.append(variance)
         return variances
-    
+
     def get_distance_mean(self) -> list[float]:
         """
         Calculate the variance of a specified column for each dataframe in the class.
@@ -718,13 +732,13 @@ class MISAnalyser:
 
         avg = []
         for df in self.df:
-            df=df.to_pandas()
-            df=df.groupby(_DISTANCE, as_index=False).agg({_PROBABILITY: "sum"})
-            df = df[df[_DISTANCE]>=0]
-            mean=(df[_DISTANCE]*df[_PROBABILITY]).sum()
+            df = df.to_pandas()
+            df = df.groupby(_DISTANCE, as_index=False).agg({_PROBABILITY: "sum"})
+            df = df[df[_DISTANCE] >= 0]
+            mean = (df[_DISTANCE] * df[_PROBABILITY]).sum()
             avg.append(mean)
         return avg
-        
+
     def get_cost_mean(self) -> list[float]:
         """
         Calculate the variance of a specified column for each dataframe in the class.
@@ -736,13 +750,13 @@ class MISAnalyser:
         """
 
         avg = []
-        for i,df in enumerate(self.df):
-            df=df.to_pandas()
-            df=df.groupby(_COST, as_index=False).agg({_PROBABILITY: "sum"})
-            mean=((self.mis_size[i]+df[_COST])/self.mis_size[i]*df[_PROBABILITY]).sum()
+        for i, df in enumerate(self.df):
+            df = df.to_pandas()
+            df = df.groupby(_COST, as_index=False).agg({_PROBABILITY: "sum"})
+            mean = ((self.mis_size[i] + df[_COST]) / self.mis_size[i] * df[_PROBABILITY]).sum()
             avg.append(mean)
         return avg
-    
+
     def get_gap_mean(self) -> list[float]:
         """
         Calculate the variance of a specified column for each dataframe in the class.
@@ -754,14 +768,14 @@ class MISAnalyser:
         """
 
         avg = []
-        for i,df in enumerate(self.df):
-            df=df.to_pandas()
-            df=df.groupby(_DISTANCE, as_index=False).agg({_PROBABILITY: "sum"})
-            df = df[df[_DISTANCE]>=0]
-            mean=(df[_DISTANCE]*df[_PROBABILITY]/self.mis_size[i]).sum()
+        for i, df in enumerate(self.df):
+            df = df.to_pandas()
+            df = df.groupby(_DISTANCE, as_index=False).agg({_PROBABILITY: "sum"})
+            df = df[df[_DISTANCE] >= 0]
+            mean = (df[_DISTANCE] * df[_PROBABILITY] / self.mis_size[i]).sum()
             avg.append(mean)
         return avg
-    
+
     def get_gap_variance(self) -> list[float]:
         """
         Calculate the variance of a specified column for each dataframe in the class.
@@ -773,32 +787,30 @@ class MISAnalyser:
         """
 
         variances = []
-        for i,df in enumerate(self.df):
-            df=df.to_pandas()
-            df=df.groupby(_DISTANCE, as_index=False).agg({_PROBABILITY: "sum"})
-            df = df[df[_DISTANCE]>=0]
-            mean=(df[_DISTANCE]*df[_PROBABILITY]).sum()
-            variance=(((df[_DISTANCE]-mean)/self.mis_size[i])**2*df[_PROBABILITY]).sum()
+        for i, df in enumerate(self.df):
+            df = df.to_pandas()
+            df = df.groupby(_DISTANCE, as_index=False).agg({_PROBABILITY: "sum"})
+            df = df[df[_DISTANCE] >= 0]
+            mean = (df[_DISTANCE] * df[_PROBABILITY]).sum()
+            variance = (((df[_DISTANCE] - mean) / self.mis_size[i]) ** 2 * df[_PROBABILITY]).sum()
             variances.append(variance)
         return variances
-    
-    
+
     def get_distance_distributions(self) -> list[np.ndarray]:
         """
         Extract the distribution of distances for each dataframe in the class.
         Returns:
             list[np.ndarray]: A list containing arrays of distances for each dataframe.
-                            If the _DISTANCE column does not exist in a dataframe, 
+                            If the _DISTANCE column does not exist in a dataframe,
                             an empty array is returned for that dataframe.
         """
         distributions = []
         for df in self.df:
             df = df.to_pandas()
-            df=df.groupby(_DISTANCE, as_index=False).agg({_PROBABILITY: "sum"})
+            df = df.groupby(_DISTANCE, as_index=False).agg({_PROBABILITY: "sum"})
             distributions.append(df)
         return distributions
 
-        
     def get_MIS_probability(self, label: Optional[str] = None) -> float:
         """
         Calculates the probability of the maximal independent set (MIS) for a specific dataframe or all dataframes.
@@ -813,10 +825,12 @@ class MISAnalyser:
             df = self._get_dataframe_by_label(label)
             return float(df.filter(pl.col(_INDEPENDENCE_TYPE) == "maximum")[_PROBABILITY].sum())
         else:
-            return [float(df.filter(pl.col(_INDEPENDENCE_TYPE) == "maximum")[_PROBABILITY].sum()) 
-                for df in self.df]
+            return [
+                float(df.filter(pl.col(_INDEPENDENCE_TYPE) == "maximum")[_PROBABILITY].sum())
+                for df in self.df
+            ]
 
-    def get_MIS_minus_k_probability(self,k:int, label: Optional[str] = None) -> float:
+    def get_MIS_minus_k_probability(self, k: int, label: Optional[str] = None) -> float:
         """
         Calculates the probability of the maximal independent set (MIS)minus k  for a specific dataframe or all dataframes.
 
@@ -830,9 +844,7 @@ class MISAnalyser:
             df = self._get_dataframe_by_label(label)
             return float(df.filter(pl.col(_DISTANCE) == k)[_PROBABILITY].sum())
         else:
-            return [float(df.filter(pl.col(_DISTANCE) == k)[_PROBABILITY].sum()) 
-                for df in self.df]
-        
+            return [float(df.filter(pl.col(_DISTANCE) == k)[_PROBABILITY].sum()) for df in self.df]
 
     def get_IS_probability(self, label: Optional[str] = None) -> float:
         """
@@ -848,8 +860,10 @@ class MISAnalyser:
             df = self._get_dataframe_by_label(label)
             return float(df.filter(pl.col(_INDEPENDENCE_TYPE) != "not")[_PROBABILITY].sum())
         else:
-            return [float(df.filter(pl.col(_INDEPENDENCE_TYPE) != "not")[_PROBABILITY].sum()) 
-                for df in self.df]
+            return [
+                float(df.filter(pl.col(_INDEPENDENCE_TYPE) != "not")[_PROBABILITY].sum())
+                for df in self.df
+            ]
 
     def get_mIS_probability(self, label: Optional[str] = None) -> float:
         """
@@ -865,8 +879,10 @@ class MISAnalyser:
             df = self._get_dataframe_by_label(label)
             return float(df.filter(pl.col(_INDEPENDENCE_TYPE) == "maximal")[_PROBABILITY].sum())
         else:
-            return [float(df.filter(pl.col(_INDEPENDENCE_TYPE) == "maximal")[_PROBABILITY].sum()) 
-                for df in self.df]
+            return [
+                float(df.filter(pl.col(_INDEPENDENCE_TYPE) == "maximal")[_PROBABILITY].sum())
+                for df in self.df
+            ]
 
     def get_most_probable_indept_set(self, label: Optional[str] = None) -> Tuple[str, float]:
         """
@@ -880,24 +896,30 @@ class MISAnalyser:
             # Retrieve the dataframe for the specific label
             df = self._get_dataframe_by_label(label)
             # Filter and sort to get the most probable independent set
-            most_probable_row = df.filter(pl.col(_INDEPENDENCE_TYPE) != "not").sort(_PROBABILITY, descending=True)
+            most_probable_row = df.filter(pl.col(_INDEPENDENCE_TYPE) != "not").sort(
+                _PROBABILITY, descending=True
+            )
             return [(most_probable_row[_BITSTRING][0], most_probable_row[_PROBABILITY][0])]
         else:
             # Process all dataframes and retrieve the most probable independent set for each
             most_probable_list = []
             for df in self.df:
-                most_probable_row = df.filter(pl.col(_INDEPENDENCE_TYPE) != "not").sort(_PROBABILITY, descending=True)
-                most_probable_list.append((most_probable_row[_BITSTRING][0], most_probable_row[_PROBABILITY][0]))
+                most_probable_row = df.filter(pl.col(_INDEPENDENCE_TYPE) != "not").sort(
+                    _PROBABILITY, descending=True
+                )
+                most_probable_list.append(
+                    (most_probable_row[_BITSTRING][0], most_probable_row[_PROBABILITY][0])
+                )
             return most_probable_list
 
     def plot_bitstring_distribution(
-            self,
-            labels: Union[list[str],str]=None,
-            context: str = "notebook",
-            probability_threshold: Optional[float] = None,
-            probability_cutoff: Optional[float] = None,
-            sort_by: Optional[str] = _PROBABILITY,
-        ) -> plt.Figure:
+        self,
+        labels: Union[list[str], str] = None,
+        context: str = "notebook",
+        probability_threshold: Optional[float] = None,
+        probability_cutoff: Optional[float] = None,
+        sort_by: Optional[str] = _PROBABILITY,
+    ) -> plt.Figure:
         """Plot the distribution of bitstrings as a barplot from a dataframe
         for one or multiple dataframes
 
@@ -916,19 +938,19 @@ class MISAnalyser:
             seaborne catplot
         """
         if labels is not None:
-            if isinstance(labels,list) and  all(isinstance(x, str) for x in labels):
-                df=[self._get_dataframe_by_label(x) for x in labels]
-                df=self.merge(df)
-            elif isinstance(labels,str):
-                df=[self._get_dataframe_by_label(labels)]
-                df=self.merge(df)
+            if isinstance(labels, list) and all(isinstance(x, str) for x in labels):
+                df = [self._get_dataframe_by_label(x) for x in labels]
+                df = self.merge(df)
+            elif isinstance(labels, str):
+                df = [self._get_dataframe_by_label(labels)]
+                df = self.merge(df)
             else:
                 raise ValueError("labels must be of type str.")
         else:
-            labels=self.labels
-            df=self.merge(self.df)
-        df=self.limit_dataframe(df, pthreshold=probability_threshold, pcutoff=probability_cutoff)
-        df=df.to_pandas()
+            labels = self.labels
+            df = self.merge(self.df)
+        df = self.limit_dataframe(df, pthreshold=probability_threshold, pcutoff=probability_cutoff)
+        df = df.to_pandas()
         # Combine the DataFrames
         # Pivot the Combined DataFrame to prepare for plotting
         pivot_df = df.pivot_table(
@@ -943,9 +965,9 @@ class MISAnalyser:
             id_vars=[_BITSTRING, _INDEPENDENCE_TYPE], var_name=_DATA_TYPE, value_name=_PROBABILITY
         )
 
-        if sort_by==_PROBABILITY:
+        if sort_by == _PROBABILITY:
             melted_df = melted_df.sort_values(by=sort_by, ascending=False)
-        elif sort_by==sort_byE:
+        elif sort_by == sort_byE:
             melted_df[sort_by] = pd.Categorical(melted_df[sort_by], categories=labels, ordered=True)
             melted_df = melted_df.sort_values(by=sort_by).reset_index(drop=True)
 
@@ -975,7 +997,7 @@ class MISAnalyser:
                 kind="bar",
                 height=6,
                 aspect=1.5,  # This puts the bars side by side
-                palette=PASQAL_cmap(np.linspace(0, 1, len(labels)))
+                palette=PASQAL_cmap(np.linspace(0, 1, len(labels))),
             )
 
         g.set_xticklabels(rotation=90)
@@ -1004,17 +1026,15 @@ class MISAnalyser:
         g.set_axis_labels("Bitstring", "Probability")
         return g
 
-
     def plot_distance_to_mis(
-            self,
-            labels: Optional[list[str],str]=None,
-            context: str = "notebook",
-            probability_threshold: Optional[float] = None,
-            probability_cutoff: Optional[float] = None,
-            plot_only_IS: Optional[float] = True,
-            sort_by: Optional[str]= _PROBABILITY,
-        ) -> plt.Figure:
-        
+        self,
+        labels: Optional[list[str], str] = None,
+        context: str = "notebook",
+        probability_threshold: Optional[float] = None,
+        probability_cutoff: Optional[float] = None,
+        plot_only_IS: Optional[float] = True,
+        sort_by: Optional[str] = _PROBABILITY,
+    ) -> plt.Figure:
         """Plot the probability as a function of distance from MIS for multiple datasets with side-by-side bars.
 
         Args:
@@ -1027,27 +1047,29 @@ class MISAnalyser:
             plt.Figure: The plot figure.
         """
         if labels is not None:
-            if isinstance(labels,list) and  all(isinstance(x, str) for x in labels):
-                df=[self._get_dataframe_by_label(x) for x in labels]
-                df=self.merge(df)
-            elif isinstance(labels,str):
-                df=[self._get_dataframe_by_label(labels)]
-                df=self.merge(df)
+            if isinstance(labels, list) and all(isinstance(x, str) for x in labels):
+                df = [self._get_dataframe_by_label(x) for x in labels]
+                df = self.merge(df)
+            elif isinstance(labels, str):
+                df = [self._get_dataframe_by_label(labels)]
+                df = self.merge(df)
             else:
                 raise ValueError("labels must be of type str.")
         else:
-            labels=self.labels
-            df=self.merge(self.df)
-        df = self.limit_dataframe(
-                    df, pthreshold=probability_threshold, pcutoff=probability_cutoff
-                )
+            labels = self.labels
+            df = self.merge(self.df)
+        df = self.limit_dataframe(df, pthreshold=probability_threshold, pcutoff=probability_cutoff)
         df = df.to_pandas()
 
         if plot_only_IS:
-            df= df[df[_DISTANCE] >= 0].groupby([_DISTANCE, _DATA_TYPE], as_index=False).agg({_PROBABILITY: "sum"})
+            df = (
+                df[df[_DISTANCE] >= 0]
+                .groupby([_DISTANCE, _DATA_TYPE], as_index=False)
+                .agg({_PROBABILITY: "sum"})
+            )
         else:
-            df= df.groupby([_DISTANCE, _DATA_TYPE], as_index=False).agg({_PROBABILITY: "sum"})
-        
+            df = df.groupby([_DISTANCE, _DATA_TYPE], as_index=False).agg({_PROBABILITY: "sum"})
+
         pivot_df = (
             df.pivot(index=_DISTANCE, columns=_DATA_TYPE, values=_PROBABILITY)
             .fillna(0)
@@ -1057,17 +1079,17 @@ class MISAnalyser:
         # Melt the pivoted dataframe to make it suitable for Seaborn
         melted_df = pivot_df.melt(id_vars=_DISTANCE, var_name=_DATA_TYPE, value_name=_PROBABILITY)
 
-        if sort_by==_PROBABILITY:
+        if sort_by == _PROBABILITY:
             melted_df = melted_df.sort_values(by=sort_by, ascending=False)
-        elif sort_by==sort_by:
+        elif sort_by == sort_by:
             melted_df[sort_by] = pd.Categorical(melted_df[sort_by], categories=labels, ordered=True)
             melted_df = melted_df.sort_values(by=sort_by).reset_index(drop=True)
-        
+
         # Plotting
         with sns.plotting_context(context):
             sns.set_theme(style="whitegrid")
-            #sns.set_palette(sns.color_palette(PASQAL_cmap(np.linspace(0, 1, len(self.labels)))))
-            
+            # sns.set_palette(sns.color_palette(PASQAL_cmap(np.linspace(0, 1, len(self.labels)))))
+
             # Create bar plot with `_DISTANCE` on x-axis and `_PROBABILITY` on y-axis
             g = sns.catplot(
                 data=melted_df,
@@ -1078,24 +1100,23 @@ class MISAnalyser:
                 height=6,
                 aspect=1.5,
                 dodge=True,
-                palette=sns.color_palette(PASQAL_cmap(np.linspace(0, 1, len(labels))))
+                palette=sns.color_palette(PASQAL_cmap(np.linspace(0, 1, len(labels)))),
             )
 
         g.set_axis_labels("Distance from MIS", "Probability")
         g.legend.set_title("Dataset")
 
         return g
-    
+
     def plot_cost(
-            self,
-            labels: Optional[list[str],str]=None,
-            context: str = "notebook",
-            probability_threshold: Optional[float] = None,
-            probability_cutoff: Optional[float] = None,
-            plot_only_IS: Optional[float] = True,
-            sort_by: Optional[str]= _PROBABILITY,
-        ) -> plt.Figure:
-        
+        self,
+        labels: Optional[list[str], str] = None,
+        context: str = "notebook",
+        probability_threshold: Optional[float] = None,
+        probability_cutoff: Optional[float] = None,
+        plot_only_IS: Optional[float] = True,
+        sort_by: Optional[str] = _PROBABILITY,
+    ) -> plt.Figure:
         """Plot the probability as a function of distance from MIS for multiple datasets with side-by-side bars.
 
         Args:
@@ -1108,47 +1129,47 @@ class MISAnalyser:
             plt.Figure: The plot figure.
         """
         if labels is not None:
-            if isinstance(labels,list) and  all(isinstance(x, str) for x in labels):
-                df=[self._get_dataframe_by_label(x) for x in labels]
-                df=self.merge(df)
-            elif isinstance(labels,str):
-                df=[self._get_dataframe_by_label(labels)]
-                df=self.merge(df)
+            if isinstance(labels, list) and all(isinstance(x, str) for x in labels):
+                df = [self._get_dataframe_by_label(x) for x in labels]
+                df = self.merge(df)
+            elif isinstance(labels, str):
+                df = [self._get_dataframe_by_label(labels)]
+                df = self.merge(df)
             else:
                 raise ValueError("labels must be of type str.")
         else:
-            labels=self.labels
-            df=self.merge(self.df)
-        df = self.limit_dataframe(
-                    df, pthreshold=probability_threshold, pcutoff=probability_cutoff
-                )
+            labels = self.labels
+            df = self.merge(self.df)
+        df = self.limit_dataframe(df, pthreshold=probability_threshold, pcutoff=probability_cutoff)
         df = df.to_pandas()
 
         if plot_only_IS:
-            df= df[df[_INDEPENDENCE_TYPE]!="not"].groupby([_COST, _DATA_TYPE], as_index=False).agg({_PROBABILITY: "sum"})
+            df = (
+                df[df[_INDEPENDENCE_TYPE] != "not"]
+                .groupby([_COST, _DATA_TYPE], as_index=False)
+                .agg({_PROBABILITY: "sum"})
+            )
         else:
-            df= df.groupby([_COST, _DATA_TYPE], as_index=False).agg({_PROBABILITY: "sum"})
-        
+            df = df.groupby([_COST, _DATA_TYPE], as_index=False).agg({_PROBABILITY: "sum"})
+
         pivot_df = (
-            df.pivot(index=_COST, columns=_DATA_TYPE, values=_PROBABILITY)
-            .fillna(0)
-            .reset_index()
+            df.pivot(index=_COST, columns=_DATA_TYPE, values=_PROBABILITY).fillna(0).reset_index()
         )
 
         # Melt the pivoted dataframe to make it suitable for Seaborn
         melted_df = pivot_df.melt(id_vars=_COST, var_name=_DATA_TYPE, value_name=_PROBABILITY)
 
-        if sort_by==_PROBABILITY:
+        if sort_by == _PROBABILITY:
             melted_df = melted_df.sort_values(by=sort_by, ascending=False)
-        elif sort_by==sort_by:
+        elif sort_by == sort_by:
             melted_df[sort_by] = pd.Categorical(melted_df[sort_by], categories=labels, ordered=True)
             melted_df = melted_df.sort_values(by=sort_by).reset_index(drop=True)
-        
+
         # Plotting
         with sns.plotting_context(context):
             sns.set_theme(style="whitegrid")
-            #sns.set_palette(sns.color_palette(PASQAL_cmap(np.linspace(0, 1, len(self.labels)))))
-            
+            # sns.set_palette(sns.color_palette(PASQAL_cmap(np.linspace(0, 1, len(self.labels)))))
+
             # Create bar plot with `_DISTANCE` on x-axis and `_PROBABILITY` on y-axis
             g = sns.catplot(
                 data=melted_df,
@@ -1159,7 +1180,7 @@ class MISAnalyser:
                 height=6,
                 aspect=1.5,
                 dodge=True,
-                palette=sns.color_palette(PASQAL_cmap(np.linspace(0, 1, len(labels))))
+                palette=sns.color_palette(PASQAL_cmap(np.linspace(0, 1, len(labels)))),
             )
 
         g.set_axis_labels("Cost", "Probability")
@@ -1167,17 +1188,15 @@ class MISAnalyser:
 
         return g
 
-
     def plot_distance_distribution(
-            self,
-            labels: Optional[list[str],str]=None,
-            context: str = "notebook",
-            probability_threshold: Optional[float] = None,
-            probability_cutoff: Optional[float] = None,
-            plot_only_IS: Optional[float] = True,
-            sort_by: Optional[str]= _PROBABILITY,
-        ) -> plt.Figure:
-        
+        self,
+        labels: Optional[list[str], str] = None,
+        context: str = "notebook",
+        probability_threshold: Optional[float] = None,
+        probability_cutoff: Optional[float] = None,
+        plot_only_IS: Optional[float] = True,
+        sort_by: Optional[str] = _PROBABILITY,
+    ) -> plt.Figure:
         """Plot the probability as a function of distance from MIS for multiple datasets with side-by-side bars.
 
         Args:
@@ -1190,47 +1209,47 @@ class MISAnalyser:
             plt.Figure: The plot figure.
         """
         if labels is not None:
-            if isinstance(labels,list) and  all(isinstance(x, str) for x in labels):
-                df=[self._get_dataframe_by_label(x) for x in labels]
-                df=self.merge(df)
-            elif isinstance(labels,str):
-                df=[self._get_dataframe_by_label(labels)]
-                df=self.merge(df)
+            if isinstance(labels, list) and all(isinstance(x, str) for x in labels):
+                df = [self._get_dataframe_by_label(x) for x in labels]
+                df = self.merge(df)
+            elif isinstance(labels, str):
+                df = [self._get_dataframe_by_label(labels)]
+                df = self.merge(df)
             else:
                 raise ValueError("labels must be of type str.")
         else:
-            labels=self.labels
-            df=self.merge(self.df)
-        df = self.limit_dataframe(
-                    df, pthreshold=probability_threshold, pcutoff=probability_cutoff
-                )
+            labels = self.labels
+            df = self.merge(self.df)
+        df = self.limit_dataframe(df, pthreshold=probability_threshold, pcutoff=probability_cutoff)
         df = df.to_pandas()
 
         if plot_only_IS:
-            df= df[df[_INDEPENDENCE_TYPE]!="not"].groupby([_COST, _DATA_TYPE], as_index=False).agg({_PROBABILITY: "sum"})
+            df = (
+                df[df[_INDEPENDENCE_TYPE] != "not"]
+                .groupby([_COST, _DATA_TYPE], as_index=False)
+                .agg({_PROBABILITY: "sum"})
+            )
         else:
-            df= df.groupby([_COST, _DATA_TYPE], as_index=False).agg({_PROBABILITY: "sum"})
-        
+            df = df.groupby([_COST, _DATA_TYPE], as_index=False).agg({_PROBABILITY: "sum"})
+
         pivot_df = (
-            df.pivot(index=_COST, columns=_DATA_TYPE, values=_PROBABILITY)
-            .fillna(0)
-            .reset_index()
+            df.pivot(index=_COST, columns=_DATA_TYPE, values=_PROBABILITY).fillna(0).reset_index()
         )
 
         # Melt the pivoted dataframe to make it suitable for Seaborn
         melted_df = pivot_df.melt(id_vars=_COST, var_name=_DATA_TYPE, value_name=_PROBABILITY)
 
-        if sort_by==_PROBABILITY:
+        if sort_by == _PROBABILITY:
             melted_df = melted_df.sort_values(by=sort_by, ascending=False)
-        elif sort_by==sort_by:
+        elif sort_by == sort_by:
             melted_df[sort_by] = pd.Categorical(melted_df[sort_by], categories=labels, ordered=True)
             melted_df = melted_df.sort_values(by=sort_by).reset_index(drop=True)
-        
+
         # Plotting
         with sns.plotting_context(context):
             sns.set_theme(style="whitegrid")
-            #sns.set_palette(sns.color_palette(PASQAL_cmap(np.linspace(0, 1, len(self.labels)))))
-            
+            # sns.set_palette(sns.color_palette(PASQAL_cmap(np.linspace(0, 1, len(self.labels)))))
+
             # Create bar plot with `_DISTANCE` on x-axis and `_PROBABILITY` on y-axis
             g = sns.catplot(
                 data=melted_df,
@@ -1241,7 +1260,7 @@ class MISAnalyser:
                 height=6,
                 aspect=1.5,
                 dodge=True,
-                palette=sns.color_palette(PASQAL_cmap(np.linspace(0, 1, len(labels))))
+                palette=sns.color_palette(PASQAL_cmap(np.linspace(0, 1, len(labels)))),
             )
 
         g.set_axis_labels("Cost", "Probability")
