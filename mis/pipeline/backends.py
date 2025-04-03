@@ -1,23 +1,57 @@
-"""
-Low-level tools to execute compiled registers and pulses onto Quantum Devices, including local emulators, remote emulators and physical QPUs.
-"""
+from __future__ import annotations
 
 import abc
 import asyncio
+import os
 from math import ceil
 from typing import Counter, cast
 
-import os
+import pulser
 from pasqal_cloud import SDK
 from pasqal_cloud.device import BaseConfig, EmulatorType
 from pasqal_cloud.job import Job
-from pulser import Pulse, Register, Sequence
+from pulser import Sequence
 from pulser.devices import Device
+from pulser.json.abstract_repr.deserializer import deserialize_device
 from pulser_simulation import QutipEmulator
 
-from mis.data.extractors import deserialize_device
-from mis.shared.error import CompilationError
-from mis.shared._utils import make_sequence
+import mis.pipeline.targets as targets
+
+
+class CompilationError(Exception):
+    """
+    An error raised when attempting to compile a graph for an architecture
+    that does not support it, e.g. because it requires too many qubits or
+    because the physical constraints on the geometry are not satisfied.
+    """
+
+
+def make_sequence(
+    device: Device, pulse: targets.Pulse, register: targets.Register
+) -> pulser.Sequence:
+    """
+    Build a sequence for a device from a pulse and a register.
+
+    This function is mostly intended for internal use and will likely move to qool-layer
+    in time.
+
+    Arguments:
+        device: The quantum device for which the sequence is built. Used to detect if
+            a pulse + register is not compatible with a device.
+        pulse: The laser pulse to apply. It will be added as a Rydberg global channel.
+        register: The geometry for the sequence. If the device expects an automatic
+            layout, this must already have been normalized with `with_automatic_layout`.
+
+    Raises:
+        CompilationError if the pulse + register are not compatible with the device.
+    """
+    try:
+        sequence = pulser.Sequence(register=register.register, device=device)
+        sequence.declare_channel("ising", "rydberg_global")
+        sequence.add(pulse.pulse, "ising")
+        return sequence
+    except ValueError as e:
+        raise CompilationError(f"This pulse/register cannot be executed on the device: {e}")
 
 
 class BaseBackend(abc.ABC):
@@ -33,18 +67,18 @@ class BaseBackend(abc.ABC):
     def __init__(self, device: Device | None):
         self._device = device
 
-    def _make_sequence(self, register: Register, pulse: Pulse) -> Sequence:
+    def _make_sequence(self, register: targets.Register, pulse: targets.Pulse) -> Sequence:
         assert self._device is not None
         return make_sequence(register=register, pulse=pulse, device=self._device)
 
     @abc.abstractmethod
-    async def run(self, register: Register, pulse: Pulse) -> dict[str, int]:
+    async def run(self, register: targets.Register, pulse: targets.Pulse) -> Counter[str]:
         """
         Execute a register and a pulse.
 
         Returns:
-            A bitstring counter, i.e. a data structure counting for each bitstring
-            the number of instances of this bitstring observed at the end of runs.
+            A bitstring Counter, i.e. a data structure counting for each bitstring
+            the number of measured instances of this bitstring.
         """
         raise NotImplementedError
 
@@ -65,7 +99,18 @@ class QutipBackend(BaseBackend):
     def __init__(self, device: Device):
         super().__init__(device)
 
-    async def run(self, register: Register, pulse: Pulse) -> dict[str, int]:
+    async def run(self, register: targets.Register, pulse: targets.Pulse) -> Counter[str]:
+        """
+        Execute a register and a pulse.
+
+        Arguments:
+            register: The register (geometry) to execute. Typically obtained by compiling a graph.
+            pulse: The pulse (lasers) to execute. Typically obtained by compiling a graph.
+
+        Returns:
+            A bitstring Counter, i.e. a data structure counting for each bitstring
+            the number of instances of this bitstring observed at the end of runs.
+        """
         sequence = self._make_sequence(register=register, pulse=pulse)
         emulator = QutipEmulator.from_sequence(sequence)
         result: Counter[str] = emulator.run().sample_final_state()
@@ -128,8 +173,8 @@ class BaseRemoteBackend(BaseBackend):
 
     async def _run(
         self,
-        register: Register,
-        pulse: Pulse,
+        register: targets.Register,
+        pulse: targets.Pulse,
         emulator: EmulatorType | None,
         config: BaseConfig | None = None,
         sleep_sec: int = 2,
@@ -142,16 +187,15 @@ class BaseRemoteBackend(BaseBackend):
             pulse: A pulse to execute.
             emulator: The emulator to use, or None to run on a QPU.
             config: The backend-specific config.
-            sleep_sec (optional): The amount of time to sleep when waiting for the remote server to respond, in seconds. Defaults to 2.
+            sleep_sec (optional): The amount of time to sleep when waiting for the remote server to
+            respond, in seconds. Defaults to 2.
 
         Raises:
             CompilationError: If the register/pulse may not be executed on this device.
         """
         device = await self.device()
         try:
-            sequence = Sequence(register=register, device=device)
-            sequence.declare_channel("ising", "rydberg_global")
-            sequence.add(pulse=pulse, channel="ising")
+            sequence = make_sequence(device=device, pulse=pulse, register=register)
 
             self._sequence = sequence
         except ValueError as e:
@@ -190,9 +234,9 @@ class RemoteQPUBackend(BaseRemoteBackend):
         with a computation that has been previously started.
     """
 
-    async def run(self, register: Register, pulse: Pulse) -> dict[str, int]:
+    async def run(self, register: targets.Register, pulse: targets.Pulse) -> Counter[str]:
         job = await self._run(register, pulse, emulator=None, config=None)
-        return cast(dict[str, int], job.result)
+        return cast(Counter[str], job.result)
 
 
 class RemoteEmuMPSBackend(BaseRemoteBackend):
@@ -201,9 +245,11 @@ class RemoteEmuMPSBackend(BaseRemoteBackend):
     published on Pasqal Cloud.
     """
 
-    async def run(self, register: Register, pulse: Pulse, dt: int = 10) -> dict[str, int]:
+    async def run(
+        self, register: targets.Register, pulse: targets.Pulse, dt: int = 10
+    ) -> Counter[str]:
         job = await self._run(register, pulse, emulator=EmulatorType.EMU_MPS, config=None)
-        bag = cast(dict[str, dict[int, dict[str, int]]], job.result)
+        bag = cast(dict[str, dict[int, Counter[str]]], job.result)
 
         assert self._sequence is not None
         cutoff_duration = int(ceil(self._sequence.get_duration() / dt) * dt)
@@ -229,7 +275,9 @@ if os.name == "posix":
         def __init__(self, device: Device):
             super().__init__(device)
 
-        async def run(self, register: Register, pulse: Pulse, dt: int = 10) -> dict[str, int]:
+        async def run(
+            self, register: targets.Register, pulse: targets.Pulse, dt: int = 10
+        ) -> Counter[str]:
             sequence = self._make_sequence(register=register, pulse=pulse)
             backend = emu_mps.MPSBackend()
 
@@ -237,7 +285,5 @@ if os.name == "posix":
             cutoff_duration = int(ceil(sequence.get_duration() / dt) * dt)
             observable = emu_mps.BitStrings(evaluation_times={cutoff_duration})
             config = emu_mps.MPSConfig(observables=[observable], dt=dt)
-            counter: dict[str, int] = backend.run(sequence, config)[observable.name][
-                cutoff_duration
-            ]
+            counter: Counter[str] = backend.run(sequence, config)[observable.name][cutoff_duration]
             return counter
