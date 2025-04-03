@@ -51,9 +51,7 @@ def make_sequence(
         sequence.add(pulse.pulse, "ising")
         return sequence
     except ValueError as e:
-        raise CompilationError(
-            f"This pulse/register cannot be executed on the device: {e}"
-        )
+        raise CompilationError(f"This pulse/register cannot be executed on the device: {e}")
 
 
 class BaseBackend(abc.ABC):
@@ -69,16 +67,12 @@ class BaseBackend(abc.ABC):
     def __init__(self, device: Device | None):
         self._device = device
 
-    def _make_sequence(
-        self, register: targets.Register, pulse: targets.Pulse
-    ) -> Sequence:
+    def _make_sequence(self, register: targets.Register, pulse: targets.Pulse) -> Sequence:
         assert self._device is not None
         return make_sequence(register=register, pulse=pulse, device=self._device)
 
     @abc.abstractmethod
-    async def run(
-        self, register: targets.Register, pulse: targets.Pulse
-    ) -> Counter[str]:
+    async def run(self, register: targets.Register, pulse: targets.Pulse) -> Counter[str]:
         """
         Execute a register and a pulse.
 
@@ -105,9 +99,7 @@ class QutipBackend(BaseBackend):
     def __init__(self, device: Device):
         super().__init__(device)
 
-    async def run(
-        self, register: targets.Register, pulse: targets.Pulse
-    ) -> Counter[str]:
+    async def run(self, register: targets.Register, pulse: targets.Pulse) -> Counter[str]:
         """
         Execute a register and a pulse.
 
@@ -207,9 +199,7 @@ class BaseRemoteBackend(BaseBackend):
 
             self._sequence = sequence
         except ValueError as e:
-            raise CompilationError(
-                f"This register/pulse cannot be executed on the device: {e}"
-            )
+            raise CompilationError(f"This register/pulse cannot be executed on the device: {e}")
 
         # Enqueue execution.
         batch = self._sdk.create_batch(
@@ -244,9 +234,7 @@ class RemoteQPUBackend(BaseRemoteBackend):
         with a computation that has been previously started.
     """
 
-    async def run(
-        self, register: targets.Register, pulse: targets.Pulse
-    ) -> Counter[str]:
+    async def run(self, register: targets.Register, pulse: targets.Pulse) -> Counter[str]:
         job = await self._run(register, pulse, emulator=None, config=None)
         return cast(Counter[str], job.result)
 
@@ -260,9 +248,7 @@ class RemoteEmuMPSBackend(BaseRemoteBackend):
     async def run(
         self, register: targets.Register, pulse: targets.Pulse, dt: int = 10
     ) -> Counter[str]:
-        job = await self._run(
-            register, pulse, emulator=EmulatorType.EMU_MPS, config=None
-        )
+        job = await self._run(register, pulse, emulator=EmulatorType.EMU_MPS, config=None)
         bag = cast(dict[str, dict[int, Counter[str]]], job.result)
 
         assert self._sequence is not None
@@ -299,7 +285,5 @@ if os.name == "posix":
             cutoff_duration = int(ceil(sequence.get_duration() / dt) * dt)
             observable = emu_mps.BitStrings(evaluation_times={cutoff_duration})
             config = emu_mps.MPSConfig(observables=[observable], dt=dt)
-            counter: Counter[str] = backend.run(sequence, config)[observable.name][
-                cutoff_duration
-            ]
+            counter: Counter[str] = backend.run(sequence, config)[observable.name][cutoff_duration]
             return counter

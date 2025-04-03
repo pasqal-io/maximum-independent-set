@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from mis import QUBOInstance, QUBOSolution
+from mis import MISInstance, MISSolution
 from mis.config import SolverConfig
 
 
@@ -12,35 +12,35 @@ class Fixtures:
     instance before solving, and modification or annotation of the solution after solving.
     """
 
-    def __init__(self, instance: QUBOInstance, config: SolverConfig):
+    def __init__(self, instance: MISInstance, config: SolverConfig):
         """
         Initialize the fixture handler with the MIS instance and solver config.
 
         Args:
-            instance (QUBOInstance): The problem instance to process.
+            instance (MISInstance): The problem instance to process.
             config (SolverConfig): Solver configuration, which may include flags
                                    for enabling or customizing processing behavior.
         """
         self.instance = instance
         self.config = config
 
-    def preprocess(self) -> QUBOInstance:
+    def preprocess(self) -> MISInstance:
         """
         Apply preprocessing steps to the MIS instance before solving.
 
         Returns:
-            QUBOInstance: The processed or annotated instance.
+            MISInstance: The processed or annotated instance.
         """
         return self.instance
 
-    def postprocess(self, solution: QUBOSolution) -> QUBOSolution:
+    def postprocess(self, solution: MISSolution) -> MISSolution:
         """
         Apply postprocessing steps to the MIS solution after solving.
 
         Args:
-            solution (QUBOSolution): The raw solution from a solver.
+            solution (MISSolution): The raw solution from a solver.
 
         Returns:
-            QUBOSolution: The cleaned or transformed solution.
+            MISSolution: The cleaned or transformed solution.
         """
         return solution

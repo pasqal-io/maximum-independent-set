@@ -4,9 +4,9 @@ import asyncio
 from abc import ABC, abstractmethod
 from typing import Any
 
-from mis import QUBOInstance
+from mis import MISInstance
 from mis.config import SolverConfig
-from mis.data import QUBOSolution
+from mis.data import MISSolution
 
 from .executor import Executor
 from .targets import Pulse, Register
@@ -23,25 +23,25 @@ class BaseSolver(ABC):
     Register
     """
 
-    def __init__(self, instance: QUBOInstance, config: SolverConfig):
+    def __init__(self, instance: MISInstance, config: SolverConfig):
         """
         Initialize the solver with the MISinstance and configuration.
 
         Args:
-            instance (QUBOInstance): The MISproblem to solve.
+            instance (MISInstance): The MISproblem to solve.
             config (SolverConfig): Configuration settings for the solver.
         """
-        self.instance: QUBOInstance = instance
+        self.instance: MISInstance = instance
         self.config: SolverConfig = config
         self.executor: Executor = Executor(config=self.config)
 
     @abstractmethod
-    def solve(self) -> QUBOSolution:
+    def solve(self) -> MISSolution:
         """
         Solve the given MISinstance.
 
         Returns:
-            QUBOSolution: The result of the optimization.
+            MISSolution: The result of the optimization.
         """
         pass
 

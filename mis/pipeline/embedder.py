@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from mis import QUBOInstance
+from mis import MISInstance
 from mis.config import SolverConfig
 
 from .targets import Register
@@ -16,13 +16,13 @@ class BaseEmbedder(ABC):
     Returns a Register compatible with Pasqal/Pulser devices.
     """
 
-    def __init__(self, instance: QUBOInstance, config: SolverConfig):
+    def __init__(self, instance: MISInstance, config: SolverConfig):
         """
         Args:
-            instance (QUBOInstance): The MISproblem to embed.
+            instance (MISInstance): The MISproblem to embed.
             config (SolverConfig): The Solver Configuration.
         """
-        self.instance: QUBOInstance = instance
+        self.instance: MISInstance = instance
         self.config: SolverConfig = config
         self.register: Register | None = None
 
@@ -46,14 +46,14 @@ class FirstEmdedder(BaseEmbedder):
         raise NotImplementedError
 
 
-def get_embedder(instance: QUBOInstance, config: SolverConfig) -> BaseEmbedder:
+def get_embedder(instance: MISInstance, config: SolverConfig) -> BaseEmbedder:
     """
     Method that returns the correct embedder based on configuration.
     The correct embedding method can be identified using the config, and an
     object of this embedding can be returned using this function.
 
     Args:
-        instance (QUBOInstance): The MISproblem to embed.
+        instance (MISInstance): The MISproblem to embed.
         config (Device): The quantum device to target.
 
     Returns:

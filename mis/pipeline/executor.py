@@ -26,7 +26,7 @@ class Executor:
 
     async def submit_job(self, pulse: Pulse, register: Register) -> Any:
         """
-        Submits the job to the backend and returns a processed QUBOSolution.
+        Submits the job to the backend and returns a processed MISSolution.
 
         Returns:
             Any: The measured solution from execution.
