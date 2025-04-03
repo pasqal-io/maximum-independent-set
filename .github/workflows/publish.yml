@@ -9,7 +9,7 @@ concurrency:
   group: fast-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
-# jobs:
+jobs:
 #     publish_pypi:
 #         name: Publish package to PyPI
 #         runs-on: ubuntu-latest
