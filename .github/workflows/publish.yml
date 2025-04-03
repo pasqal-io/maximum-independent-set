@@ -1,13 +1,13 @@
-# name: Publish
+name: Publish
 
-# on:
-#     release:
-#         types:
-#             [published]
+on:
+    release:
+        types:
+            [published]
 
-# concurrency:
-#   group: fast-${{ github.head_ref || github.run_id }}
-#   cancel-in-progress: true
+concurrency:
+  group: fast-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 # jobs:
 #     publish_pypi:
@@ -44,32 +44,32 @@
 #                 sleep 1
 #             done
 
-#     public_docs:
-#         name: Publish docs to github pages
-#         runs-on: ubuntu-latest
-#         steps:
-#         - name: Checkout mis
-#           uses: actions/checkout@v4
-#         - name: Install JetBrains Mono font
-#           run: |
-#             sudo apt install -y wget unzip fontconfig
-#             wget https://download.jetbrains.com/fonts/JetBrainsMono-2.304.zip
-#             unzip JetBrainsMono-2.304.zip -d JetBrainsMono
-#             mkdir -p /usr/share/fonts/truetype/jetbrains
-#             cp JetBrainsMono/fonts/ttf/*.ttf /usr/share/fonts/truetype/jetbrains/
-#             fc-cache -f -v
-#         - name: Install graphviz
-#           run: sudo apt-get install -y graphviz
-#         - name: Set up Python 3.10
-#           uses: actions/setup-python@v5
-#           with:
-#             python-version: '3.10'
-#         - name: Install Hatch
-#           run: |
-#             pip install hatch
-#         - name: Deploy docs
-#           run: |
-#             git config user.name "GitHub Actions"
-#             git config user.email "actions@github.com"
-#             git fetch origin gh-pages
-#             hatch -v run docs:mike deploy --push --update-aliases ${{ github.ref_name }} latest
+    public_docs:
+        name: Publish docs to github pages
+        runs-on: ubuntu-latest
+        steps:
+        - name: Checkout mis
+          uses: actions/checkout@v4
+        - name: Install JetBrains Mono font
+          run: |
+            sudo apt install -y wget unzip fontconfig
+            wget https://download.jetbrains.com/fonts/JetBrainsMono-2.304.zip
+            unzip JetBrainsMono-2.304.zip -d JetBrainsMono
+            mkdir -p /usr/share/fonts/truetype/jetbrains
+            cp JetBrainsMono/fonts/ttf/*.ttf /usr/share/fonts/truetype/jetbrains/
+            fc-cache -f -v
+        - name: Install graphviz
+          run: sudo apt-get install -y graphviz
+        - name: Set up Python 3.10
+          uses: actions/setup-python@v5
+          with:
+            python-version: '3.10'
+        - name: Install Hatch
+          run: |
+            pip install hatch
+        - name: Deploy docs
+          run: |
+            git config user.name "GitHub Actions"
+            git config user.email "actions@github.com"
+            git fetch origin gh-pages
+            hatch -v run docs:mike deploy --push --update-aliases ${{ github.ref_name }} latest
