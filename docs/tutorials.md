@@ -1,13 +1,13 @@
 # High-Level tutorials
 
-These tutorials will guide you, step-to-step, from loading graphs to machine learning.
+These tutorials will guide you, step-to-step, from loading graphs to solve MIS.
 
-1. [Using a Quantum Device to extract machine-learning features (high-level)](https://github.com/pasqal-io/maximum-independent-set/blob/main/examples/tutorial%201%20-%20Using%20a%20Quantum%20Device%20to%20Extract%20Machine-Learning%20Features.ipynb);
-2. [Machine Learning with the maximum independent set](https://github.com/pasqal-io/maximum-independent-set/blob/main/examples/tutorial%202%20-%20Machine-Learning%20with%20the%20Quantum%20EvolutionKernel.ipynb)
-
+1. [Using a Quantum Device to solve MIS](https://pasqal-io.github.io/maximum-independent-setl/blob/main/examples/tutorial%201a%20-%20Using%20a%20Quantum%20Device%20to%20solve%20MIS.ipynb)
+2. [Example Use Case](https://pasqal-io.github.io/maximum-independent-setl/blob/main/examples/tutorial%201b%20-%20MIS%20Example%20Use%20Case.ipynb)
 
 # Going lower-level
 
 At some point, you may decide that you need more control, or wish to understand better how the pipeline works. These tutorials will guide you through the same features using lower-level APIs.
 
-1. [Using a Quantum Device to extract machine-learning features (low-level)](https://github.com/pasqal-io/maximum-independent-set/blob/main/examples/tutorial%201a%20-%20Using%20a%20Quantum%20Device%20to%20Extract%20Machine-Learning%20Features%20-%20low-level.ipynb);
+3. [Backend and Solver Configuration](https://pasqal-io.github.io/maximum-independent-setl/blob/main/examples/tutorial%202%20-%20Backend%20and%20Solver%20Configuration.ipynb)
+4. [Sampling & Analysis](https://pasqal-io.github.io/maximum-independent-setl/blob/main/examples/tutorial%203%20-%20Sampling%20&%20Analysis.ipynb)
