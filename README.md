@@ -1,4 +1,4 @@
-# maximum independent set
+# Maximum independent set
 
 
 The **Maximum Independent Set (MIS)** library provides a flexible, powerful, and user-friendly Python interface for solving Maximum Independent Set and Weighted Maximum Independent Set problems. It is designed for **scientists and engineers** working on optimization problems—**no quantum computing knowledge required**.
