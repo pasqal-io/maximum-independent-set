@@ -1,11 +1,10 @@
 import copy
-import math
-from typing import Any, Callable, Dict, List, Set, Tuple, Union
+from typing import Callable, Dict, List, Set, Tuple, Union
 
 import networkx as nx
 from networkx import Graph
 from greedy_lattice_mapping import GreedyMapping, Lattice
-from classic_MIS_solvers import solve_weighted_mis, weighted_greedy_independent_set, weighted_generate_different_mis
+
 
 class greedy_subgraph_solver:
     def __init__(
@@ -222,11 +221,11 @@ class greedy_subgraph_solver:
             )
 
             current_mis_set_on_lattice: List[Set[int]] = self.mis_solving_function(
-                     graph_to_solve,
-                     self.lattice_id_coord_dic,
-                     mis_sample_quantity,
-                     )
-         
+                graph_to_solve,
+                self.lattice_id_coord_dic,
+                mis_sample_quantity,
+            )
+
             inverse_mapping: Dict[int, int] = {v: k for k, v in mapping.items()}
             current_mis_set: List[List[int]] = [
                 [inverse_mapping[value] for value in mis_lattice]
@@ -239,20 +238,18 @@ class greedy_subgraph_solver:
                         current_mis,
                     )
                 )
-                #print(current_mis_set)
-                #print('subgraph:', new_subgraph_with_removed_nodes)
-                #print('weight:', nx.get_node_attributes(new_subgraph_with_removed_nodes, 'weight'))
+                # print(current_mis_set)
+                # print('subgraph:', new_subgraph_with_removed_nodes)
+                # print('weight:', nx.get_node_attributes(new_subgraph_with_removed_nodes, 'weight'))
                 mis_from_recursive_call: List[int] = self.solve_recursively(
                     new_subgraph_with_removed_nodes,
                     exact_solving_threshold,
                     subgraph_quantity,
                     mis_sample_quantity,
                 )
-                if (
-                    self.calculate_weight(current_mis)
-                    + self.calculate_weight(mis_from_recursive_call)
-                    > self.calculate_weight(current_max_mis)
-                ):
+                if self.calculate_weight(current_mis) + self.calculate_weight(
+                    mis_from_recursive_call
+                ) > self.calculate_weight(current_max_mis):
                     current_max_mis = current_mis + mis_from_recursive_call
 
         if not self.is_independent_set(current_graph, current_max_mis):
