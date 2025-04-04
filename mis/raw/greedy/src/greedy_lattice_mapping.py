@@ -118,9 +118,7 @@ class GreedyMapping:
         unexpanded_nodes.add(starting_node)
         return starting_lattice_node
 
-    def check_mapping_validity(
-        self, mapping: Dict[int, int], unmapping: Dict[int, int]
-    ) -> bool:
+    def check_mapping_validity(self, mapping: Dict[int, int], unmapping: Dict[int, int]) -> bool:
         """
         Checks if the current mapping is valid based on adjacency constraints.
 
@@ -170,7 +168,9 @@ class GreedyMapping:
             non_adj_score: float = 0
             if not remove_invalid_placement_nodes:
                 non_neighbors = [
-                    neighbor for neighbor in nx.non_neighbors(self.graph, node) if neighbor in mapping
+                    neighbor
+                    for neighbor in nx.non_neighbors(self.graph, node)
+                    if neighbor in mapping
                 ]
                 if n > 0:
                     non_adj_score = len(non_neighbors) / n
@@ -179,8 +179,7 @@ class GreedyMapping:
                 1 for subgraph in self.previously_generated_subgraphs if node in subgraph
             )
             previous_subgraphs_belonging_score: float = (
-                1
-                - (subgraphs_containing_node_count / len(self.previously_generated_subgraphs))
+                1 - (subgraphs_containing_node_count / len(self.previously_generated_subgraphs))
                 if self.previously_generated_subgraphs
                 else 0
             )
@@ -211,9 +210,7 @@ class GreedyMapping:
         :param rank_nodes: Whether to rank nodes using the scoring heuristic.
         """
         already_placed_nodes: Set[int] = set(mapping.keys())
-        unplaced_nodes: List[int] = [
-            n for n in considered_nodes if n not in already_placed_nodes
-        ]
+        unplaced_nodes: List[int] = [n for n in considered_nodes if n not in already_placed_nodes]
 
         if rank_nodes:
             node_scoring = self.greedy_node_scoring(

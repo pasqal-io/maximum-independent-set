@@ -29,14 +29,13 @@ def solve_weighted_mis(graph: nx.Graph) -> List[int]:
     # Setting variables as binary
     c.variables.add(
         names=[str(node) for node in solved_graph.nodes()],
-        types=[c.variables.type.binary] * len(solved_graph.nodes())
+        types=[c.variables.type.binary] * len(solved_graph.nodes()),
     )
 
     # Independence constraints
     c.linear_constraints.add(
         lin_expr=[
-            cplex.SparsePair(ind=[str(u), str(v)], val=[1.0, 1.0]) 
-            for u, v in solved_graph.edges()
+            cplex.SparsePair(ind=[str(u), str(v)], val=[1.0, 1.0]) for u, v in solved_graph.edges()
         ],
         senses=["L"] * solved_graph.number_of_edges(),
         rhs=[1.0] * solved_graph.number_of_edges(),
@@ -54,9 +53,7 @@ def solve_weighted_mis(graph: nx.Graph) -> List[int]:
 
     # Extract solution
     solution_values = c.solution.get_values()
-    selected_nodes = [
-        node for node, value in enumerate(solution_values) if value >= 0.9
-    ]
+    selected_nodes = [node for node, value in enumerate(solution_values) if value >= 0.9]
 
     # Convert back to original node labels
     conversion_table = list(graph.nodes())
@@ -119,7 +116,9 @@ def weighted_generate_diff_greedy_mis(graph: nx.Graph, priority: dict = None) ->
     return list(mis)
 
 
-def weighted_generate_different_mis(graph: nx.Graph, lattice_id_coord_dic: Dict[int, Tuple[float, float]], k: int) -> List[List[int]]:
+def weighted_generate_different_mis(
+    graph: nx.Graph, lattice_id_coord_dic: Dict[int, Tuple[float, float]], k: int
+) -> List[List[int]]:
     """
     Generate `k` maximal independent sets with maximal differences.
 
