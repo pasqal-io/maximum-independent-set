@@ -14,6 +14,7 @@ from pulser import Sequence
 from pulser.devices import Device
 from pulser.json.abstract_repr.deserializer import deserialize_device
 from pulser_simulation import QutipEmulator
+from torch import device
 
 import mis.pipeline.targets as targets
 
@@ -131,7 +132,7 @@ class BaseRemoteBackend(BaseBackend):
         self,
         project_id: str,
         username: str,
-        device_name: str = "FRESNEL",
+        device_name: str | None = "FRESNEL",
         password: str | None = None,
     ):
         """
@@ -146,7 +147,7 @@ class BaseRemoteBackend(BaseBackend):
                 the default value of "FRESNEL" represents the latest QPU
                 available through the Pasqal Cloud API.
         """
-        self.device_name = device_name
+        self.device_name = device if device_name is not None else "FRESNEL"
         self._sdk = SDK(username=username, project_id=project_id, password=password)
         self._max_runs = 500
         self._sequence = None

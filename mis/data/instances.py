@@ -1,11 +1,15 @@
 from dataclasses import dataclass
+import networkx
 
 
-@dataclass
 class MISInstance:
-    pass
+    def __init__(self, graph: networkx.Graph):
+        # FIXME: Make it work with pytorch geometric
+        self.graph = graph
 
 
 @dataclass
 class MISSolution:
-    pass
+    original: networkx.Graph
+    nodes: list[int]
+    energy: float
