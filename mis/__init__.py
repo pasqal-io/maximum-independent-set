@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from .data import MISInstance, MISSolution
+from .pipeline.execution import Execution
 from .solver.solver import MISSolver
-from .types import BackendType
 
 """
 The maximum independent set is a Python library designed for the machine
@@ -24,8 +23,6 @@ intuitive QPU interface.
 """
 
 __all__ = [
-    "BackendType",
-    "MISInstance",
-    "MISSolution",
+    "Execution",
     "MISSolver",
 ]

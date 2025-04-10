@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from mis import MISInstance
 from mis.config import SolverConfig
-from mis.data import MISSolution
 
-from .executor import Executor
+from .executor import (Executor, Execution)
+from mis.shared.types import (
+    MISInstance,
+    MISSolution
+)
 
 
 class BaseSolver(ABC):
@@ -33,11 +35,12 @@ class BaseSolver(ABC):
         self.executor: Executor = Executor(config=self.config)
 
     @abstractmethod
-    def solve(self) -> list[MISSolution]:
+    def solve(self) -> Execution[list[MISSolution]]:
         """
         Solve the given MISinstance.
 
         Returns:
-            A list of solutions, ranked from best (lowest energy) to worst (highest energy).
+            A list of solutions, ranked from best (lowest energy) to worst
+            (highest energy).
         """
         pass

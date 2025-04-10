@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from mis import MISInstance, MISSolution
+from mis.shared.types import MISInstance, MISSolution
 from mis.config import SolverConfig
 
 

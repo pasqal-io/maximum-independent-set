@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from mis import MISInstance
+from mis.shared.types import (
+    MISInstance,
+)
 from mis.config import SolverConfig
 
 from .targets import Register
@@ -41,7 +43,8 @@ class FirstEmdedder(BaseEmbedder):
     """
     A simple embedder
     """
-
+    # FIXME: How are users supposed to pick an embedeer?
+    # FIXME: How is the code supposed to pick an embedder?
     def embed(self) -> Register:
         raise NotImplementedError
 
