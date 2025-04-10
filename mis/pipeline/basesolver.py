@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from mis.config import SolverConfig
+from mis.pipeline.config import SolverConfig
 
 from .executor import (Executor, Execution)
 from mis.shared.types import (

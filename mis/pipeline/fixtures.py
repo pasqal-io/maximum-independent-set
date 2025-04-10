@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from mis.shared.types import MISInstance, MISSolution
-from mis.config import SolverConfig
+from mis.pipeline.config import SolverConfig
 
 
 class Fixtures:

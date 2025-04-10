@@ -1,9 +1,15 @@
 from __future__ import annotations
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from pulser.devices import Device
 
-from mis.pipeline.backends import BaseBackend
+if TYPE_CHECKING:
+    from mis.pipeline.backends import BaseBackend
+    from mis.pipeline.embedder import (
+        BaseEmbedder
+    )
+    from mis.pipeline.pulse import BasePulseShaper
 from mis.shared.types import MethodType
 
 # Modules to be automatically added to the MISSolver namespace
@@ -39,5 +45,10 @@ class SolverConfig:
 
     device: Device | None = None
     """
-    Pulser device to execute the code in
+    Quantum device to execute the code in. If unspecified, use a
+    reasonable default device.
     """
+
+    embedder: BaseEmbedder | None = None
+    pulse_shaper: BasePulseShaper | None = None
+

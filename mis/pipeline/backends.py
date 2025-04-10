@@ -70,12 +70,19 @@ class BaseBackend(abc.ABC):
     They might be removed in a future version, once Pulser has gained a similar API.
     """
 
-    def __init__(self, device: Device | None):
+    def __init__(self, device: Device):
         self._device = device
 
-    def _make_sequence(self, register: targets.Register, pulse: targets.Pulse) -> Sequence:
+    def _make_sequence(self,
+                       register: targets.Register,
+                       pulse: targets.Pulse) -> Sequence:
         assert self._device is not None
-        return make_sequence(register=register, pulse=pulse, device=self._device)
+        return make_sequence(register=register,
+                             pulse=pulse,
+                             device=self._device)
+
+    def device(self) -> Device:
+        return self._device
 
     @abc.abstractmethod
     def run(self,
@@ -99,6 +106,8 @@ class QutipBackend(BaseBackend):
     """
 
     def __init__(self, device: Device | None = None):
+        if device is None:
+            device = pulser.devices.AnalogDevice
         super().__init__(device)
 
     def run(self,
@@ -189,6 +198,7 @@ class BaseRemoteBackend(BaseBackend):
         self._max_runs = 500
         self._sequence = None
         self._device = None
+        super().__init__(device=self._fetch_device())  # FIXME: Currently sync.
 
     def _fetch_device(self) -> Device:
         """

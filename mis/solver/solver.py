@@ -10,12 +10,12 @@ from mis.shared.types import (
     MISSolution
 )
 from mis.pipeline.basesolver import BaseSolver
-from mis.pipeline.embedder import get_embedder
 from mis.pipeline.execution import Execution
 from mis.pipeline.fixtures import Fixtures
-from mis.pipeline.pulse import get_pulse_shaper
+from mis.pipeline.embedder import BaseEmbedder, DefaultEmbedder
+from mis.pipeline.pulse import BasePulseShaper, DefaultPulseShaper
 from mis.pipeline.targets import Pulse, Register
-from mis.config import SolverConfig
+from mis.pipeline.config import SolverConfig
 
 
 class MISSolver(BaseSolver):
@@ -119,15 +119,19 @@ class MISSolverQuantum(BaseSolver):
             config (SolverConfig): Solver settings including backend and
                 device.
         """
+        if config.embedder is None:  # FIXME: That's a side-effect on config
+            config.embedder = DefaultEmbedder()
+        if config.pulse_shaper is None:
+            config.pulse_shaper = DefaultPulseShaper()
+
         super().__init__(instance, config)
 
         self.fixtures = Fixtures(instance, self.config)
-        self.embedder = get_embedder(instance, self.config)
-        self.pulse_shaper = get_pulse_shaper(instance, self.config)
-
         self._register: Register | None = None
         self._pulse: Pulse | None = None
         self._solution: MISSolution | None = None
+
+        # FIXME: Normalize embedder.
 
     def embedding(self) -> Register:
         """
@@ -136,7 +140,15 @@ class MISSolverQuantum(BaseSolver):
         Returns:
             Register: Atom layout suitable for quantum hardware.
         """
-        self._register = self.embedder.embed()
+        # FIXME: mypy seems to have an issue here, need to investigate.
+        config: SolverConfig = self.config
+        embedder = config.embedder
+        assert embedder is not None
+        assert isinstance(embedder, BaseEmbedder)
+        self._register = embedder.embed(
+            instance=self.instance,
+            config=self.config,
+        )
         return self._register
 
     def pulse(self, embedding: Register) -> Pulse:
@@ -149,7 +161,12 @@ class MISSolverQuantum(BaseSolver):
         Returns:
             Pulse: Pulse schedule for quantum execution.
         """
-        self._pulse = self.pulse_shaper.generate(embedding)
+        # FIXME: mypy seems to have an issue here, need to investigate.
+        config: SolverConfig = self.config
+        shaper = config.pulse_shaper
+        assert shaper is not None
+        assert isinstance(shaper, BasePulseShaper)
+        self._pulse = shaper.generate(embedding)
         return self._pulse
 
     def _bitstring_to_nodes(self, bitstring: str) -> list[int]:

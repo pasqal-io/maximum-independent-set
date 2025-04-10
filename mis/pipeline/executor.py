@@ -3,7 +3,7 @@ from __future__ import annotations
 from pulser import devices
 from typing import Counter
 
-from mis.config import SolverConfig
+from mis.pipeline.config import SolverConfig
 
 from .execution import Execution
 from .backends import (

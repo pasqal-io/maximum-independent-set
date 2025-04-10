@@ -2,10 +2,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
+import networkx as nx
+import pulser
+
 from mis.shared.types import (
     MISInstance,
 )
-from mis.config import SolverConfig
+from mis.pipeline.config import SolverConfig
 
 from .targets import Register
 
@@ -18,18 +21,8 @@ class BaseEmbedder(ABC):
     Returns a Register compatible with Pasqal/Pulser devices.
     """
 
-    def __init__(self, instance: MISInstance, config: SolverConfig):
-        """
-        Args:
-            instance (MISInstance): The MISproblem to embed.
-            config (SolverConfig): The Solver Configuration.
-        """
-        self.instance: MISInstance = instance
-        self.config: SolverConfig = config
-        self.register: Register | None = None
-
     @abstractmethod
-    def embed(self) -> Register:
+    def embed(self, instance: MISInstance, config: SolverConfig) -> Register:
         """
         Creates a layout of atoms as the register.
 
@@ -39,28 +32,19 @@ class BaseEmbedder(ABC):
         pass
 
 
-class FirstEmdedder(BaseEmbedder):
+class DefaultEmbedder(BaseEmbedder):
     """
     A simple embedder
     """
-    # FIXME: How are users supposed to pick an embedeer?
-    # FIXME: How is the code supposed to pick an embedder?
-    def embed(self) -> Register:
-        raise NotImplementedError
 
+    def embed(self, instance: MISInstance, config: SolverConfig) -> Register:
+        # Layout based on edges.
+        positions = nx.spring_layout(instance.graph)
+        # FIXME: Rescale if necessary.
+        device = config.device
+        assert device is not None
 
-def get_embedder(instance: MISInstance, config: SolverConfig) -> BaseEmbedder:
-    """
-    Method that returns the correct embedder based on configuration.
-    The correct embedding method can be identified using the config, and an
-    object of this embedding can be returned using this function.
-
-    Args:
-        instance (MISInstance): The MISproblem to embed.
-        config (Device): The quantum device to target.
-
-    Returns:
-        (BaseEmbedder): The representative embedder object.
-    """
-
-    return FirstEmdedder(instance, config)
+        reg = pulser.register.Register(qubits={
+            f"q{node}": pos for (node, pos) in positions.items()
+            })
+        return Register(device=device, register=reg)
