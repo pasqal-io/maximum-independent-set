@@ -9,6 +9,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import pulser
+import pulser.pulse
+import pulser.register.weight_maps
 
 
 @dataclass
@@ -21,6 +23,9 @@ class Pulse:
     """
 
     pulse: pulser.Pulse
+    detuning_maps: (
+        list[tuple[pulser.register.weight_maps.DetuningMap, pulser.waveforms.Waveform]] | None
+    ) = None
 
     def draw(self) -> None:
         """

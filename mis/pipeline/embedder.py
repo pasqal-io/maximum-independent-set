@@ -3,6 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 import networkx as nx
+import numpy as np
 import pulser
 
 from mis.shared.types import (
@@ -40,11 +41,20 @@ class DefaultEmbedder(BaseEmbedder):
     def embed(self, instance: MISInstance, config: SolverConfig) -> Register:
         # Layout based on edges.
         positions = nx.spring_layout(instance.graph)
-        # FIXME: Rescale if necessary.
+
+        # Rescale to ensure that minimal distances are respected.
+        distances = [
+            np.linalg.norm(positions[v1] - positions[v2]) for v1, v2 in instance.graph.edges()
+        ]
+        min_distance = np.min(distances)
         device = config.device
         assert device is not None
+        if min_distance < device.min_atom_distance:
+            multiplier = device.min_atom_distance / min_distance
+            positions = {i: v * multiplier for (i, v) in positions.items()}
 
-        reg = pulser.register.Register(qubits={
-            f"q{node}": pos for (node, pos) in positions.items()
-            })
+        # Finall, prepare register.
+        reg = pulser.register.Register(
+            qubits={f"q{node}": pos for (node, pos) in positions.items()}
+        )
         return Register(device=device, register=reg)

@@ -4,11 +4,8 @@ from abc import ABC, abstractmethod
 
 from mis.pipeline.config import SolverConfig
 
-from .executor import (Executor, Execution)
-from mis.shared.types import (
-    MISInstance,
-    MISSolution
-)
+from .executor import Executor, Execution
+from mis.shared.types import MISInstance, MISSolution
 
 
 class BaseSolver(ABC):

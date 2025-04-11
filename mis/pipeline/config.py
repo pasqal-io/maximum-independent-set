@@ -6,9 +6,7 @@ from pulser.devices import Device
 
 if TYPE_CHECKING:
     from mis.pipeline.backends import BaseBackend
-    from mis.pipeline.embedder import (
-        BaseEmbedder
-    )
+    from mis.pipeline.embedder import BaseEmbedder
     from mis.pipeline.pulse import BasePulseShaper
 from mis.shared.types import MethodType
 
@@ -51,4 +49,3 @@ class SolverConfig:
 
     embedder: BaseEmbedder | None = None
     pulse_shaper: BasePulseShaper | None = None
-

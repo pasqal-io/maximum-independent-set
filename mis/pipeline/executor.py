@@ -6,9 +6,7 @@ from typing import Counter
 from mis.pipeline.config import SolverConfig
 
 from .execution import Execution
-from .backends import (
-    QutipBackend
-)
+from .backends import QutipBackend
 from .targets import Pulse, Register
 
 
@@ -36,9 +34,7 @@ class Executor:
             backend = QutipBackend(device=device)
         self.backend = backend
 
-    def submit_job(
-            self, pulse: Pulse, register: Register
-            ) -> Execution[Counter[str]]:
+    def submit_job(self, pulse: Pulse, register: Register) -> Execution[Counter[str]]:
         """
         Submits the job to the backend and returns a processed MISSolution.
 

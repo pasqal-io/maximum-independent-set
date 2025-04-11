@@ -21,6 +21,7 @@ class Execution(abc.ABC, Generic[Result]):
     A task being sent to a quantum device and which
     may need some time before it is completed.
     """
+
     @abc.abstractmethod
     def result(self) -> Result:
         pass
@@ -33,9 +34,7 @@ class Execution(abc.ABC, Generic[Result]):
     def status(self) -> Status:
         pass
 
-    def map(self,
-            transform: Callable[[Result], Transformed]
-            ) -> Execution[Transformed]:
+    def map(self, transform: Callable[[Result], Transformed]) -> Execution[Transformed]:
         """
         Apply a transformation to the result once it is
         complete.
@@ -61,9 +60,7 @@ class WaitingExecution(Execution[Result]):
 
 
 class MappedExecution(Execution[Transformed]):
-    def __init__(self,
-                 origin: Execution[Result],
-                 transform: Callable[[Result], Transformed]):
+    def __init__(self, origin: Execution[Result], transform: Callable[[Result], Transformed]):
         self._cache_filled = False
         self._origin = origin
         self._transform = transform
@@ -84,6 +81,7 @@ class SuccessfulExecution(Execution[Result]):
     """
     An execution that is already completed.
     """
+
     def __init__(self, result: Result):
         self._result = result
 
@@ -97,8 +95,6 @@ class SuccessfulExecution(Execution[Result]):
     def result(self) -> Result:
         return self._result
 
-    def map(self,
-            transform: Callable[[Result], Transformed]
-            ) -> Execution[Transformed]:
+    def map(self, transform: Callable[[Result], Transformed]) -> Execution[Transformed]:
         mapped = transform(self.result())
         return SuccessfulExecution(result=mapped)

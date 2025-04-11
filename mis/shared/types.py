@@ -31,4 +31,3 @@ class MISSolution:
     original: networkx.Graph
     nodes: list[int]
     energy: float
-

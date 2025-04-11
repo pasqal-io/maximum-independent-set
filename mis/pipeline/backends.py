@@ -16,7 +16,7 @@ from pulser.json.abstract_repr.deserializer import deserialize_device
 from pulser_simulation import QutipEmulator
 
 import mis.pipeline.targets as targets
-from .execution import (Execution, Status, WaitingExecution)
+from .execution import Execution, Status, WaitingExecution
 
 
 class CompilationError(Exception):
@@ -25,6 +25,7 @@ class CompilationError(Exception):
     that does not support it, e.g. because it requires too many qubits or
     because the physical constraints on the geometry are not satisfied.
     """
+
     pass
 
 
@@ -55,6 +56,12 @@ def make_sequence(
         sequence = pulser.Sequence(register=register.register, device=device)
         sequence.declare_channel("ising", "rydberg_global")
         sequence.add(pulse.pulse, "ising")
+        if pulse.detuning_maps is not None:
+            for i, (map, wave) in enumerate(pulse.detuning_maps):
+                dmm_id = f"dmm_{i}"
+                sequence.config_detuning_map(map, dmm_id)
+                sequence.add_dmm_detuning(wave, dmm_id)
+
         return sequence
     except ValueError as e:
         raise CompilationError(f"This pulse/register cannot be executed on the device: {e}")
@@ -73,22 +80,15 @@ class BaseBackend(abc.ABC):
     def __init__(self, device: Device):
         self._device = device
 
-    def _make_sequence(self,
-                       register: targets.Register,
-                       pulse: targets.Pulse) -> Sequence:
+    def _make_sequence(self, register: targets.Register, pulse: targets.Pulse) -> Sequence:
         assert self._device is not None
-        return make_sequence(register=register,
-                             pulse=pulse,
-                             device=self._device)
+        return make_sequence(register=register, pulse=pulse, device=self._device)
 
     def device(self) -> Device:
         return self._device
 
     @abc.abstractmethod
-    def run(self,
-            register: targets.Register,
-            pulse: targets.Pulse
-            ) -> Execution[Counter[str]]:
+    def run(self, register: targets.Register, pulse: targets.Pulse) -> Execution[Counter[str]]:
         raise NotImplementedError
 
 
@@ -110,9 +110,7 @@ class QutipBackend(BaseBackend):
             device = pulser.devices.AnalogDevice
         super().__init__(device)
 
-    def run(self,
-            register: targets.Register, pulse: targets.Pulse
-            ) -> Execution[Counter[str]]:
+    def run(self, register: targets.Register, pulse: targets.Pulse) -> Execution[Counter[str]]:
         """
         Execute a register and a pulse.
 
@@ -152,8 +150,9 @@ class BaseRemoteExecution(WaitingExecution[Any]):
             sleep(self._sleep_sec)
         job = next(iter(self._batch.jobs.values()))
         if self.status() == Status.FAILURE:
-            raise ExecutionError("Encountered errors while executing this "
-                                 "sequence remotely: {}", job.errors)
+            raise ExecutionError(
+                "Encountered errors while executing this " "sequence remotely: {}", job.errors
+            )
         assert job.full_result is not None
         return job.full_result["counter"]
 
@@ -191,10 +190,7 @@ class BaseRemoteBackend(BaseBackend):
         if device_name is None:
             device_name = "FRESNEL"
         self.device_name = device_name
-        self._sdk = SDK(
-            username=username,
-            project_id=project_id,
-            password=password)
+        self._sdk = SDK(username=username, project_id=project_id, password=password)
         self._max_runs = 500
         self._sequence = None
         self._device = None
@@ -210,9 +206,7 @@ class BaseRemoteBackend(BaseBackend):
         # Fetch the latest list of QPUs
         # Implementation note: Currently sync, hopefully async in the future.
         specs = self._sdk.get_device_specs_dict()
-        self._device = cast(Device,
-                            deserialize_device(specs[self.device_name])
-                            )
+        self._device = cast(Device, deserialize_device(specs[self.device_name]))
 
         # As of this writing, the API doesn't support runs longer than 500 jobs.
         # If we want to add more runs, we'll need to split them across several jobs.
@@ -256,10 +250,7 @@ class BaseRemoteBackend(BaseBackend):
         """
         device = self._fetch_device()
         try:
-            sequence = make_sequence(
-                device=device,
-                pulse=pulse,
-                register=register)
+            sequence = make_sequence(device=device, pulse=pulse, register=register)
 
             self._sequence = sequence
         except ValueError as e:
@@ -274,11 +265,7 @@ class BaseRemoteBackend(BaseBackend):
             configuration=config,
         )
 
-        return BaseRemoteExecution(
-            sleep_sec=sleep_sec,
-            batch=batch).map(
-                self._extract
-            )
+        return BaseRemoteExecution(sleep_sec=sleep_sec, batch=batch).map(self._extract)
 
 
 class RemoteQPUBackend(BaseRemoteBackend):
@@ -291,9 +278,7 @@ class RemoteQPUBackend(BaseRemoteBackend):
         with a computation that has been previously started.
     """
 
-    def run(self,
-            register: targets.Register,
-            pulse: targets.Pulse) -> Execution[Counter[str]]:
+    def run(self, register: targets.Register, pulse: targets.Pulse) -> Execution[Counter[str]]:
         return self._run(register, pulse, emulator=None, config=None)
 
 
@@ -341,11 +326,5 @@ if os.name == "posix":
             cutoff_duration = int(ceil(sequence.get_duration() / dt) * dt)
             observable = emu_mps.BitStrings(evaluation_times={cutoff_duration})
             config = emu_mps.MPSConfig(observables=[observable], dt=dt)
-            counter: Counter[str] = backend.run(
-                sequence,
-                config)[
-                    observable.name
-                    ][
-                        cutoff_duration
-                        ]
+            counter: Counter[str] = backend.run(sequence, config)[observable.name][cutoff_duration]
             return Execution.success(counter)

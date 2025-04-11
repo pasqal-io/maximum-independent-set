@@ -5,10 +5,7 @@ from typing import Counter, cast
 import cplex
 import networkx as nx
 
-from mis.shared.types import (
-    MISInstance,
-    MISSolution
-)
+from mis.shared.types import MISInstance, MISSolution
 from mis.pipeline.basesolver import BaseSolver
 from mis.pipeline.execution import Execution
 from mis.pipeline.fixtures import Fixtures
@@ -95,13 +92,15 @@ class MISSolverClassical(BaseSolver):
 
         # Convert back to original node labels
         conversion_table = list(graph.nodes())
-        return Execution.success([
-            MISSolution(
-                original=graph,
-                nodes=[conversion_table[node] for node in selected_nodes],
-                energy=0
-            )
-        ])
+        return Execution.success(
+            [
+                MISSolution(
+                    original=graph,
+                    nodes=[conversion_table[node] for node in selected_nodes],
+                    energy=0,
+                )
+            ]
+        )
 
 
 class MISSolverQuantum(BaseSolver):
@@ -119,10 +118,13 @@ class MISSolverQuantum(BaseSolver):
             config (SolverConfig): Solver settings including backend and
                 device.
         """
+        assert config.backend is not None
         if config.embedder is None:  # FIXME: That's a side-effect on config
             config.embedder = DefaultEmbedder()
         if config.pulse_shaper is None:
             config.pulse_shaper = DefaultPulseShaper()
+        if config.device is None:
+            config.device = config.backend.device()
 
         super().__init__(instance, config)
 
@@ -166,26 +168,30 @@ class MISSolverQuantum(BaseSolver):
         shaper = config.pulse_shaper
         assert shaper is not None
         assert isinstance(shaper, BasePulseShaper)
-        self._pulse = shaper.generate(embedding)
+        self._pulse = shaper.generate(
+            config=self.config, register=embedding, graph=self.instance.graph
+        )
         return self._pulse
 
     def _bitstring_to_nodes(self, bitstring: str) -> list[int]:
         result: list[int] = []
         for i, c in enumerate(bitstring):
-            if c == '1':
+            if c == "1":
                 result.append(i)
         return result
 
     def _process(self, data: Counter[str]) -> list[MISSolution]:
-        ranked = sorted(
-            data.items(),
-            key=lambda item: item[1],
-            reverse=True)
-        solutions = [self.fixtures.postprocess(MISSolution(
-            original=self.instance.graph,
-            energy=1-atan(count),  # FIXME Probably not the best definition of energy
-            nodes=self._bitstring_to_nodes(bitstr),
-        )) for [bitstr, count] in ranked]
+        ranked = sorted(data.items(), key=lambda item: item[1], reverse=True)
+        solutions = [
+            self.fixtures.postprocess(
+                MISSolution(
+                    original=self.instance.graph,
+                    energy=1 - atan(count),  # FIXME Probably not the best definition of energy
+                    nodes=self._bitstring_to_nodes(bitstr),
+                )
+            )
+            for [bitstr, count] in ranked
+        ]
         return solutions
 
     def solve(self) -> Execution[list[MISSolution]]:
@@ -203,9 +209,7 @@ class MISSolverQuantum(BaseSolver):
         execution_result = self.execute(pulse, embedding)
         return execution_result.map(self._process)
 
-    def execute(self,
-                pulse: Pulse,
-                embedding: Register) -> Execution[Counter[str]]:
+    def execute(self, pulse: Pulse, embedding: Register) -> Execution[Counter[str]]:
         """
         Execute the pulse schedule on the backend and retrieve the solution.
 
@@ -217,4 +221,3 @@ class MISSolverQuantum(BaseSolver):
             Result: The solution from execution.
         """
         return self.executor.submit_job(pulse, embedding)
-
