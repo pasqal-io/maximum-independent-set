@@ -24,15 +24,15 @@ class Execution(abc.ABC, Generic[Result]):
 
     @abc.abstractmethod
     def result(self) -> Result:
-        pass
+        ...
 
     @abc.abstractmethod
     async def wait(self) -> Result:
-        pass
+        ...
 
     @abc.abstractmethod
     def status(self) -> Status:
-        pass
+        ...
 
     def map(self, transform: Callable[[Result], Transformed]) -> Execution[Transformed]:
         """

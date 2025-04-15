@@ -27,7 +27,7 @@ class BasePulseShaper(ABC):
     """
 
     duration_us: int | None = None
-    """The duration of the pulse.
+    """The duration of the pulse, in microseconds.
 
     If unspecified, use the maximal duration for the device."""
 
