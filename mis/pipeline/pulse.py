@@ -32,14 +32,13 @@ class BasePulseShaper(ABC):
     If unspecified, use the maximal duration for the device."""
 
     @abstractmethod
-    def generate(self, config: SolverConfig, register: Register, graph: nx.Graph) -> Pulse:
+    def generate(self, config: SolverConfig, register: Register) -> Pulse:
         """
         Generate a pulse based on the problem and the provided register.
 
         Args:
             config: The configuration for this pulse.
             register: The physical register layout.
-            graph: The graph for the physical register layout.
 
         Returns:
             Pulse: A generated pulse object wrapping a Pulser pulse.
@@ -61,7 +60,8 @@ class DefaultPulseShaper(BasePulseShaper):
     def _get_interactions(
         self, pos: np.ndarray, graph: nx.Graph, device: Device
     ) -> tuple[list[float], list[float]]:
-        """Calculate the interaction strengths for connected and disconnected nodes.
+        """Calculate the interaction strengths for connected and disconnected
+            nodes.
 
         Args:
             pos (np.ndarray): The position of the nodes.
@@ -69,43 +69,58 @@ class DefaultPulseShaper(BasePulseShaper):
             device (BaseDevice): Device used to calculate interaction coeff.
 
         Returns:
-            tuple[list[float], list[float]]: Connected interactions, Disconnected interactions
+            tuple[list[float], list[float]]: Connected interactions,
+                Disconnected interactions
         """
 
         def calculate_edge_interaction(edge: tuple[int, int]) -> float:
             pos_a, pos_b = pos[edge[0]], pos[edge[1]]
-            return float(device.interaction_coeff / (euclidean(pos_a, pos_b) ** 6))
+            return float(device.interaction_coeff /
+                         (euclidean(pos_a, pos_b) ** 6))
 
-        connected = [calculate_edge_interaction(edge) for edge in graph.edges()]
-        disconnected = [calculate_edge_interaction(edge) for edge in nx.complement(graph).edges()]
+        connected = [calculate_edge_interaction(edge) for edge in
+                     graph.edges()]
+        disconnected = [
+            calculate_edge_interaction(edge) for edge in
+            nx.complement(graph).edges()]
 
         return connected, disconnected
 
-    def _calc_bounds(self, reg: Register, graph: nx.Graph, device: Device) -> _Bounds:
-        _, disconnected = self._get_interactions(reg.register.sorted_coords, graph, device)
-        u_min, u_max = self._interaction_bounds(reg.register.sorted_coords, graph, device)
+    def _calc_bounds(self, reg: Register, device: Device) -> _Bounds:
+        _, disconnected = self._get_interactions(
+            pos=reg.register.sorted_coords,
+            graph=reg.graph,
+            device=device)
+        u_min, u_max = self._interaction_bounds(
+            pos=reg.register.sorted_coords,
+            graph=reg.graph,
+            device=device)
         max_amp_device = device.channels["rydberg_global"].max_amp or np.inf
         maximum_amplitude = min(max_amp_device, u_max + 0.8 * (u_min - u_max))
 
-        degree = graph.degree
+        degree = reg.graph.degree
         assert isinstance(degree, DegreeView)
         d_min = min(dict(degree).values())
         d_max = max(dict(degree).values())
         det_max_theory = (d_min / (d_min + 1)) * u_min
         det_min_theory = sum(sorted(disconnected)[-d_max:])
         det_final_theory = max([det_max_theory, det_min_theory])
-        det_max_device = device.channels["rydberg_global"].max_abs_detuning or np.inf
+        det_max_device = (
+            device.channels["rydberg_global"].max_abs_detuning or np.inf
+        )
         final_detuning = min(det_final_theory, det_max_device)
 
-        return _Bounds(maximum_amplitude=maximum_amplitude, final_detuning=final_detuning)
+        return _Bounds(
+            maximum_amplitude=maximum_amplitude,
+            final_detuning=final_detuning)
 
     def _interaction_bounds(
         self, pos: np.ndarray, graph: nx.Graph, device: Device
     ) -> tuple[float, float]:
-        """Calculates U_min and U_max given the positions. It uses the edges of the
-        graph. U_min corresponds to minimal energy of two nodes connected in the
-        graph. U_max corresponds to maximal energy of two nodes NOT connected in
-        the graph."""
+        """Calculates U_min and U_max given the positions. It uses the edges
+        of the graph. U_min corresponds to minimal energy of two nodes
+        connected in the graph. U_max corresponds to maximal energy of two
+        nodes NOT connected in the graph."""
         connected, disconnected = self._get_interactions(pos, graph, device)
         if len(connected) == 0:
             u_min = 0
@@ -117,7 +132,7 @@ class DefaultPulseShaper(BasePulseShaper):
             u_max = np.max(disconnected)
         return u_min, u_max
 
-    def generate(self, config: SolverConfig, register: Register, graph: nx.Graph) -> Pulse:
+    def generate(self, config: SolverConfig, register: Register) -> Pulse:
         """
         Method to return a simple constant waveform pulse
         """
@@ -128,7 +143,7 @@ class DefaultPulseShaper(BasePulseShaper):
         if duration_us is None:
             duration_us = device.max_sequence_duration
 
-        bounds = self._calc_bounds(reg=register, graph=graph, device=device)
+        bounds = self._calc_bounds(reg=register, device=device)
 
         amplitude = InterpolatedWaveform(
             duration_us, [1e-9, bounds.maximum_amplitude, 1e-9]

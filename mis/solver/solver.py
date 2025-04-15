@@ -77,7 +77,8 @@ class MISSolverClassical(BaseSolver):
         )
 
         # Objective function definition
-        c.objective.set_linear([(str(node), 1) for node in solved_graph.nodes()])
+        c.objective.set_linear([
+            (str(node), 1) for node in solved_graph.nodes()])
         c.objective.set_sense(c.objective.sense.maximize)
 
         # Solve MIP without logs
@@ -88,7 +89,8 @@ class MISSolverClassical(BaseSolver):
 
         # Extract solution
         solution_values = c.solution.get_values()
-        selected_nodes = [node for node, value in enumerate(solution_values) if value >= 0.9]
+        selected_nodes = [
+            node for node, value in enumerate(solution_values) if value >= 0.9]
 
         # Convert back to original node labels
         conversion_table = list(graph.nodes())
@@ -169,7 +171,8 @@ class MISSolverQuantum(BaseSolver):
         assert shaper is not None
         assert isinstance(shaper, BasePulseShaper)
         self._pulse = shaper.generate(
-            config=self.config, register=embedding, graph=self.instance.graph
+            config=self.config,
+            register=embedding
         )
         return self._pulse
 
@@ -209,7 +212,8 @@ class MISSolverQuantum(BaseSolver):
         execution_result = self.execute(pulse, embedding)
         return execution_result.map(self._process)
 
-    def execute(self, pulse: Pulse, embedding: Register) -> Execution[Counter[str]]:
+    def execute(self, pulse: Pulse,
+                embedding: Register) -> Execution[Counter[str]]:
         """
         Execute the pulse schedule on the backend and retrieve the solution.
 

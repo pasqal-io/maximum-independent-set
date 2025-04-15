@@ -34,7 +34,9 @@ class Execution(abc.ABC, Generic[Result]):
     def status(self) -> Status:
         ...
 
-    def map(self, transform: Callable[[Result], Transformed]) -> Execution[Transformed]:
+    def map(self,
+            transform: Callable[[Result], Transformed]
+            ) -> Execution[Transformed]:
         """
         Apply a transformation to the result once it is
         complete.
@@ -50,6 +52,13 @@ class Execution(abc.ABC, Generic[Result]):
 
 
 class WaitingExecution(Execution[Result]):
+    """
+    A task being sent to a quantum device and which
+    definitely needs some time before it is completed.
+
+    Unless you're implementing new executors, you're probably
+    not interested in this class.
+    """
     def __init__(self, sleep_sec: int):
         self._sleep_sec = sleep_sec
 
@@ -60,7 +69,15 @@ class WaitingExecution(Execution[Result]):
 
 
 class MappedExecution(Execution[Transformed]):
-    def __init__(self, origin: Execution[Result], transform: Callable[[Result], Transformed]):
+    """
+    The result of calling `map` on an `Execution`.
+
+    Unless you're implementing new executors, you're probably
+    not interested in this class.
+    """
+    def __init__(self,
+                 origin: Execution[Result],
+                 transform: Callable[[Result], Transformed]):
         self._cache_filled = False
         self._origin = origin
         self._transform = transform
@@ -80,6 +97,9 @@ class MappedExecution(Execution[Transformed]):
 class SuccessfulExecution(Execution[Result]):
     """
     An execution that is already completed.
+
+    Unless you're implementing new executors, you're probably
+    not interested in this class.
     """
 
     def __init__(self, result: Result):
@@ -95,6 +115,10 @@ class SuccessfulExecution(Execution[Result]):
     def result(self) -> Result:
         return self._result
 
-    def map(self, transform: Callable[[Result], Transformed]) -> Execution[Transformed]:
+    def map(self,
+            transform: Callable[[Result], Transformed]
+            ) -> Execution[Transformed]:
+        # Since we know that we're not waiting for anything,
+        # we can perform the `map` call immediately.
         mapped = transform(self.result())
         return SuccessfulExecution(result=mapped)

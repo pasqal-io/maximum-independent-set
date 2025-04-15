@@ -132,6 +132,12 @@ class QutipBackend(BaseBackend):
 
 
 class BaseRemoteExecution(WaitingExecution[Any]):
+    """
+    Execution on a remote device.
+
+    Unless you're implementing a new backend, you
+    probably want to use one of the subclasses.
+    """
     def __init__(self, sleep_sec: int, batch: Batch):
         self._sleep_sec = sleep_sec
         self._batch = batch
@@ -151,7 +157,8 @@ class BaseRemoteExecution(WaitingExecution[Any]):
         job = next(iter(self._batch.jobs.values()))
         if self.status() == Status.FAILURE:
             raise ExecutionError(
-                "Encountered errors while executing this " "sequence remotely: {}", job.errors
+                "Encountered errors while executing this "
+                "sequence remotely: {}", job.errors
             )
         assert job.full_result is not None
         return job.full_result["counter"]
@@ -172,7 +179,7 @@ class BaseRemoteBackend(BaseBackend):
         self,
         project_id: str,
         username: str,
-        device_name: str | None,
+        device_name: str | None = None,
         password: str | None = None,
     ):
         """
@@ -190,7 +197,9 @@ class BaseRemoteBackend(BaseBackend):
         if device_name is None:
             device_name = "FRESNEL"
         self.device_name = device_name
-        self._sdk = SDK(username=username, project_id=project_id, password=password)
+        self._sdk = SDK(username=username,
+                        project_id=project_id,
+                        password=password)
         self._max_runs = 500
         self._sequence = None
         self._device = None
@@ -198,7 +207,8 @@ class BaseRemoteBackend(BaseBackend):
 
     def _fetch_device(self) -> Device:
         """
-        Make sure that we have fetched the latest specs for the device from the server.
+        Make sure that we have fetched the latest specs for the device from
+        the server.
         """
         if self._device is not None:
             return self._device
@@ -206,16 +216,18 @@ class BaseRemoteBackend(BaseBackend):
         # Fetch the latest list of QPUs
         # Implementation note: Currently sync, hopefully async in the future.
         specs = self._sdk.get_device_specs_dict()
-        self._device = cast(Device, deserialize_device(specs[self.device_name]))
+        self._device = cast(Device,
+                            deserialize_device(specs[self.device_name]))
 
-        # As of this writing, the API doesn't support runs longer than 500 jobs.
-        # If we want to add more runs, we'll need to split them across several jobs.
+        # As of this writing, the API doesn't support runs longer than
+        # 500 jobs. If we want to add more runs, we'll need to split them
+        # across several jobs.
         if isinstance(self._device.max_runs, int):
             self._max_runs = self._device.max_runs
 
         return self._device
 
-    def _extract(self, payload: Any) -> Counter[str]:
+    def _extract(self, payload: Counter) -> Counter[str]:
         # We expect that the payload returned will always be a `Counter[str]`,
         # but we still need to double-check.
         assert isinstance(payload, Counter)
@@ -242,19 +254,23 @@ class BaseRemoteBackend(BaseBackend):
             pulse: A pulse to execute.
             emulator: The emulator to use, or None to run on a QPU.
             config: The backend-specific config.
-            sleep_sec (optional): The amount of time to sleep when waiting for the remote server to
-            respond, in seconds. Defaults to 2.
+            sleep_sec (optional): The amount of time to sleep when waiting for
+                the remote server to respond, in seconds. Defaults to 2.
 
         Raises:
-            CompilationError: If the register/pulse may not be executed on this device.
+            CompilationError: If the register/pulse may not be executed on
+                this device.
         """
         device = self._fetch_device()
         try:
-            sequence = make_sequence(device=device, pulse=pulse, register=register)
+            sequence = make_sequence(device=device,
+                                     pulse=pulse,
+                                     register=register)
 
             self._sequence = sequence
         except ValueError as e:
-            raise CompilationError(f"This register/pulse cannot be executed on the device: {e}")
+            raise CompilationError("This register/pulse cannot be executed "
+                                   f"on the device: {e}")
 
         # Enqueue execution.
         batch = self._sdk.create_batch(
@@ -265,7 +281,8 @@ class BaseRemoteBackend(BaseBackend):
             configuration=config,
         )
 
-        return BaseRemoteExecution(sleep_sec=sleep_sec, batch=batch).map(self._extract)
+        return BaseRemoteExecution(sleep_sec=sleep_sec, batch=batch).map(
+            self._extract)
 
 
 class RemoteQPUBackend(BaseRemoteBackend):
@@ -278,7 +295,8 @@ class RemoteQPUBackend(BaseRemoteBackend):
         with a computation that has been previously started.
     """
 
-    def run(self, register: targets.Register, pulse: targets.Pulse) -> Execution[Counter[str]]:
+    def run(self, register: targets.Register,
+            pulse: targets.Pulse) -> Execution[Counter[str]]:
         return self._run(register, pulse, emulator=None, config=None)
 
 
@@ -302,22 +320,25 @@ if os.name == "posix":
 
     class EmuMPSBackend(BaseBackend):
         """
-        Execute a Register and a Pulse on the high-performance emu-mps Emulator.
+        Execute a Register and a Pulse on the high-performance emu-mps
+        Emulator.
 
-        As of this writing, this local emulator is only available under Unix. However,
-        the RemoteEmuMPSBackend is available on all platforms.
+        As of this writing, this local emulator is only available under Unix.
+        However, the RemoteEmuMPSBackend is available on all platforms.
 
         Performance warning:
-            Executing anything quantum related on an emulator takes an amount of resources
-            polynomial in 2^N, where N is the number of qubits. This can easily go beyond
-            the limit of the computer on which you're executing it.
+            Executing anything quantum related on an emulator takes an amount
+            of resources polynomial in 2^N, where N is the number of qubits.
+            This can easily go beyond the limit of the computer on which
+            you're executing it.
         """
 
         def __init__(self, device: Device):
             super().__init__(device)
 
         def run(
-            self, register: targets.Register, pulse: targets.Pulse, dt: int = 10
+            self, register: targets.Register,
+            pulse: targets.Pulse, dt: int = 10
         ) -> Execution[Counter[str]]:
             sequence = self._make_sequence(register=register, pulse=pulse)
             backend = emu_mps.MPSBackend()
