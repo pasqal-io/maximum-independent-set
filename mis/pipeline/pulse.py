@@ -75,26 +75,20 @@ class DefaultPulseShaper(BasePulseShaper):
 
         def calculate_edge_interaction(edge: tuple[int, int]) -> float:
             pos_a, pos_b = pos[edge[0]], pos[edge[1]]
-            return float(device.interaction_coeff /
-                         (euclidean(pos_a, pos_b) ** 6))
+            return float(device.interaction_coeff / (euclidean(pos_a, pos_b) ** 6))
 
-        connected = [calculate_edge_interaction(edge) for edge in
-                     graph.edges()]
-        disconnected = [
-            calculate_edge_interaction(edge) for edge in
-            nx.complement(graph).edges()]
+        connected = [calculate_edge_interaction(edge) for edge in graph.edges()]
+        disconnected = [calculate_edge_interaction(edge) for edge in nx.complement(graph).edges()]
 
         return connected, disconnected
 
     def _calc_bounds(self, reg: Register, device: Device) -> _Bounds:
         _, disconnected = self._get_interactions(
-            pos=reg.register.sorted_coords,
-            graph=reg.graph,
-            device=device)
+            pos=reg.register.sorted_coords, graph=reg.graph, device=device
+        )
         u_min, u_max = self._interaction_bounds(
-            pos=reg.register.sorted_coords,
-            graph=reg.graph,
-            device=device)
+            pos=reg.register.sorted_coords, graph=reg.graph, device=device
+        )
         max_amp_device = device.channels["rydberg_global"].max_amp or np.inf
         maximum_amplitude = min(max_amp_device, u_max + 0.8 * (u_min - u_max))
 
@@ -105,14 +99,10 @@ class DefaultPulseShaper(BasePulseShaper):
         det_max_theory = (d_min / (d_min + 1)) * u_min
         det_min_theory = sum(sorted(disconnected)[-d_max:])
         det_final_theory = max([det_max_theory, det_min_theory])
-        det_max_device = (
-            device.channels["rydberg_global"].max_abs_detuning or np.inf
-        )
+        det_max_device = device.channels["rydberg_global"].max_abs_detuning or np.inf
         final_detuning = min(det_final_theory, det_max_device)
 
-        return _Bounds(
-            maximum_amplitude=maximum_amplitude,
-            final_detuning=final_detuning)
+        return _Bounds(maximum_amplitude=maximum_amplitude, final_detuning=final_detuning)
 
     def _interaction_bounds(
         self, pos: np.ndarray, graph: nx.Graph, device: Device

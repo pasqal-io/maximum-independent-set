@@ -26,9 +26,7 @@ class Pulse:
 
     pulse: pulser.Pulse
     detuning_maps: (
-        list[tuple[
-            pulser.register.weight_maps.DetuningMap, pulser.waveforms.Waveform
-            ]] | None
+        list[tuple[pulser.register.weight_maps.DetuningMap, pulser.waveforms.Waveform]] | None
     ) = None
 
     def draw(self) -> None:
@@ -65,5 +63,4 @@ class Register:
         """
         Draw the geometry of this register.
         """
-        self.register.draw(
-            blockade_radius=self.device.min_atom_distance + 0.01)
+        self.register.draw(blockade_radius=self.device.min_atom_distance + 0.01)

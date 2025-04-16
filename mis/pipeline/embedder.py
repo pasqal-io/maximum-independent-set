@@ -44,8 +44,7 @@ class DefaultEmbedder(BaseEmbedder):
 
         # Rescale to ensure that minimal distances are respected.
         distances = [
-            np.linalg.norm(positions[v1] - positions[v2])
-            for v1, v2 in instance.graph.edges()
+            np.linalg.norm(positions[v1] - positions[v2]) for v1, v2 in instance.graph.edges()
         ]
         min_distance = np.min(distances)
         device = config.device
@@ -58,8 +57,4 @@ class DefaultEmbedder(BaseEmbedder):
         reg = pulser.register.Register(
             qubits={f"q{node}": pos for (node, pos) in positions.items()}
         )
-        return Register(
-            device=device,
-            register=reg,
-            graph=instance.graph
-        )
+        return Register(device=device, register=reg, graph=instance.graph)

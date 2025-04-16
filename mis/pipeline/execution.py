@@ -23,20 +23,15 @@ class Execution(abc.ABC, Generic[Result]):
     """
 
     @abc.abstractmethod
-    def result(self) -> Result:
-        ...
+    def result(self) -> Result: ...
 
     @abc.abstractmethod
-    async def wait(self) -> Result:
-        ...
+    async def wait(self) -> Result: ...
 
     @abc.abstractmethod
-    def status(self) -> Status:
-        ...
+    def status(self) -> Status: ...
 
-    def map(self,
-            transform: Callable[[Result], Transformed]
-            ) -> Execution[Transformed]:
+    def map(self, transform: Callable[[Result], Transformed]) -> Execution[Transformed]:
         """
         Apply a transformation to the result once it is
         complete.
@@ -59,6 +54,7 @@ class WaitingExecution(Execution[Result]):
     Unless you're implementing new executors, you're probably
     not interested in this class.
     """
+
     def __init__(self, sleep_sec: int):
         self._sleep_sec = sleep_sec
 
@@ -75,9 +71,8 @@ class MappedExecution(Execution[Transformed]):
     Unless you're implementing new executors, you're probably
     not interested in this class.
     """
-    def __init__(self,
-                 origin: Execution[Result],
-                 transform: Callable[[Result], Transformed]):
+
+    def __init__(self, origin: Execution[Result], transform: Callable[[Result], Transformed]):
         self._cache_filled = False
         self._origin = origin
         self._transform = transform
@@ -115,9 +110,7 @@ class SuccessfulExecution(Execution[Result]):
     def result(self) -> Result:
         return self._result
 
-    def map(self,
-            transform: Callable[[Result], Transformed]
-            ) -> Execution[Transformed]:
+    def map(self, transform: Callable[[Result], Transformed]) -> Execution[Transformed]:
         # Since we know that we're not waiting for anything,
         # we can perform the `map` call immediately.
         mapped = transform(self.result())
