@@ -208,6 +208,7 @@ class BaseRemoteBackend(BaseBackend):
         Make sure that we have fetched the latest specs for the device from
         the server.
         """
+        # FIXME: With a remote backend, truly, this should be async.
         if self._device is not None:
             return self._device
 
