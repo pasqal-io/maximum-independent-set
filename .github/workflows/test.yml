@@ -61,9 +61,6 @@ jobs:
       - name: Install Hatch
         run: |
           pip install hatch
-      - name: Copy samples
-        run: |
-          cp examples/ptcfm_processed_dataset.json .
       - name: Run **a few** notebooks # FIXME: Progressively run all notebooks
         run:  |
           hatch run pip install jupyter
