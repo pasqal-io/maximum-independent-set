@@ -6,15 +6,12 @@ from mis.pipeline.config import SolverConfig
 from mis.shared.types import MethodType
 
 
-def test_empty_mis():
+def test_empty_mis() -> None:
     """
     Classical MIS solver should work with an empty graph.
     """
     graph = nx.Graph()
-    config = SolverConfig(
-        method=MethodType.EAGER,
-        max_iterations=1
-    )
+    config = SolverConfig(method=MethodType.EAGER, max_iterations=1)
 
     # Create the MIS instance
     instance = MISInstance(graph)
@@ -26,7 +23,7 @@ def test_empty_mis():
     assert len(solutions) == 0
 
 
-def test_disconnected_mis():
+def test_disconnected_mis() -> None:
     """
     Classical MIS solver should work with a graph without any edge.
     """
@@ -35,10 +32,7 @@ def test_disconnected_mis():
     for i in range(SIZE):
         graph.add_node(i)
 
-    config = SolverConfig(
-        method=MethodType.EAGER,
-        max_iterations=1
-    )
+    config = SolverConfig(method=MethodType.EAGER, max_iterations=1)
 
     # Create the MIS instance
     instance = MISInstance(graph)
@@ -51,7 +45,7 @@ def test_disconnected_mis():
     assert len(solutions[0].nodes) == SIZE
 
 
-def test_star_mis():
+def test_star_mis() -> None:
     """
     Classical MIS solver should work with a star-shaped graph.
     """
@@ -62,10 +56,7 @@ def test_star_mis():
         if i != 0:
             graph.add_edge(0, i)
 
-    config = SolverConfig(
-        method=MethodType.EAGER,
-        max_iterations=1
-    )
+    config = SolverConfig(method=MethodType.EAGER, max_iterations=1)
 
     # Create the MIS instance
     instance = MISInstance(graph)
