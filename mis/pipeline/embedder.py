@@ -39,19 +39,26 @@ class DefaultEmbedder(BaseEmbedder):
     """
 
     def embed(self, instance: MISInstance, config: SolverConfig) -> Register:
+        device = config.device
+        assert device is not None
+
         # Layout based on edges.
         positions = nx.spring_layout(instance.graph)
+        print(f"YORIC: instance: {instance.graph}")
+        print(f"YORIC: laid out: {positions}")
 
         # Rescale to ensure that minimal distances are respected.
         distances = [
-            np.linalg.norm(positions[v1] - positions[v2]) for v1, v2 in instance.graph.edges()
+            np.linalg.norm(positions[v1] - positions[v2])
+            for v1 in instance.graph.nodes()
+            for v2 in instance.graph.nodes()
+            if v1 != v2
         ]
-        min_distance = np.min(distances)
-        device = config.device
-        assert device is not None
-        if min_distance < device.min_atom_distance:
-            multiplier = device.min_atom_distance / min_distance
-            positions = {i: v * multiplier for (i, v) in positions.items()}
+        if len(distances) != 0:
+            min_distance = np.min(distances)
+            if min_distance < device.min_atom_distance:
+                multiplier = device.min_atom_distance / min_distance
+                positions = {i: v * multiplier for (i, v) in positions.items()}
 
         # Finally, prepare register.
         reg = pulser.register.Register(
