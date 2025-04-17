@@ -1,8 +1,7 @@
 from __future__ import annotations
 from math import atan
-from typing import Counter, cast
+from typing import Counter
 
-import cplex
 import networkx as nx
 
 from mis.shared.types import MISInstance, MISSolution
@@ -53,50 +52,15 @@ class MISSolverClassical(BaseSolver):
         if not graph.nodes:
             return Execution.success([])
 
-        c = cplex.Cplex()
-
-        # Relabel the graph with consecutive integers
-        solved_graph = nx.convert_node_labels_to_integers(graph)
-
-        # Setting variables as binary
-        c.variables.add(
-            names=[str(node) for node in solved_graph.nodes()],
-            types=cast(  # Type annotation in cplex is wrong
-                str, [c.variables.type.binary] * len(solved_graph.nodes())
-            ),
-        )
-
-        # Independence constraints
-        c.linear_constraints.add(
-            lin_expr=[
-                cplex.SparsePair(ind=[str(u), str(v)], val=[1.0, 1.0])
-                for u, v in solved_graph.edges()
-            ],
-            senses=["L"] * solved_graph.number_of_edges(),
-            rhs=[1.0] * solved_graph.number_of_edges(),
-        )
-
-        # Objective function definition
-        c.objective.set_linear([(str(node), 1) for node in solved_graph.nodes()])
-        c.objective.set_sense(c.objective.sense.maximize)
-
-        # Solve MIP without logs
-        c.set_log_stream(None)
-        c.set_results_stream(None)
-        c.set_warning_stream(None)
-        c.solve()
-
-        # Extract solution
-        solution_values = c.solution.get_values()
-        selected_nodes = [node for node, value in enumerate(solution_values) if value >= 0.9]
+        mis = nx.maximal_independent_set(G=graph)
+        assert isinstance(mis, list)
 
         # Convert back to original node labels
-        conversion_table = list(graph.nodes())
         return Execution.success(
             [
                 MISSolution(
                     original=graph,
-                    nodes=[conversion_table[node] for node in selected_nodes],
+                    nodes=[node for node in mis],
                     energy=0,
                 )
             ]
@@ -184,7 +148,8 @@ class MISSolverQuantum(BaseSolver):
             self.fixtures.postprocess(
                 MISSolution(
                     original=self.instance.graph,
-                    energy=1 - atan(count),  # FIXME Probably not the best definition of energy
+                    energy=1 - atan(count),
+                    # FIXME Probably not the best definition of energy
                     nodes=self._bitstring_to_nodes(bitstr),
                 )
             )
