@@ -1,16 +1,22 @@
 from __future__ import annotations
 
-from typing import Any
+from dataclasses import dataclass
 from abc import ABC, abstractmethod
 
-from pulser import Pulse as PulserPulse
-from pulser.waveforms import ConstantWaveform
+from networkx.classes.reportviews import DegreeView
+from pulser import InterpolatedWaveform, Pulse as PulserPulse
+from pulser.devices import Device
 
-from mis.config import SolverConfig
+from mis.pipeline.config import SolverConfig
+
+import numpy as np
+import networkx as nx
+from scipy.spatial.distance import euclidean
 
 from .targets import Pulse, Register
 
 
+@dataclass
 class BasePulseShaper(ABC):
     """
     Abstract base class for generating pulse schedules based on a MIS problem.
@@ -20,24 +26,19 @@ class BasePulseShaper(ABC):
     is passed at the time of pulse generation, not during initialization.
     """
 
-    def __init__(self, instance: Any, config: SolverConfig):
-        """
-        Initialize the pulse shaping module with a MIS instance.
+    duration_us: int | None = None
+    """The duration of the pulse, in microseconds.
 
-        Args:
-            instance (MISInstance): The MIS problem instance.
-        """
-        self.instance = instance
-        self.config: SolverConfig = config
-        self.pulse: Pulse | None = None
+    If unspecified, use the maximal duration for the device."""
 
     @abstractmethod
-    def generate(self, register: Register) -> Pulse:
+    def generate(self, config: SolverConfig, register: Register) -> Pulse:
         """
         Generate a pulse based on the problem and the provided register.
 
         Args:
-            register (Register): The physical register layout.
+            config: The configuration for this pulse.
+            register: The physical register layout.
 
         Returns:
             Pulse: A generated pulse object wrapping a Pulser pulse.
@@ -45,34 +46,104 @@ class BasePulseShaper(ABC):
         pass
 
 
-class FirstPulseShaper(BasePulseShaper):
+@dataclass
+class _Bounds:
+    maximum_amplitude: float
+    final_detuning: float
+
+
+class DefaultPulseShaper(BasePulseShaper):
     """
-    A simple pulse shaper
+    A simple pulse shaper.
     """
 
-    def generate(self, register: Register) -> Pulse:
+    def _get_interactions(
+        self, pos: np.ndarray, graph: nx.Graph, device: Device
+    ) -> tuple[list[float], list[float]]:
+        """Calculate the interaction strengths for connected and disconnected
+            nodes.
+
+        Args:
+            pos (np.ndarray): The position of the nodes.
+            graph (nx.Graph): The associated graph.
+            device (BaseDevice): Device used to calculate interaction coeff.
+
+        Returns:
+            tuple[list[float], list[float]]: Connected interactions,
+                Disconnected interactions
+        """
+
+        def calculate_edge_interaction(edge: tuple[int, int]) -> float:
+            pos_a, pos_b = pos[edge[0]], pos[edge[1]]
+            return float(device.interaction_coeff / (euclidean(pos_a, pos_b) ** 6))
+
+        connected = [calculate_edge_interaction(edge) for edge in graph.edges()]
+        disconnected = [calculate_edge_interaction(edge) for edge in nx.complement(graph).edges()]
+
+        return connected, disconnected
+
+    def _calc_bounds(self, reg: Register, device: Device) -> _Bounds:
+        _, disconnected = self._get_interactions(
+            pos=reg.register.sorted_coords, graph=reg.graph, device=device
+        )
+        u_min, u_max = self._interaction_bounds(
+            pos=reg.register.sorted_coords, graph=reg.graph, device=device
+        )
+        max_amp_device = device.channels["rydberg_global"].max_amp or np.inf
+        maximum_amplitude = min(max_amp_device, u_max + 0.8 * (u_min - u_max))
+
+        degree = reg.graph.degree
+        assert isinstance(degree, DegreeView)
+        d_min = min(dict(degree).values())
+        d_max = max(dict(degree).values())
+        det_max_theory = (d_min / (d_min + 1)) * u_min
+        det_min_theory = sum(sorted(disconnected)[-d_max:])
+        det_final_theory = max([det_max_theory, det_min_theory])
+        det_max_device = device.channels["rydberg_global"].max_abs_detuning or np.inf
+        final_detuning = min(det_final_theory, det_max_device)
+
+        return _Bounds(maximum_amplitude=maximum_amplitude, final_detuning=final_detuning)
+
+    def _interaction_bounds(
+        self, pos: np.ndarray, graph: nx.Graph, device: Device
+    ) -> tuple[float, float]:
+        """Calculates U_min and U_max given the positions. It uses the edges
+        of the graph. U_min corresponds to minimal energy of two nodes
+        connected in the graph. U_max corresponds to maximal energy of two
+        nodes NOT connected in the graph."""
+        connected, disconnected = self._get_interactions(pos, graph, device)
+        if len(connected) == 0:
+            u_min = 0
+        else:
+            u_min = np.min(connected)
+        if len(disconnected) == 0:
+            u_max = np.inf
+        else:
+            u_max = np.max(disconnected)
+        return u_min, u_max
+
+    def generate(self, config: SolverConfig, register: Register) -> Pulse:
         """
         Method to return a simple constant waveform pulse
         """
-        wf = ConstantWaveform(duration=1000, value=1.0)
-        pulser_pulse = PulserPulse.ConstantDetuning(amplitude=wf, detuning=0.0, phase=0.0)
+        device = config.device
+        assert device is not None
 
-        self.pulse = Pulse(pulse=pulser_pulse)
-        return self.pulse
+        duration_us = self.duration_us
+        if duration_us is None:
+            duration_us = device.max_sequence_duration
 
+        bounds = self._calc_bounds(reg=register, device=device)
 
-def get_pulse_shaper(instance: Any, config: SolverConfig) -> BasePulseShaper:
-    """
-    Method that returns the correct PulseShaper based on configuration.
-    The correct pulse shaping method can be identified using the config, and an
-    object of this pulseshaper can be returned using this function.
+        amplitude = InterpolatedWaveform(
+            duration_us, [1e-9, bounds.maximum_amplitude, 1e-9]
+        )  # FIXME: This should be 0, investigate why it's 1e-9
+        detuning = InterpolatedWaveform(
+            duration_us, [-bounds.final_detuning, 0, bounds.final_detuning]
+        )
+        rydberg_pulse = PulserPulse(amplitude, detuning, 0)
+        # Pulser overrides PulserPulse.__new__ with an exotic type, so we need
+        # to help mypy.
+        assert isinstance(rydberg_pulse, PulserPulse)
 
-    Args:
-        instance (MISInstance): The MIS problem to embed.
-        config (Device): The quantum device to target.
-
-    Returns:
-        (BasePulseShaper): The representative Pulse Shaper object.
-    """
-
-    return FirstPulseShaper(instance, config)
+        return Pulse(pulse=rydberg_pulse)

@@ -2,8 +2,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from mis import MISInstance
-from mis.config import SolverConfig
+import networkx as nx
+import numpy as np
+import pulser
+
+from mis.shared.types import (
+    MISInstance,
+)
+from mis.pipeline.config import SolverConfig
 
 from .targets import Register
 
@@ -16,18 +22,8 @@ class BaseEmbedder(ABC):
     Returns a Register compatible with Pasqal/Pulser devices.
     """
 
-    def __init__(self, instance: MISInstance, config: SolverConfig):
-        """
-        Args:
-            instance (MISInstance): The MISproblem to embed.
-            config (SolverConfig): The Solver Configuration.
-        """
-        self.instance: MISInstance = instance
-        self.config: SolverConfig = config
-        self.register: Register | None = None
-
     @abstractmethod
-    def embed(self) -> Register:
+    def embed(self, instance: MISInstance, config: SolverConfig) -> Register:
         """
         Creates a layout of atoms as the register.
 
@@ -37,27 +33,28 @@ class BaseEmbedder(ABC):
         pass
 
 
-class FirstEmdedder(BaseEmbedder):
+class DefaultEmbedder(BaseEmbedder):
     """
     A simple embedder
     """
 
-    def embed(self) -> Register:
-        raise NotImplementedError
+    def embed(self, instance: MISInstance, config: SolverConfig) -> Register:
+        # Layout based on edges.
+        positions = nx.spring_layout(instance.graph)
 
+        # Rescale to ensure that minimal distances are respected.
+        distances = [
+            np.linalg.norm(positions[v1] - positions[v2]) for v1, v2 in instance.graph.edges()
+        ]
+        min_distance = np.min(distances)
+        device = config.device
+        assert device is not None
+        if min_distance < device.min_atom_distance:
+            multiplier = device.min_atom_distance / min_distance
+            positions = {i: v * multiplier for (i, v) in positions.items()}
 
-def get_embedder(instance: MISInstance, config: SolverConfig) -> BaseEmbedder:
-    """
-    Method that returns the correct embedder based on configuration.
-    The correct embedding method can be identified using the config, and an
-    object of this embedding can be returned using this function.
-
-    Args:
-        instance (MISInstance): The MISproblem to embed.
-        config (Device): The quantum device to target.
-
-    Returns:
-        (BaseEmbedder): The representative embedder object.
-    """
-
-    return FirstEmdedder(instance, config)
+        # Finally, prepare register.
+        reg = pulser.register.Register(
+            qubits={f"q{node}": pos for (node, pos) in positions.items()}
+        )
+        return Register(device=device, register=reg, graph=instance.graph)

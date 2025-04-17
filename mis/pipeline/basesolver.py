@@ -1,15 +1,11 @@
 from __future__ import annotations
 
-import asyncio
 from abc import ABC, abstractmethod
-from typing import Any
 
-from mis import MISInstance
-from mis.config import SolverConfig
-from mis.data import MISSolution
+from mis.pipeline.config import SolverConfig
 
-from .executor import Executor
-from .targets import Pulse, Register
+from .executor import Executor, Execution
+from mis.shared.types import MISInstance, MISSolution
 
 
 class BaseSolver(ABC):
@@ -36,47 +32,12 @@ class BaseSolver(ABC):
         self.executor: Executor = Executor(config=self.config)
 
     @abstractmethod
-    def solve(self) -> MISSolution:
+    def solve(self) -> Execution[list[MISSolution]]:
         """
         Solve the given MISinstance.
 
         Returns:
-            MISSolution: The result of the optimization.
+            A list of solutions, ranked from best (lowest energy) to worst
+            (highest energy).
         """
         pass
-
-    @abstractmethod
-    def embedding(self) -> Register:
-        """
-        Generate or retrieve an embedding for the MISinstance.
-
-        Returns:
-            dict: Embedding information for the instance.
-        """
-        pass
-
-    @abstractmethod
-    def pulse(self, embedding: Register) -> Pulse:
-        """
-        Generate a pulse schedule for the quantum device based on the embedding.
-
-        Args:
-            embedding (dict): Embedding information.
-
-        Returns:
-            object: Pulse schedule or related data.
-        """
-        pass
-
-    def execute(self, pulse: Pulse, embedding: Register) -> Any:
-        """
-        Execute the pulse schedule on the backend and retrieve the solution.
-
-        Args:
-            pulse (object): Pulse schedule or execution payload.
-            embedding (Register): The register to be executed.
-
-        Returns:
-            Result: The solution from execution.
-        """
-        return asyncio.run(self.executor.submit_job(pulse, embedding))

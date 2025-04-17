@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from mis import MISInstance, MISSolution
-from mis.config import SolverConfig
+from mis.shared.types import MISInstance, MISSolution
+from mis.pipeline.config import SolverConfig
 
 
 class Fixtures:
@@ -9,7 +9,8 @@ class Fixtures:
     Handles all preprocessing and postprocessing logic for MIS problems.
 
     This class allows centralized transformation or validation of the problem
-    instance before solving, and modification or annotation of the solution after solving.
+    instance before solving, and modification or annotation of the solution
+    after solving.
     """
 
     def __init__(self, instance: MISInstance, config: SolverConfig):
@@ -17,9 +18,9 @@ class Fixtures:
         Initialize the fixture handler with the MIS instance and solver config.
 
         Args:
-            instance (MISInstance): The problem instance to process.
-            config (SolverConfig): Solver configuration, which may include flags
-                                   for enabling or customizing processing behavior.
+            instance: The problem instance to process.
+            config: Solver configuration, which may include
+                flags for enabling or customizing processing behavior.
         """
         self.instance = instance
         self.config = config

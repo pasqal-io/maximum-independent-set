@@ -1,21 +1,22 @@
 from __future__ import annotations
 
 import abc
-import asyncio
 import os
 from math import ceil
-from typing import Counter, cast
+from time import sleep
+from typing import Any, Counter, cast
 
+from pasqal_cloud.batch import Batch
 import pulser
 from pasqal_cloud import SDK
 from pasqal_cloud.device import BaseConfig, EmulatorType
-from pasqal_cloud.job import Job
 from pulser import Sequence
 from pulser.devices import Device
 from pulser.json.abstract_repr.deserializer import deserialize_device
 from pulser_simulation import QutipEmulator
 
 import mis.pipeline.targets as targets
+from .execution import Execution, Status, WaitingExecution
 
 
 class CompilationError(Exception):
@@ -24,6 +25,12 @@ class CompilationError(Exception):
     that does not support it, e.g. because it requires too many qubits or
     because the physical constraints on the geometry are not satisfied.
     """
+
+    pass
+
+
+class ExecutionError(Exception):
+    pass
 
 
 def make_sequence(
@@ -49,6 +56,12 @@ def make_sequence(
         sequence = pulser.Sequence(register=register.register, device=device)
         sequence.declare_channel("ising", "rydberg_global")
         sequence.add(pulse.pulse, "ising")
+        if pulse.detuning_maps is not None:
+            for i, (map, wave) in enumerate(pulse.detuning_maps):
+                dmm_id = f"dmm_{i}"
+                sequence.config_detuning_map(map, dmm_id)
+                sequence.add_dmm_detuning(wave, dmm_id)
+
         return sequence
     except ValueError as e:
         raise CompilationError(f"This pulse/register cannot be executed on the device: {e}")
@@ -64,22 +77,18 @@ class BaseBackend(abc.ABC):
     They might be removed in a future version, once Pulser has gained a similar API.
     """
 
-    def __init__(self, device: Device | None):
+    def __init__(self, device: Device):
         self._device = device
 
     def _make_sequence(self, register: targets.Register, pulse: targets.Pulse) -> Sequence:
         assert self._device is not None
         return make_sequence(register=register, pulse=pulse, device=self._device)
 
-    @abc.abstractmethod
-    async def run(self, register: targets.Register, pulse: targets.Pulse) -> Counter[str]:
-        """
-        Execute a register and a pulse.
+    def device(self) -> Device:
+        return self._device
 
-        Returns:
-            A bitstring Counter, i.e. a data structure counting for each bitstring
-            the number of measured instances of this bitstring.
-        """
+    @abc.abstractmethod
+    def run(self, register: targets.Register, pulse: targets.Pulse) -> Execution[Counter[str]]:
         raise NotImplementedError
 
 
@@ -96,25 +105,63 @@ class QutipBackend(BaseBackend):
         the limit of the computer on which you're executing it.
     """
 
-    def __init__(self, device: Device):
+    def __init__(self, device: Device | None = None):
+        if device is None:
+            device = pulser.devices.AnalogDevice
         super().__init__(device)
 
-    async def run(self, register: targets.Register, pulse: targets.Pulse) -> Counter[str]:
+    def run(self, register: targets.Register, pulse: targets.Pulse) -> Execution[Counter[str]]:
         """
         Execute a register and a pulse.
 
         Arguments:
-            register: The register (geometry) to execute. Typically obtained by compiling a graph.
-            pulse: The pulse (lasers) to execute. Typically obtained by compiling a graph.
+            register: The register (geometry) to execute. Typically obtained
+                by compiling a graph.
+            pulse: The pulse (lasers) to execute. Typically obtained by
+                compiling a graph.
 
         Returns:
-            A bitstring Counter, i.e. a data structure counting for each bitstring
-            the number of instances of this bitstring observed at the end of runs.
+            A bitstring Counter, i.e. a data structure counting for each
+            bitstring the number of instances of this bitstring observed
+            at the end of runs.
         """
         sequence = self._make_sequence(register=register, pulse=pulse)
         emulator = QutipEmulator.from_sequence(sequence)
         result: Counter[str] = emulator.run().sample_final_state()
-        return result
+        return Execution.success(result)
+
+
+class BaseRemoteExecution(WaitingExecution[Any]):
+    """
+    Execution on a remote device.
+
+    Unless you're implementing a new backend, you
+    probably want to use one of the subclasses.
+    """
+
+    def __init__(self, sleep_sec: int, batch: Batch):
+        self._sleep_sec = sleep_sec
+        self._batch = batch
+
+    def status(self) -> Status:
+        if self._batch.status in {"PENDING", "RUNNING"}:
+            self._batch.refresh()
+            return Status.IN_PROGRESS
+        job = next(iter(self._batch.jobs.values()))
+        if job.status == "ERROR":
+            return Status.FAILURE
+        return Status.SUCCESS
+
+    def result(self) -> Any:
+        while self.status() == Status.IN_PROGRESS:
+            sleep(self._sleep_sec)
+        job = next(iter(self._batch.jobs.values()))
+        if self.status() == Status.FAILURE:
+            raise ExecutionError(
+                "Encountered errors while executing this " "sequence remotely: {}", job.errors
+            )
+        assert job.full_result is not None
+        return job.full_result["counter"]
 
 
 class BaseRemoteBackend(BaseBackend):
@@ -122,16 +169,17 @@ class BaseRemoteBackend(BaseBackend):
     Base hierarch for remote backends.
 
     Performance warning:
-        As of this writing, using remote Backends to access a remote QPU or remote emulator
-        is slower than using a RemoteExtractor, as the RemoteExtractor optimizes the number
-        of connections used to communicate with the cloud server.
+        As of this writing, using remote Backends to access a remote QPU or
+        remote emulator is slower than using a RemoteExtractor, as the
+        RemoteExtractor optimizes the number of connections used to communicate
+        with the cloud server.
     """
 
     def __init__(
         self,
         project_id: str,
         username: str,
-        device_name: str = "FRESNEL",
+        device_name: str | None = None,
         password: str | None = None,
     ):
         """
@@ -146,16 +194,21 @@ class BaseRemoteBackend(BaseBackend):
                 the default value of "FRESNEL" represents the latest QPU
                 available through the Pasqal Cloud API.
         """
+        if device_name is None:
+            device_name = "FRESNEL"
         self.device_name = device_name
         self._sdk = SDK(username=username, project_id=project_id, password=password)
         self._max_runs = 500
         self._sequence = None
         self._device = None
+        super().__init__(device=self._fetch_device())  # FIXME: Currently sync.
 
-    async def device(self) -> Device:
+    def _fetch_device(self) -> Device:
         """
-        Make sure that we have fetched the latest specs for the device from the server.
+        Make sure that we have fetched the latest specs for the device from
+        the server.
         """
+        # FIXME: With a remote backend, truly, this should be async.
         if self._device is not None:
             return self._device
 
@@ -164,21 +217,33 @@ class BaseRemoteBackend(BaseBackend):
         specs = self._sdk.get_device_specs_dict()
         self._device = cast(Device, deserialize_device(specs[self.device_name]))
 
-        # As of this writing, the API doesn't support runs longer than 500 jobs.
-        # If we want to add more runs, we'll need to split them across several jobs.
+        # As of this writing, the API doesn't support runs longer than
+        # 500 jobs. If we want to add more runs, we'll need to split them
+        # across several jobs.
         if isinstance(self._device.max_runs, int):
             self._max_runs = self._device.max_runs
 
         return self._device
 
-    async def _run(
+    def _extract(self, payload: Counter) -> Counter[str]:
+        # We expect that the payload returned will always be a `Counter[str]`,
+        # but we still need to double-check.
+        assert isinstance(payload, Counter)
+        if len(payload) == 0:
+            return payload
+        k, v = next(iter(payload))
+        assert isinstance(k, str)
+        assert isinstance(v, int)
+        return payload
+
+    def _run(
         self,
         register: targets.Register,
         pulse: targets.Pulse,
         emulator: EmulatorType | None,
         config: BaseConfig | None = None,
         sleep_sec: int = 2,
-    ) -> Job:
+    ) -> Execution[Counter[str]]:
         """
         Run the pulse + register.
 
@@ -187,19 +252,20 @@ class BaseRemoteBackend(BaseBackend):
             pulse: A pulse to execute.
             emulator: The emulator to use, or None to run on a QPU.
             config: The backend-specific config.
-            sleep_sec (optional): The amount of time to sleep when waiting for the remote server to
-            respond, in seconds. Defaults to 2.
+            sleep_sec (optional): The amount of time to sleep when waiting for
+                the remote server to respond, in seconds. Defaults to 2.
 
         Raises:
-            CompilationError: If the register/pulse may not be executed on this device.
+            CompilationError: If the register/pulse may not be executed on
+                this device.
         """
-        device = await self.device()
+        device = self._fetch_device()
         try:
             sequence = make_sequence(device=device, pulse=pulse, register=register)
 
             self._sequence = sequence
         except ValueError as e:
-            raise CompilationError(f"This register/pulse cannot be executed on the device: {e}")
+            raise CompilationError("This register/pulse cannot be executed " f"on the device: {e}")
 
         # Enqueue execution.
         batch = self._sdk.create_batch(
@@ -210,18 +276,7 @@ class BaseRemoteBackend(BaseBackend):
             configuration=config,
         )
 
-        # Wait for execution to complete.
-        while True:
-            await asyncio.sleep(sleep_sec)
-            # Currently sync, hopefully async in the future.
-            batch.refresh()
-            if batch.status in {"PENDING", "RUNNING"}:
-                # Continue waiting.
-                continue
-            job = next(iter(batch.jobs.values()))
-            if job.status == "ERROR":
-                raise Exception(f"Error while executing remote job: {job.errors}")
-            return job
+        return BaseRemoteExecution(sleep_sec=sleep_sec, batch=batch).map(self._extract)
 
 
 class RemoteQPUBackend(BaseRemoteBackend):
@@ -234,9 +289,8 @@ class RemoteQPUBackend(BaseRemoteBackend):
         with a computation that has been previously started.
     """
 
-    async def run(self, register: targets.Register, pulse: targets.Pulse) -> Counter[str]:
-        job = await self._run(register, pulse, emulator=None, config=None)
-        return cast(Counter[str], job.result)
+    def run(self, register: targets.Register, pulse: targets.Pulse) -> Execution[Counter[str]]:
+        return self._run(register, pulse, emulator=None, config=None)
 
 
 class RemoteEmuMPSBackend(BaseRemoteBackend):
@@ -245,15 +299,13 @@ class RemoteEmuMPSBackend(BaseRemoteBackend):
     published on Pasqal Cloud.
     """
 
-    async def run(
-        self, register: targets.Register, pulse: targets.Pulse, dt: int = 10
-    ) -> Counter[str]:
-        job = await self._run(register, pulse, emulator=EmulatorType.EMU_MPS, config=None)
-        bag = cast(dict[str, dict[int, Counter[str]]], job.result)
+    def _extract(self, payload: Any) -> Counter[str]:
+        return super()._extract(payload)
 
-        assert self._sequence is not None
-        cutoff_duration = int(ceil(self._sequence.get_duration() / dt) * dt)
-        return bag["bitstring"][cutoff_duration]
+    def run(
+        self, register: targets.Register, pulse: targets.Pulse, dt: int = 10
+    ) -> Execution[Counter[str]]:
+        return self._run(register, pulse, emulator=None, config=None)
 
 
 if os.name == "posix":
@@ -261,23 +313,25 @@ if os.name == "posix":
 
     class EmuMPSBackend(BaseBackend):
         """
-        Execute a Register and a Pulse on the high-performance emu-mps Emulator.
+        Execute a Register and a Pulse on the high-performance emu-mps
+        Emulator.
 
-        As of this writing, this local emulator is only available under Unix. However,
-        the RemoteEmuMPSBackend is available on all platforms.
+        As of this writing, this local emulator is only available under Unix.
+        However, the RemoteEmuMPSBackend is available on all platforms.
 
         Performance warning:
-            Executing anything quantum related on an emulator takes an amount of resources
-            polynomial in 2^N, where N is the number of qubits. This can easily go beyond
-            the limit of the computer on which you're executing it.
+            Executing anything quantum related on an emulator takes an amount
+            of resources polynomial in 2^N, where N is the number of qubits.
+            This can easily go beyond the limit of the computer on which
+            you're executing it.
         """
 
         def __init__(self, device: Device):
             super().__init__(device)
 
-        async def run(
+        def run(
             self, register: targets.Register, pulse: targets.Pulse, dt: int = 10
-        ) -> Counter[str]:
+        ) -> Execution[Counter[str]]:
             sequence = self._make_sequence(register=register, pulse=pulse)
             backend = emu_mps.MPSBackend()
 
@@ -286,4 +340,4 @@ if os.name == "posix":
             observable = emu_mps.BitStrings(evaluation_times={cutoff_duration})
             config = emu_mps.MPSConfig(observables=[observable], dt=dt)
             counter: Counter[str] = backend.run(sequence, config)[observable.name][cutoff_duration]
-            return counter
+            return Execution.success(counter)
