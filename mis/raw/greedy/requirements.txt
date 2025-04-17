@@ -1,7 +1,0 @@
-emu-mps==1.1.1
-matplotlib==3.7.5
-networkx==3.4.2
-numpy==1.26.4
-cplex==22.1.1.2
-pulser==1.2.0
-pulser-simulation==1.2.0
