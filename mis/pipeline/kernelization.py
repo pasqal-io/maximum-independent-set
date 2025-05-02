@@ -13,13 +13,10 @@ class Kernelization(BasePreprocessor, abc.ABC):
 
         self.new_node_current_index = 1
         if self.kernel.number_of_nodes() > 0:
-            self.new_node_current_index = max([
-                node for node in self.graph.nodes()]
-            ) + 1
+            self.new_node_current_index = max([node for node in self.graph.nodes()]) + 1
 
     @abc.abstractmethod
-    def exhaustive_rules_applications(self) -> nx.Graph:
-        ...
+    def exhaustive_rules_applications(self) -> nx.Graph: ...
 
     def rebuild(self, partial_solution: set[int]) -> set[int]:
         """
@@ -52,15 +49,12 @@ class Kernelization(BasePreprocessor, abc.ABC):
     def is_subclique(self, graph: nx.Graph, nodelist: list[int]) -> bool:
         H: nx.Graph = graph.subgraph(nodelist)
         n: int = len(nodelist)
-        return H.size() == n * (n - 1) / 2
+        return bool(H.size() == n * (n - 1) / 2)
 
     def is_isolated(self, vertex: int) -> bool:
         closed_neighborhood: list[int] = list(self.kernel.neighbors(vertex))
         closed_neighborhood.append(vertex)
-        if self.is_subclique(
-            graph=self.kernel,
-            nodelist=closed_neighborhood
-        ):
+        if self.is_subclique(graph=self.kernel, nodelist=closed_neighborhood):
             return True
         return False
 
@@ -107,7 +101,7 @@ class UnweightedKernelization(Kernelization):
             self.kernel.add_edge(v_prime, node)
         self.kernel.remove_nodes_from([v, u, x])
 
-    def apply_rule_vertex_fold(self, v: int, u: int, x: int):
+    def apply_rule_vertex_fold(self, v: int, u: int, x: int) -> None:
         v_prime: int = self.new_node_current_index
         self.kernel.add_node(v_prime)
         self.new_node_current_index += 1
@@ -131,9 +125,7 @@ class UnweightedKernelization(Kernelization):
                         self.apply_rule_vertex_fold(v, u, x)
 
     # -----------------unconfined reduction---------------------------
-    def search_confinement(self,
-                           N_S: set[int],
-                           S: set[int]) -> tuple[int, int, set[int]]:
+    def search_confinement(self, N_S: set[int], S: set[int]) -> tuple[int, int, set[int]]:
         min: int = -1
         min_value: int = self.graph.number_of_nodes() + 2
         min_set_diff: set[int] = set()
@@ -161,10 +153,10 @@ class UnweightedKernelization(Kernelization):
         # If there is no such vertex, then v is confined.
         if min == -1:
             pass
-            '''
+            """
             if self.find_diamond_reduction(N_S, S):
                 self.apply_rule_diamond(v)
-            '''
+            """
         # If N(u)\N[S] = ∅, then v is unconfined.
         if min_value == 0:
             self.apply_rule_unconfined(v)
@@ -220,25 +212,18 @@ class UnweightedKernelization(Kernelization):
                 N_v: set[int] = set(self.kernel.neighbors(v))
                 N_u: set[int] = set(self.kernel.neighbors(u))
                 if N_u == N_v:
-                    return u
+                    return int(u)
         return -1
 
-    def apply_rule_twin_independent(self, v: int, u: int,
-                                    N_u: set[int]) -> None:
+    def apply_rule_twin_independent(self, v: int, u: int, N_u: set[int]) -> None:
         v_prime: int = self.new_node_current_index
         self.kernel.add_node(v_prime)
         self.new_node_current_index += 1
-        rule_app = RebuilderTwinIndependent(v,
-                                            u,
-                                            list(N_u)[0],
-                                            list(N_u)[1],
-                                            list(N_u)[2],
-                                            v_prime)
+        rule_app = RebuilderTwinIndependent(v, u, list(N_u)[0], list(N_u)[1], list(N_u)[2], v_prime)
         self.rule_application_sequence.append(rule_app)
         self.fold_twin(u, v, v_prime, N_u)
 
-    def apply_rule_twin_has_dependency(self, v: int, u: int,
-                                       N_u: set[int]) -> None:
+    def apply_rule_twin_has_dependency(self, v: int, u: int, N_u: set[int]) -> None:
         rule_app = RebuilderTwinHasDependency(v, u)
         self.rule_application_sequence.append(rule_app)
         self.kernel.remove_nodes_from(list(N_u))
@@ -275,8 +260,7 @@ class BaseRebuilder(abc.ABC):
     """
 
     @abc.abstractmethod
-    def rebuild(self, partial_solution: set[int]) -> None:
-        ...
+    def rebuild(self, partial_solution: set[int]) -> None: ...
 
 
 class RebuilderIsolatedVertexRemoval(BaseRebuilder):
@@ -304,16 +288,12 @@ class RebuilderVertexFolding(BaseRebuilder):
 
 
 class RebuilderUnconfined(BaseRebuilder):
-    def __init__(self):
-        pass
-
     def rebuild(self, partial_solution: set[int]) -> None:
         pass
 
 
 class RebuilderTwinIndependent(BaseRebuilder):
-    def __init__(self, v: int, u: int, w_0: int,
-                 w_1: int, w_2: int, v_prime: int):
+    def __init__(self, v: int, u: int, w_0: int, w_1: int, w_2: int, v_prime: int):
         self.v: int = v
         self.u: int = u
         self.w_0: int = w_0

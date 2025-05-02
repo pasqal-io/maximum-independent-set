@@ -8,20 +8,19 @@ from mis.shared.types import MISInstance, MISSolution
 from mis.pipeline.basesolver import BaseSolver
 from mis.pipeline.execution import Execution
 from mis.pipeline.fixtures import Fixtures
-from mis.pipeline.embedder import DefaultEmbedder
+from mis.pipeline.embedder import BaseEmbedder, DefaultEmbedder
 from mis.pipeline.pulse import BasePulseShaper, DefaultPulseShaper
 from mis.pipeline.targets import Pulse, Register
 from mis.pipeline.config import SolverConfig
 
 
-class MISSolver(BaseSolver):
+class MISSolver:
     """
     Dispatcher that selects the appropriate solver (quantum or classical)
     based on the SolverConfig and delegates execution to it.
     """
 
     def __init__(self, instance: MISInstance, config: SolverConfig):
-        super().__init__(instance, config)
         self._solver: BaseSolver
         if config.backend is None:
             self._solver = MISSolverClassical(instance, config)
@@ -37,7 +36,7 @@ class MISSolver(BaseSolver):
 class MISSolverClassical(BaseSolver):
     """
     Classical (i.e. non-quantum) solver for Maximum Independent Set using
-     brute-force search.
+    brute-force search.
 
     This solver is intended for benchmarking or as a fallback when quantum
     execution is disabled.
@@ -50,6 +49,7 @@ class MISSolverClassical(BaseSolver):
         """
         Solve the MIS problem and return a single optimal solution.
         """
+
         graph = self.instance.graph
         if not graph.nodes:
             return Execution.success([])
@@ -98,6 +98,7 @@ class MISSolverQuantum(BaseSolver):
         self._register: Register | None = None
         self._pulse: Pulse | None = None
         self._solution: MISSolution | None = None
+        self._preprocessed_instance: MISInstance | None = None
 
         # FIXME: Normalize embedder.
 
@@ -108,10 +109,15 @@ class MISSolverQuantum(BaseSolver):
         Returns:
             Register: Atom layout suitable for quantum hardware.
         """
-        embedder = self.config.embedder
+        config: SolverConfig = self.config
+        embedder = config.embedder
         assert embedder is not None
+        if self._preprocessed_instance is not None:
+            instance = self._preprocessed_instance
+        else:
+            instance = self.instance
         self._register = embedder.embed(
-            instance=self.instance,
+            instance=instance,
             config=self.config,
         )
         return self._register
@@ -142,11 +148,15 @@ class MISSolverQuantum(BaseSolver):
         return result
 
     def _process(self, data: Counter[str]) -> list[MISSolution]:
+        """
+        Process bitstrings into solutions.
+        """
+        assert self._preprocessed_instance is not None
         ranked = sorted(data.items(), key=lambda item: item[1], reverse=True)
         solutions = [
             self.fixtures.postprocess(
                 MISSolution(
-                    original=self.instance.graph,
+                    original=self._preprocessed_instance.graph,
                     energy=1 - atan(count),
                     # FIXME Probably not the best definition of energy
                     nodes=self._bitstring_to_nodes(bitstr),
@@ -164,7 +174,8 @@ class MISSolverQuantum(BaseSolver):
         Returns:
             MISSolution: Final result after execution and postprocessing.
         """
-        self.instance = self.fixtures.preprocess()
+
+        self._preprocessed_instance = self.fixtures.preprocess()
 
         embedding = self.embedding()
         pulse = self.pulse(embedding)

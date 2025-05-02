@@ -24,6 +24,7 @@ class Fixtures:
         """
         self.instance = instance
         self.config = config
+        self.preprocessor = self.config.preprocessor
 
     def preprocess(self) -> MISInstance:
         """
@@ -32,6 +33,9 @@ class Fixtures:
         Returns:
             MISInstance: The processed or annotated instance.
         """
+        if self.preprocessor is not None:
+            graph = self.preprocessor.preprocess(self.instance.graph)
+            return MISInstance(graph)
         return self.instance
 
     def postprocess(self, solution: MISSolution) -> MISSolution:
@@ -44,4 +48,14 @@ class Fixtures:
         Returns:
             MISSolution: The cleaned or transformed solution.
         """
+        if self.preprocessor is not None:
+            # If we have preprocessed the graph, we end up with a solution
+            # that only works for the preprocessed graph.
+            #
+            # At this stage, we need to call the preprocessor's rebuilder to
+            # expand this to a solution on the original graph.
+            nodes = self.preprocessor.rebuild(set(solution.nodes))
+            return MISSolution(
+                original=self.instance.graph, nodes=list(nodes), energy=solution.energy
+            )
         return solution
