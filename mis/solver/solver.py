@@ -8,7 +8,7 @@ from mis.shared.types import MISInstance, MISSolution
 from mis.pipeline.basesolver import BaseSolver
 from mis.pipeline.execution import Execution
 from mis.pipeline.fixtures import Fixtures
-from mis.pipeline.embedder import BaseEmbedder, DefaultEmbedder
+from mis.pipeline.embedder import DefaultEmbedder
 from mis.pipeline.pulse import BasePulseShaper, DefaultPulseShaper
 from mis.pipeline.targets import Pulse, Register
 from mis.pipeline.config import SolverConfig
@@ -22,6 +22,7 @@ class MISSolver:
 
     def __init__(self, instance: MISInstance, config: SolverConfig):
         self._solver: BaseSolver
+        self.instance = instance
         if config.backend is None:
             self._solver = MISSolverClassical(instance, config)
         else:

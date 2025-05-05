@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from mis.shared.types import MISInstance, MISSolution
 from mis.pipeline.config import SolverConfig
+from mis.pipeline.kernelization import Kernelization
+from mis.pipeline.preprocessor import BasePreprocessor
 
 
 class Fixtures:
@@ -24,7 +26,10 @@ class Fixtures:
         """
         self.instance = instance
         self.config = config
-        self.preprocessor = self.config.preprocessor
+        if self.config.preprocessor is None:
+            self.preprocessor: BasePreprocessor = Kernelization()
+        else:
+            self.preprocessor = self.config.preprocessor
 
     def preprocess(self) -> MISInstance:
         """
