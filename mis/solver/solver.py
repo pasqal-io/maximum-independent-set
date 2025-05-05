@@ -8,7 +8,7 @@ from mis.shared.types import MISInstance, MISSolution
 from mis.pipeline.basesolver import BaseSolver
 from mis.pipeline.execution import Execution
 from mis.pipeline.fixtures import Fixtures
-from mis.pipeline.embedder import BaseEmbedder, DefaultEmbedder
+from mis.pipeline.embedder import DefaultEmbedder
 from mis.pipeline.pulse import BasePulseShaper, DefaultPulseShaper
 from mis.pipeline.targets import Pulse, Register
 from mis.pipeline.config import SolverConfig
@@ -29,6 +29,8 @@ class MISSolver(BaseSolver):
             self._solver = MISSolverQuantum(instance, config)
 
     def solve(self) -> Execution[list[MISSolution]]:
+        if len(self.instance.graph.nodes) == 0:
+            return Execution.success([])
         return self._solver.solve()
 
 
@@ -106,11 +108,8 @@ class MISSolverQuantum(BaseSolver):
         Returns:
             Register: Atom layout suitable for quantum hardware.
         """
-        # FIXME: mypy seems to have an issue here, need to investigate.
-        config: SolverConfig = self.config
-        embedder = config.embedder
+        embedder = self.config.embedder
         assert embedder is not None
-        assert isinstance(embedder, BaseEmbedder)
         self._register = embedder.embed(
             instance=self.instance,
             config=self.config,
