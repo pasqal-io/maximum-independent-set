@@ -74,10 +74,15 @@ class SolverConfig:
         the size of the graph (hence the duration of actual resolution)
         by applying heuristics prior to embedding on a quantum device.
 
-        Ignored if `backend` is `None`, i.e. if the graph will not be
-        embedded on a quantum device.
+        By default, apply Kernelization, a set of non-destructive operations
+        that reduce the size of the graph prior to solving the problem.
+        This preprocessor reduces the number of qubits needed to execute
+        the embedded graph on the quantum device.
 
-        Note: If you wish to apply more than one preprocessor, you will
+        If you wish to deactivate preprocessing entirely, pass the
+        `EmptyPreprocessor()`.
+
+        If you wish to apply more than one preprocessor, you will
         need to specify in which order these preprocessurs must be called,
         or if some of them need to be called more than once, etc. For
         this purpose, you'll need to write your own subclass of

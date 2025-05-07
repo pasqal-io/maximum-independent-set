@@ -45,29 +45,32 @@ class MISSolverClassical(BaseSolver):
 
     def __init__(self, instance: MISInstance, config: SolverConfig):
         super().__init__(instance, config)
+        self.fixtures = Fixtures(instance, self.config)
 
     def solve(self) -> Execution[list[MISSolution]]:
         """
         Solve the MIS problem and return a single optimal solution.
         """
 
-        graph = self.instance.graph
-        if not graph.nodes:
+        if not self.instance.graph.nodes:
             return Execution.success([])
 
-        mis = nx.maximal_independent_set(G=graph)
-        assert isinstance(mis, list)
+        preprocessed_instance = self.fixtures.preprocess()
+        if len(preprocessed_instance.graph) == 0:
+            # Edge case: nx.maximal_independent_set doesn't work with an empty graph.
+            partial_solution = MISSolution(original=preprocessed_instance.graph, energy=0, nodes=[])
+        else:
+            mis = nx.maximal_independent_set(G=preprocessed_instance.graph)
+            assert isinstance(mis, list)
+            partial_solution = MISSolution(
+                original=preprocessed_instance.graph,
+                energy=0,
+                nodes=[node for node in mis],
+            )
 
-        # Convert back to original node labels
-        return Execution.success(
-            [
-                MISSolution(
-                    original=graph,
-                    nodes=[node for node in mis],
-                    energy=0,
-                )
-            ]
-        )
+        solution = self.fixtures.postprocess(partial_solution)
+
+        return Execution.success([solution])
 
 
 class MISSolverQuantum(BaseSolver):
@@ -177,7 +180,15 @@ class MISSolverQuantum(BaseSolver):
         """
 
         self._preprocessed_instance = self.fixtures.preprocess()
-
+        if len(self._preprocessed_instance.graph) == 0:
+            # Edge case: we cannot process an empty register.
+            return Execution.success(
+                [
+                    self.fixtures.postprocess(
+                        MISSolution(original=self._preprocessed_instance.graph, nodes=[], energy=0)
+                    )
+                ]
+            )
         embedding = self.embedding()
         pulse = self.pulse(embedding)
         execution_result = self.execute(pulse, embedding)

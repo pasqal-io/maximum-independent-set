@@ -10,17 +10,31 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
     Shared base class for kernelization.
     """
 
-    def preprocess(self, graph: nx.Graph) -> nx.Graph:
-        # FIXME: Check that there are no self-loops?
-
+    def reset(self, graph: nx.Graph) -> None:
         # The latest version of the graph.
+        # We rewrite it progressively to decrease the number of
+        # nodes and edges.
         self.kernel: nx.Graph = graph.copy()
         self.initial_number_of_nodes = self.kernel.number_of_nodes()
         self.rule_application_sequence: list[BaseRebuilder] = []
 
-        self._new_node_current_index = 1
-        if self.kernel.number_of_nodes() > 0:
-            self._new_node_current_index = max([node for node in self.kernel.nodes()]) + 1
+        # An index used to generate new node numbers.
+        self._new_node_gen_counter: int = 1
+        if self.initial_number_of_nodes > 0:
+            self._new_node_gen_counter = max(self.kernel.nodes()) + 1
+
+        # Get rid of any node with a self-loop (a node that is its own
+        # neighbour), as it cannot be part of a solution and we rely upon
+        # their absence in rule applications.
+        for node in list(self.kernel.nodes()):
+            if self.kernel.has_edge(node, node):
+                self.kernel.remove_node(node)
+
+    def preprocess(self, graph: nx.Graph) -> nx.Graph:
+        self.reset(graph)
+
+        # Invariant: from this point, `self.kernel` does not contain any
+        # self-loop.
         return self.exhaustive_rules_applications()
 
     @abc.abstractmethod
@@ -45,7 +59,7 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
             rule_app.rebuild(partial_solution)
         return partial_solution
 
-    def is_independent(self, graph: nx.Graph, nodes: list[int]) -> bool:
+    def is_independent(self, nodes: list[int]) -> bool:
         """
         Determine if a set of nodes represents an independent set
         within a given graph.
@@ -56,22 +70,22 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
             False otherwise, i.e. if there's at least one connection
                 between two nodes of `nodes`
         """
-        for i in range(len(nodes)):
-            for j in range(i, len(nodes)):
-                u = nodes[i]
-                v = nodes[j]
-                if graph.has_edge(u, v):
+        for i, u in enumerate(nodes):
+            for v in nodes[i + 1 :]:
+                if self.kernel.has_edge(u, v):
                     return False
         return True
 
-    def is_subclique(self, graph: nx.Graph, nodes: list[int]) -> bool:
+    def is_subclique(self, nodes: list[int]) -> bool:
         """
         Determine whether a list of nodes represents a clique
         within the graph, i.e. whether every pair of nodes is connected.
         """
-        H: nx.Graph = graph.subgraph(nodes)
-        n: int = len(nodes)
-        return bool(H.size() == n * (n - 1) / 2)
+        for i, u in enumerate(nodes):
+            for v in nodes[i + 1 :]:
+                if not self.kernel.has_edge(u, v):
+                    return False
+        return True
 
     def is_isolated(self, node: int) -> bool:
         """
@@ -80,7 +94,7 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         """
         closed_neighborhood: list[int] = list(self.kernel.neighbors(node))
         closed_neighborhood.append(node)
-        if self.is_subclique(graph=self.kernel, nodes=closed_neighborhood):
+        if self.is_subclique(nodes=closed_neighborhood):
             return True
         return False
 
@@ -88,8 +102,8 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         """
         Add a new node with a unique index.
         """
-        node = self._new_node_current_index
-        self._new_node_current_index += 1
+        node = self._new_node_gen_counter
+        self._new_node_gen_counter += 1
         self.kernel.add_node(node)
         return node
 
@@ -98,6 +112,9 @@ class Kernelization(BaseKernelization):
     """
     Apply well-known transformations to the graph to reduce its size without
     compromising the result.
+
+    This algorithm is adapted from e.g.:
+    https://schulzchristian.github.io/thesis/masterarbeit_demian_hespe.pdf
 
     Unless you are experimenting with your own preprocessors, you should
     probably use Kernelization in your pipeline.
@@ -146,7 +163,10 @@ class Kernelization(BaseKernelization):
 
     # -----------------unweighted_node_folding---------------------------
 
-    def folding(self, v: int, u: int, x: int, v_prime: int) -> None:
+    def _fold_three(self, v: int, u: int, x: int, v_prime: int) -> None:
+        """
+        Fold three nodes V, U and X into a new single node V'.
+        """
         neighbors_v_prime = set(self.kernel.neighbors(u)) | set(self.kernel.neighbors(x))
         for node in neighbors_v_prime:
             self.kernel.add_edge(v_prime, node)
@@ -156,11 +176,11 @@ class Kernelization(BaseKernelization):
         v_prime = self._add_node()
         rule_app = RebuilderNodeFolding(v, u, x, v_prime)
         self.rule_application_sequence.append(rule_app)
-        self.folding(v, u, x, v_prime)
+        self._fold_three(v, u, x, v_prime)
 
     def search_rule_node_fold(self) -> None:
         """
-        If a node V has two neighbours U and X and there is no edge
+        If a node V has exactly two neighbours U and X and there is no edge
         between U and X, fold U, V and X and into a single node.
         """
         if self.kernel.number_of_nodes() == 0:
@@ -177,9 +197,7 @@ class Kernelization(BaseKernelization):
                 continue
             if self.kernel.has_node(v):
                 if self.kernel.degree(v) == 2:
-                    neighbors: list[int] = list(self.kernel.neighbors(v))
-                    u: int = neighbors[0]
-                    x: int = neighbors[1]
+                    [u, x] = self.kernel.neighbors(v)
                     if not self.kernel.has_edge(u, x):
                         self.apply_rule_node_fold(v, u, x)
 
@@ -325,7 +343,7 @@ class Kernelization(BaseKernelization):
             if u is None:
                 continue
             neighbors_u: list[int] = list(self.kernel.neighbors(u))
-            if self.is_independent(self.kernel, neighbors_u):
+            if self.is_independent(neighbors_u):
                 self.apply_rule_twin_independent(v, u, neighbors_u)
             else:
                 self.apply_rule_twin_has_dependency(v, u, neighbors_u)
@@ -340,12 +358,18 @@ class BaseRebuilder(abc.ABC):
     that does not work for the original graph.
 
     Each rebuilder corresponds to one of the operations
-    that reduced the size of the graph, and is charged
-    with adapting the MIS solution to the greater graph.
+    that previously reduced the size of the graph, and is
+    charged with adapting the MIS solution to the greater graph.
     """
 
     @abc.abstractmethod
     def rebuild(self, partial_solution: set[int]) -> None: ...
+
+    """
+    Convert a solution `partial_solution` that is valid on a reduced
+    graph to a solution that is valid on the graph prior to this
+    reduction step.
+    """
 
 
 class RebuilderIsolatedNodeRemoval(BaseRebuilder):
@@ -385,7 +409,7 @@ class RebuilderTwinIndependent(BaseRebuilder):
          - V has exactly the same neighbours as U;
          - there is no self-loop around U or V (hence U and V are not
             neighbours);
-         - there is no connection between W1, W2, W3;
+         - there is no edge between W1, W2, W3;
          - V' is the node obtained by merging U, V, W1, W2, W3.
         """
         self.v: int = v
