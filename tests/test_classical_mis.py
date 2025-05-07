@@ -1,17 +1,20 @@
 import networkx as nx
+import pytest
 
 # Define classical solver configuration
 from mis.solver.solver import MISInstance, MISSolver
 from mis.pipeline.config import SolverConfig
 from mis.shared.types import MethodType
+from mis.pipeline.preprocessor import EmptyPreprocessor
 
 
-def test_empty_mis() -> None:
+@pytest.mark.parametrize("preprocessor", [None, EmptyPreprocessor()])
+def test_empty_mis(preprocessor: None | EmptyPreprocessor) -> None:
     """
     Classical MIS solver should work with an empty graph.
     """
     graph = nx.Graph()
-    config = SolverConfig(method=MethodType.EAGER, max_iterations=1)
+    config = SolverConfig(method=MethodType.EAGER, max_iterations=1, preprocessor=preprocessor)
 
     # Create the MIS instance
     instance = MISInstance(graph)
@@ -23,7 +26,8 @@ def test_empty_mis() -> None:
     assert len(solutions) == 0
 
 
-def test_disconnected_mis() -> None:
+@pytest.mark.parametrize("preprocessor", [None, EmptyPreprocessor()])
+def test_disconnected_mis(preprocessor: None | EmptyPreprocessor) -> None:
     """
     Classical MIS solver should work with a graph without any edge.
     """
@@ -32,7 +36,7 @@ def test_disconnected_mis() -> None:
     for i in range(SIZE):
         graph.add_node(i)
 
-    config = SolverConfig(method=MethodType.EAGER, max_iterations=1)
+    config = SolverConfig(method=MethodType.EAGER, max_iterations=1, preprocessor=preprocessor)
 
     # Create the MIS instance
     instance = MISInstance(graph)
@@ -45,7 +49,8 @@ def test_disconnected_mis() -> None:
     assert len(solutions[0].nodes) == SIZE
 
 
-def test_star_mis() -> None:
+@pytest.mark.parametrize("preprocessor", [None, EmptyPreprocessor()])
+def test_star_mis(preprocessor: None | EmptyPreprocessor) -> None:
     """
     Classical MIS solver should work with a star-shaped graph.
     """
@@ -56,7 +61,7 @@ def test_star_mis() -> None:
         if i != 0:
             graph.add_edge(0, i)
 
-    config = SolverConfig(method=MethodType.EAGER, max_iterations=1)
+    config = SolverConfig(method=MethodType.EAGER, max_iterations=1, preprocessor=preprocessor)
 
     # Create the MIS instance
     instance = MISInstance(graph)

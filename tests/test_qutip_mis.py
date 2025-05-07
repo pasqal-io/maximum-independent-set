@@ -15,7 +15,9 @@ def test_empty_qtip_mis(preprocessor: None | EmptyPreprocessor) -> None:
     Classical MIS solver should work on an empty graph.
     """
     graph = nx.Graph()
-    config = SolverConfig(method=MethodType.EAGER, max_iterations=1, backend=QutipBackend(), preprocessor=preprocessor)
+    config = SolverConfig(
+        method=MethodType.EAGER, max_iterations=1, backend=QutipBackend(), preprocessor=preprocessor
+    )
 
     # Create the MIS instance
     instance = MISInstance(graph)
@@ -37,7 +39,9 @@ def test_disconnected_qtip_mis(preprocessor: None | EmptyPreprocessor) -> None:
     for i in range(SIZE):
         graph.add_node(i)
 
-    config = SolverConfig(method=MethodType.EAGER, max_iterations=1, backend=QutipBackend(), preprocessor=preprocessor)
+    config = SolverConfig(
+        method=MethodType.EAGER, max_iterations=1, backend=QutipBackend(), preprocessor=preprocessor
+    )
 
     # Create the MIS instance
     instance = MISInstance(graph)
@@ -70,7 +74,9 @@ def test_star_qtip_mis(preprocessor: None | EmptyPreprocessor) -> None:
         if i != 0:
             graph.add_edge(0, i)
 
-    config = SolverConfig(method=MethodType.EAGER, max_iterations=1, backend=QutipBackend(), preprocessor=preprocessor)
+    config = SolverConfig(
+        method=MethodType.EAGER, max_iterations=1, backend=QutipBackend(), preprocessor=preprocessor
+    )
 
     # Create the MIS instance
     instance = MISInstance(graph)
