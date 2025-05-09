@@ -44,8 +44,6 @@ class DefaultEmbedder(BaseEmbedder):
 
         # Layout based on edges.
         positions = nx.spring_layout(instance.graph)
-        print(f"YORIC: instance: {instance.graph}")
-        print(f"YORIC: laid out: {positions}")
 
         # Rescale to ensure that minimal distances are respected.
         distances = [
