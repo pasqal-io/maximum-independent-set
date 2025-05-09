@@ -30,4 +30,4 @@ class MISInstance:
 class MISSolution:
     original: networkx.Graph
     nodes: list[int]
-    energy: float
+    frequency: float

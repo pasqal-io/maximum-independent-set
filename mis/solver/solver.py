@@ -1,5 +1,4 @@
 from __future__ import annotations
-from math import atan
 from typing import Counter
 
 import networkx as nx
@@ -22,7 +21,6 @@ class MISSolver:
 
     def __init__(self, instance: MISInstance, config: SolverConfig):
         self._solver: BaseSolver
-        self.instance = instance
         if config.backend is None:
             self._solver = MISSolverClassical(instance, config)
         else:
@@ -45,7 +43,6 @@ class MISSolverClassical(BaseSolver):
 
     def __init__(self, instance: MISInstance, config: SolverConfig):
         super().__init__(instance, config)
-        self.fixtures = Fixtures(instance, self.config)
 
     def solve(self) -> Execution[list[MISSolution]]:
         """
@@ -161,9 +158,7 @@ class MISSolverQuantum(BaseSolver):
             self.fixtures.postprocess(
                 MISSolution(
                     original=self._preprocessed_instance.graph,
-                    energy=1 - atan(count),
-                    # FIXME Probably not the best definition of energy
-                    nodes=self._bitstring_to_nodes(bitstr),
+                    frequency=count / total,                    nodes=self._bitstring_to_nodes(bitstr),
                 )
             )
             for [bitstr, count] in ranked
@@ -178,7 +173,6 @@ class MISSolverQuantum(BaseSolver):
         Returns:
             MISSolution: Final result after execution and postprocessing.
         """
-
         self._preprocessed_instance = self.fixtures.preprocess()
         if len(self._preprocessed_instance.graph) == 0:
             # Edge case: we cannot process an empty register.
