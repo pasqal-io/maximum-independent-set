@@ -44,4 +44,6 @@ class Fixtures:
         Returns:
             MISSolution: The cleaned or transformed solution.
         """
+        # FIXME: Call postprocess
+        # FIXME: Adjust frequencies
         return solution

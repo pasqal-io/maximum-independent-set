@@ -1,5 +1,4 @@
 from __future__ import annotations
-from math import atan
 from typing import Counter
 
 import networkx as nx
@@ -63,7 +62,7 @@ class MISSolverClassical(BaseSolver):
                 MISSolution(
                     original=graph,
                     nodes=[node for node in mis],
-                    energy=0,
+                    frequency=1.0,
                 )
             ]
         )
@@ -143,12 +142,12 @@ class MISSolverQuantum(BaseSolver):
 
     def _process(self, data: Counter[str]) -> list[MISSolution]:
         ranked = sorted(data.items(), key=lambda item: item[1], reverse=True)
+        total = sum(data.values())
         solutions = [
             self.fixtures.postprocess(
                 MISSolution(
                     original=self.instance.graph,
-                    energy=1 - atan(count),
-                    # FIXME Probably not the best definition of energy
+                    frequency=count / total,
                     nodes=self._bitstring_to_nodes(bitstr),
                 )
             )
