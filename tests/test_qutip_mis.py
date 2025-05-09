@@ -1,3 +1,4 @@
+from typing import Callable
 import networkx as nx
 import pytest
 
@@ -5,12 +6,12 @@ import pytest
 from mis.pipeline.backends import QutipBackend
 from mis.solver.solver import MISInstance, MISSolver
 from mis.pipeline.config import SolverConfig
-from mis.pipeline.preprocessor import EmptyPreprocessor
+from mis.pipeline.kernelization import Kernelization
 from mis.shared.types import MethodType
 
 
-@pytest.mark.parametrize("preprocessor", [None, EmptyPreprocessor()])
-def test_empty_qtip_mis(preprocessor: None | EmptyPreprocessor) -> None:
+@pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
+def test_empty_qtip_mis(preprocessor: None | Callable[[nx.Graph], Kernelization]) -> None:
     """
     Classical MIS solver should work on an empty graph.
     """
@@ -29,8 +30,8 @@ def test_empty_qtip_mis(preprocessor: None | EmptyPreprocessor) -> None:
     assert len(solutions) == 0
 
 
-@pytest.mark.parametrize("preprocessor", [None, EmptyPreprocessor()])
-def test_disconnected_qtip_mis(preprocessor: None | EmptyPreprocessor) -> None:
+@pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
+def test_disconnected_qtip_mis(preprocessor: None | Callable[[nx.Graph], Kernelization]) -> None:
     """
     Classical MIS solver should work on a graph without any edge.
     """
@@ -49,7 +50,6 @@ def test_disconnected_qtip_mis(preprocessor: None | EmptyPreprocessor) -> None:
     # Run the solver
     solver = MISSolver(instance, config)
     solutions = solver.solve().result()
-    print(f"YORIC: Solutions {solutions}")
 
     # Check that at least one of the solutions makes sense.
     found = False
@@ -62,8 +62,8 @@ def test_disconnected_qtip_mis(preprocessor: None | EmptyPreprocessor) -> None:
     assert found
 
 
-@pytest.mark.parametrize("preprocessor", [(None), (EmptyPreprocessor())])
-def test_star_qtip_mis(preprocessor: None | EmptyPreprocessor) -> None:
+@pytest.mark.parametrize("preprocessor", [(None), (lambda graph: Kernelization(graph))])
+def test_star_qtip_mis(preprocessor: None | Callable[[nx.Graph], Kernelization]) -> None:
     """
     Classical MIS solver should work on a star-shaped graph.
     """

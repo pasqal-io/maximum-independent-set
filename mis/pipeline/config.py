@@ -1,6 +1,8 @@
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Callable
+
+import networkx as nx
 
 from pulser.devices import Device
 
@@ -13,6 +15,13 @@ from mis.shared.types import MethodType
 
 # Modules to be automatically added to the MISSolver namespace
 __all__ = ["SolverConfig"]  # type: ignore
+
+
+def default_preprocessor() -> Callable[[nx.Graph], BasePreprocessor]:
+    # Avoid circular dependencies during load.
+    from mis.pipeline.kernelization import Kernelization
+
+    return lambda graph: Kernelization(graph)
 
 
 @dataclass
@@ -68,7 +77,9 @@ class SolverConfig:
         Ignored for non-quantum backends.
     """
 
-    preprocessor: BasePreprocessor | None = None
+    preprocessor: Callable[[nx.Graph], BasePreprocessor] | None = field(
+        default_factory=default_preprocessor
+    )
     """
     preprocessor: If specified, a graph preprocessor, used to decrease
         the size of the graph (hence the duration of actual resolution)
@@ -79,8 +90,7 @@ class SolverConfig:
         This preprocessor reduces the number of qubits needed to execute
         the embedded graph on the quantum device.
 
-        If you wish to deactivate preprocessing entirely, pass the
-        `EmptyPreprocessor()`.
+        If you wish to deactivate preprocessing entirely, pass `None`.
 
         If you wish to apply more than one preprocessor, you will
         need to specify in which order these preprocessurs must be called,

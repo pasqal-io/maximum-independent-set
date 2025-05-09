@@ -9,7 +9,7 @@ class BasePreprocessor(abc.ABC):
     """
 
     @abc.abstractmethod
-    def preprocess(self, graph: nx.Graph) -> nx.Graph: ...
+    def preprocess(self) -> nx.Graph: ...
 
     """
     Preprocess a graph.
@@ -32,15 +32,3 @@ class BasePreprocessor(abc.ABC):
     """
     Apply any pending rebuild operations.
     """
-
-
-class EmptyPreprocessor(BasePreprocessor):
-    """
-    A preprocessor that does nothing.
-    """
-
-    def preprocess(self, graph: nx.Graph) -> nx.Graph:
-        return graph
-
-    def rebuild(self, partial_solution: set[int]) -> set[int]:
-        return partial_solution

@@ -1,3 +1,4 @@
+from typing import Callable
 import networkx as nx
 import pytest
 
@@ -5,11 +6,11 @@ import pytest
 from mis.solver.solver import MISInstance, MISSolver
 from mis.pipeline.config import SolverConfig
 from mis.shared.types import MethodType
-from mis.pipeline.preprocessor import EmptyPreprocessor
+from mis.pipeline.kernelization import Kernelization
 
 
-@pytest.mark.parametrize("preprocessor", [None, EmptyPreprocessor()])
-def test_empty_mis(preprocessor: None | EmptyPreprocessor) -> None:
+@pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
+def test_empty_mis(preprocessor: None | Callable[[nx.Graph], Kernelization]) -> None:
     """
     Classical MIS solver should work with an empty graph.
     """
@@ -26,8 +27,8 @@ def test_empty_mis(preprocessor: None | EmptyPreprocessor) -> None:
     assert len(solutions) == 0
 
 
-@pytest.mark.parametrize("preprocessor", [None, EmptyPreprocessor()])
-def test_disconnected_mis(preprocessor: None | EmptyPreprocessor) -> None:
+@pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
+def test_disconnected_mis(preprocessor: None | Callable[[nx.Graph], Kernelization]) -> None:
     """
     Classical MIS solver should work with a graph without any edge.
     """
@@ -49,8 +50,8 @@ def test_disconnected_mis(preprocessor: None | EmptyPreprocessor) -> None:
     assert len(solutions[0].nodes) == SIZE
 
 
-@pytest.mark.parametrize("preprocessor", [None, EmptyPreprocessor()])
-def test_star_mis(preprocessor: None | EmptyPreprocessor) -> None:
+@pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
+def test_star_mis(preprocessor: None | Callable[[nx.Graph], Kernelization]) -> None:
     """
     Classical MIS solver should work with a star-shaped graph.
     """

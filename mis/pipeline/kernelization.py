@@ -10,7 +10,7 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
     Shared base class for kernelization.
     """
 
-    def reset(self, graph: nx.Graph) -> None:
+    def __init__(self, graph: nx.Graph) -> None:
         # The latest version of the graph.
         # We rewrite it progressively to decrease the number of
         # nodes and edges.
@@ -30,9 +30,7 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
             if self.kernel.has_edge(node, node):
                 self.kernel.remove_node(node)
 
-    def preprocess(self, graph: nx.Graph) -> nx.Graph:
-        self.reset(graph)
-
+    def preprocess(self) -> nx.Graph:
         # Invariant: from this point, `self.kernel` does not contain any
         # self-loop.
         return self.exhaustive_rules_applications()
