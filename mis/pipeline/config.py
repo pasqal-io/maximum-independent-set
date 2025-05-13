@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from mis.pipeline.backends import BaseBackend
     from mis.pipeline.embedder import BaseEmbedder
     from mis.pipeline.pulse import BasePulseShaper
+    from mis.pipeline.postprocessor import BasePostprocessor
     from mis.pipeline.preprocessor import BasePreprocessor
 from mis.shared.types import MethodType
 
@@ -23,6 +24,10 @@ def default_preprocessor() -> Callable[[nx.Graph], BasePreprocessor]:
 
     return lambda graph: Kernelization(graph)
 
+
+def default_postprocessor() -> BasePostprocessor:
+    from mis.pipeline.maximization import Maximization
+    return Maximization()
 
 @dataclass
 class SolverConfig:
@@ -98,4 +103,9 @@ class SolverConfig:
         this purpose, you'll need to write your own subclass of
         `BasePreprocessor` that orchestrates calling the individual
         preprocessors.
+    """
+
+  postprocessor: Callable[[], BasePostprocessor] | None = default_postprocessor
+    """
+    A postprocessor used to sort out and improve results.
     """

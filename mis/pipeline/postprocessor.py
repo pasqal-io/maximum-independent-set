@@ -14,6 +14,3 @@ class Postprocessor(abc.ABC):
         ...
 
 
-class EmptyPostProcessor(Postprocessor):
-    def postprocess(self, solution: MISSolution) -> MISSolution | None:
-        return solution
