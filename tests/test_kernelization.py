@@ -1,13 +1,40 @@
 from __future__ import annotations
+import random
+
 import mis.pipeline.kernelization as ker
 import networkx as nx
 
 
 def test_is_subclique() -> None:
-    test_instance = ker.Kernelization(nx.complete_graph(5))
-    test_instance.kernel.add_node(30)
-    assert test_instance.is_subclique([0, 1, 2, 3])
-    assert not test_instance.is_subclique([0, 1, 2, 3, 30])
+    """
+    Test clique detection with Kernlizer.is_subclique.
+    """
+    SIZE = 10
+    graph = nx.Graph()
+
+    # Prepare a clique
+    clique_set: set[int] = set()
+    while len(clique_set) < SIZE:
+        clique_set.add(random.randint(0, 100000000))
+    for node in clique_set:
+        graph.add_node(node)
+    clique = list(clique_set)
+    for i, node in enumerate(clique):
+        for node_2 in clique[i+1:]:
+            graph.add_edge(node, node_2)
+
+    # Prepare a few points that are not in the clique
+    out_of_clique = None
+    while out_of_clique is None:
+        node = random.randint(0, 1000000000)
+        if node in clique_set:
+            continue
+        out_of_clique = node
+        graph.add_node(node)
+
+    test_instance = ker.Kernelization(graph)
+    assert test_instance.is_subclique(clique)
+    assert not test_instance.is_subclique([out_of_clique, *clique_set])
 
 
 graph_isolated = nx.Graph()
