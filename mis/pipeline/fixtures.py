@@ -25,10 +25,9 @@ class Fixtures:
         """
         self.instance = instance
         self.config = config
+        self.preprocessor: BasePreprocessor | None = None
         if self.config.preprocessor is not None:
-            self.preprocessor: BasePreprocessor | None = self.config.preprocessor(instance.graph)
-        else:
-            self.preprocessor = None
+            self.preprocessor = self.config.preprocessor(instance.graph)
 
     def preprocess(self) -> MISInstance:
         """

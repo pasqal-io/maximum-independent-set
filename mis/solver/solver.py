@@ -122,7 +122,7 @@ class MISSolverQuantum(BaseSolver):
             instance = self.instance
         self._register = embedder.embed(
             instance=instance,
-            config=self.config,
+            config=config,
         )
         return self._register
 

@@ -20,7 +20,7 @@ def test_is_subclique() -> None:
         graph.add_node(node)
     clique = list(clique_set)
     for i, node in enumerate(clique):
-        for node_2 in clique[i+1:]:
+        for node_2 in clique[i + 1 :]:
             graph.add_edge(node, node_2)
 
     # Prepare a few points that are not in the clique
