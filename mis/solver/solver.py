@@ -60,7 +60,7 @@ class MISSolverClassical(BaseSolver):
             # Edge case: nx.maximal_independent_set doesn't work with an empty graph.
             partial_solution = MISSolution(original=preprocessed_instance.graph, energy=0, nodes=[])
         else:
-            mis = nx.maximal_independent_set(G=preprocessed_instance.graph)
+            mis = nx.approximation.maximum_independent_set(G=preprocessed_instance.graph)
             assert isinstance(mis, list)
             partial_solution = MISSolution(
                 original=preprocessed_instance.graph,
