@@ -12,6 +12,32 @@ from mis.pipeline.kernelization import Kernelization
 TEST_FILES_DIR = Path.cwd() / "tests/test_files"
 
 
+@pytest.mark.parametrize("dimacs_to_nx", [TEST_FILES_DIR / "a265032_1tc.32.txt"], indirect=True)
+@pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
+def test_for_dimacs_32_node_graph(
+    dimacs_to_nx: nx.Graph, preprocessor: None | Callable[[nx.Graph], Kernelization]
+) -> None:
+    """
+    Classical MIS solver for a standard graph benchmark dataset in DIMACS format.
+
+    Can be found here: https://oeis.org/A265032/a265032.html
+    """
+    graph = dimacs_to_nx
+    assert graph.number_of_nodes() == 32
+    assert graph.number_of_edges() == 68
+
+    config = SolverConfig(method=MethodType.EAGER, max_iterations=1, preprocessor=None)
+
+    # Create the MIS instance
+    instance = MISInstance(graph)
+
+    # Run the solver
+    solver = MISSolver(instance, config)
+    solutions = solver.solve().result()
+
+    assert len(solutions[0].nodes) == 12
+
+
 @pytest.mark.parametrize("dimacs_to_nx", [TEST_FILES_DIR / "a265032_1dc.64.txt"], indirect=True)
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
 def test_for_dimacs_64_node_graph(
@@ -23,6 +49,9 @@ def test_for_dimacs_64_node_graph(
     Can be found here: https://oeis.org/A265032/a265032.html
     """
     graph = dimacs_to_nx
+    assert graph.number_of_nodes() == 64
+    assert graph.number_of_edges() == 543
+
     config = SolverConfig(method=MethodType.EAGER, max_iterations=1, preprocessor=preprocessor)
 
     # Create the MIS instance
