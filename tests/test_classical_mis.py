@@ -1,12 +1,41 @@
 from typing import Callable
 import networkx as nx
 import pytest
+from pathlib import Path
 
 # Define classical solver configuration
 from mis.solver.solver import MISInstance, MISSolver
 from mis.pipeline.config import SolverConfig
 from mis.shared.types import MethodType
 from mis.pipeline.kernelization import Kernelization
+
+TEST_FILES_DIR = Path.cwd() / "tests/test_files"
+
+
+@pytest.mark.parametrize("dimacs_to_nx", [TEST_FILES_DIR / "a265032_1dc.64.txt"], indirect=True)
+@pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
+def test_for_dimacs_64_node_graph(
+    dimacs_to_nx: nx.Graph, preprocessor: None | Callable[[nx.Graph], Kernelization]
+) -> None:
+    """
+    Classical MIS solver for a standard graph benchmark dataset in DIMACS format.
+
+    Can be found here: https://oeis.org/A265032/a265032.html
+    """
+    graph = dimacs_to_nx
+    config = SolverConfig(method=MethodType.EAGER, max_iterations=1, preprocessor=preprocessor)
+
+    # Create the MIS instance
+    instance = MISInstance(graph)
+
+    # Run the solver
+    solver = MISSolver(instance, config)
+    solutions = solver.solve().result()
+
+    if preprocessor is None:
+        assert solutions[0].nodes == [1, 4, 42, 11, 16, 56, 25, 61]
+    else:
+        assert solutions[0].nodes == [64, 1, 4, 13, 16, 22, 47, 49, 52
 
 
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
