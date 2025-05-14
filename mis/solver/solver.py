@@ -61,11 +61,11 @@ class MISSolverClassical(BaseSolver):
             partial_solution = MISSolution(original=preprocessed_instance.graph, energy=0, nodes=[])
         else:
             mis = nx.approximation.maximum_independent_set(G=preprocessed_instance.graph)
-            assert isinstance(mis, list)
+            assert isinstance(mis, set)
             partial_solution = MISSolution(
                 original=preprocessed_instance.graph,
                 energy=0,
-                nodes=[node for node in mis],
+                nodes=list(mis),
             )
 
         solution = self.fixtures.postprocess(partial_solution)
