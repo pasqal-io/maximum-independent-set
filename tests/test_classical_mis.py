@@ -35,7 +35,7 @@ def test_for_dimacs_64_node_graph(
     if preprocessor is None:
         assert solutions[0].nodes == [1, 4, 42, 11, 16, 56, 25, 61]
     else:
-        assert solutions[0].nodes == [64, 1, 4, 13, 16, 22, 47, 49, 52
+        assert solutions[0].nodes == [64, 1, 4, 13, 16, 22, 47, 49, 52]
 
 
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
