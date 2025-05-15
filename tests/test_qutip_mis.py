@@ -7,17 +7,26 @@ from mis.pipeline.backends import QutipBackend
 from mis.solver.solver import MISInstance, MISSolver
 from mis.pipeline.config import SolverConfig
 from mis.pipeline.kernelization import Kernelization
+from mis.pipeline.maximization import Maximization
 from mis.shared.types import MethodType
 
 
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
-def test_empty_qtip_mis(preprocessor: None | Callable[[nx.Graph], Kernelization]) -> None:
+@pytest.mark.parametrize("postprocessor", [None, lambda: Maximization()])
+def test_empty_qtip_mis(
+    preprocessor: None | Callable[[nx.Graph], Kernelization],
+    postprocessor: None | Callable[[], Maximization],
+) -> None:
     """
     Classical MIS solver should work on an empty graph.
     """
     graph = nx.Graph()
     config = SolverConfig(
-        method=MethodType.EAGER, max_iterations=1, backend=QutipBackend(), preprocessor=preprocessor
+        method=MethodType.EAGER,
+        max_iterations=1,
+        backend=QutipBackend(),
+        preprocessor=preprocessor,
+        postprocessor=postprocessor,
     )
 
     # Create the MIS instance
@@ -31,7 +40,11 @@ def test_empty_qtip_mis(preprocessor: None | Callable[[nx.Graph], Kernelization]
 
 
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
-def test_disconnected_qtip_mis(preprocessor: None | Callable[[nx.Graph], Kernelization]) -> None:
+@pytest.mark.parametrize("postprocessor", [None, lambda: Maximization()])
+def test_disconnected_qtip_mis(
+    preprocessor: None | Callable[[nx.Graph], Kernelization],
+    postprocessor: None | Callable[[], Maximization],
+) -> None:
     """
     Classical MIS solver should work on a graph without any edge.
     """
@@ -41,7 +54,11 @@ def test_disconnected_qtip_mis(preprocessor: None | Callable[[nx.Graph], Kerneli
         graph.add_node(i)
 
     config = SolverConfig(
-        method=MethodType.EAGER, max_iterations=1, backend=QutipBackend(), preprocessor=preprocessor
+        method=MethodType.EAGER,
+        max_iterations=1,
+        backend=QutipBackend(),
+        preprocessor=preprocessor,
+        postprocessor=postprocessor,
     )
 
     # Create the MIS instance
@@ -63,7 +80,11 @@ def test_disconnected_qtip_mis(preprocessor: None | Callable[[nx.Graph], Kerneli
 
 
 @pytest.mark.parametrize("preprocessor", [(None), (lambda graph: Kernelization(graph))])
-def test_star_qtip_mis(preprocessor: None | Callable[[nx.Graph], Kernelization]) -> None:
+@pytest.mark.parametrize("postprocessor", [None, lambda: Maximization()])
+def test_star_qtip_mis(
+    preprocessor: None | Callable[[nx.Graph], Kernelization],
+    postprocessor: None | Callable[[], Maximization],
+) -> None:
     """
     Classical MIS solver should work on a star-shaped graph.
     """
@@ -75,7 +96,11 @@ def test_star_qtip_mis(preprocessor: None | Callable[[nx.Graph], Kernelization])
             graph.add_edge(0, i)
 
     config = SolverConfig(
-        method=MethodType.EAGER, max_iterations=1, backend=QutipBackend(), preprocessor=preprocessor
+        method=MethodType.EAGER,
+        max_iterations=1,
+        backend=QutipBackend(),
+        preprocessor=preprocessor,
+        postprocessor=postprocessor,
     )
 
     # Create the MIS instance
@@ -90,6 +115,7 @@ def test_star_qtip_mis(preprocessor: None | Callable[[nx.Graph], Kernelization])
     for solution in solutions:
         assert len(solution.nodes) <= SIZE
         if len(solution.nodes) >= SIZE / 2:
+            # Check that nodes are distinct.
             assert len(set(solution.nodes)) == len(solution.nodes)
             found = True
             break

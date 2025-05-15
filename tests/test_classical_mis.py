@@ -7,15 +7,25 @@ from mis.solver.solver import MISInstance, MISSolver
 from mis.pipeline.config import SolverConfig
 from mis.shared.types import MethodType
 from mis.pipeline.kernelization import Kernelization
+from mis.pipeline.maximization import Maximization
 
 
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
-def test_empty_mis(preprocessor: None | Callable[[nx.Graph], Kernelization]) -> None:
+@pytest.mark.parametrize("postprocessor", [None, lambda: Maximization()])
+def test_empty_mis(
+    preprocessor: None | Callable[[nx.Graph], Kernelization],
+    postprocessor: None | Callable[[], Maximization],
+) -> None:
     """
     Classical MIS solver should work with an empty graph.
     """
     graph = nx.Graph()
-    config = SolverConfig(method=MethodType.EAGER, max_iterations=1, preprocessor=preprocessor)
+    config = SolverConfig(
+        method=MethodType.EAGER,
+        max_iterations=1,
+        preprocessor=preprocessor,
+        postprocessor=postprocessor,
+    )
 
     # Create the MIS instance
     instance = MISInstance(graph)
@@ -28,7 +38,11 @@ def test_empty_mis(preprocessor: None | Callable[[nx.Graph], Kernelization]) -> 
 
 
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
-def test_disconnected_mis(preprocessor: None | Callable[[nx.Graph], Kernelization]) -> None:
+@pytest.mark.parametrize("postprocessor", [None, lambda: Maximization()])
+def test_disconnected_mis(
+    preprocessor: None | Callable[[nx.Graph], Kernelization],
+    postprocessor: None | Callable[[], Maximization],
+) -> None:
     """
     Classical MIS solver should work with a graph without any edge.
     """
@@ -37,7 +51,12 @@ def test_disconnected_mis(preprocessor: None | Callable[[nx.Graph], Kernelizatio
     for i in range(SIZE):
         graph.add_node(i)
 
-    config = SolverConfig(method=MethodType.EAGER, max_iterations=1, preprocessor=preprocessor)
+    config = SolverConfig(
+        method=MethodType.EAGER,
+        max_iterations=1,
+        preprocessor=preprocessor,
+        postprocessor=postprocessor,
+    )
 
     # Create the MIS instance
     instance = MISInstance(graph)
@@ -51,7 +70,11 @@ def test_disconnected_mis(preprocessor: None | Callable[[nx.Graph], Kernelizatio
 
 
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
-def test_star_mis(preprocessor: None | Callable[[nx.Graph], Kernelization]) -> None:
+@pytest.mark.parametrize("postprocessor", [None, lambda: Maximization()])
+def test_star_mis(
+    preprocessor: None | Callable[[nx.Graph], Kernelization],
+    postprocessor: None | Callable[[], Maximization],
+) -> None:
     """
     Classical MIS solver should work with a star-shaped graph.
     """
@@ -62,7 +85,12 @@ def test_star_mis(preprocessor: None | Callable[[nx.Graph], Kernelization]) -> N
         if i != 0:
             graph.add_edge(0, i)
 
-    config = SolverConfig(method=MethodType.EAGER, max_iterations=1, preprocessor=preprocessor)
+    config = SolverConfig(
+        method=MethodType.EAGER,
+        max_iterations=1,
+        preprocessor=preprocessor,
+        postprocessor=postprocessor,
+    )
 
     # Create the MIS instance
     instance = MISInstance(graph)
