@@ -27,7 +27,9 @@ def default_preprocessor() -> Callable[[nx.Graph], BasePreprocessor]:
 
 def default_postprocessor() -> BasePostprocessor:
     from mis.pipeline.maximization import Maximization
+
     return Maximization()
+
 
 @dataclass
 class SolverConfig:
@@ -86,7 +88,7 @@ class SolverConfig:
         default_factory=default_preprocessor
     )
     """
-    preprocessor: If specified, a graph preprocessor, used to decrease
+    preprocessor: A graph preprocessor, used to decrease
         the size of the graph (hence the duration of actual resolution)
         by applying heuristics prior to embedding on a quantum device.
 
@@ -105,7 +107,12 @@ class SolverConfig:
         preprocessors.
     """
 
-  postprocessor: Callable[[], BasePostprocessor] | None = default_postprocessor
+    postprocessor: Callable[[], BasePostprocessor] | None = default_postprocessor
     """
-    A postprocessor used to sort out and improve results.
+        A postprocessor used to sort out and improve results.
+
+        By default, apply Maximization, a set of heuristics that attempt
+        to "fix" quantum results in case of accidental bitflips.
+
+        If you wish to deactivate postprocessing entirely, pass `None`.
     """

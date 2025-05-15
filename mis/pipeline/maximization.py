@@ -1,11 +1,11 @@
 import random
 import networkx as nx
 
-from mis.pipeline.postprocessor import Postprocessor
+from mis.pipeline.postprocessor import BasePostprocessor
 from mis.shared.types import MISSolution
 
 
-class Maximization(Postprocessor):
+class Maximization(BasePostprocessor):
     """
     A postprocessor dedicated to improving MIS results provided by a quantum algorithm.
 
@@ -20,6 +20,13 @@ class Maximization(Postprocessor):
         augment_rounds: int = 10,
         seed: int = 0,
     ):
+        """
+        frequency_threshold: Discard any solution which show up with a frequency
+            <= frequency_threshold. Set 0 to never discard any solution.
+        augment_rounds: The number of attempts to augment an independent set to
+            add possibly missing nodes.
+        seed: A random seed.
+        """
         self.frequency_threshold = frequency_threshold
         self.augment_rounds = augment_rounds
         self.seed = seed
@@ -71,7 +78,7 @@ class Maximization(Postprocessor):
             rng.shuffle(order)
 
             # Attempt to grow the list of nodes in this order.
-            picked = list(unpicked_nodes)
+            picked = list(solution.nodes)
             for node in order:
                 maybe_picked = list(picked)
                 maybe_picked.append(node)
@@ -93,28 +100,24 @@ class Maximization(Postprocessor):
 
         See https://doi.org/10.48550/arXiv.2202.09372 section 2.3 of supplementary material for reference.
         """
+
         # Simplify the graph by removing the nodes that we have already rejected.
         simplified_graph = solution.original.copy()
-        retained_nodes = set(simplified_graph.nodes)
-        rejected_nodes = retained_nodes - set(solution.nodes)
+        rejected_nodes = set(simplified_graph.nodes) - set(solution.nodes)
         simplified_graph.remove_nodes_from(rejected_nodes)
-
-        # From this point
-        # - `retained_nodes` is a subset of `solution.nodes`;
-        # - `simplified_graph` is a graph containing the same edges as `solution.original` but
-        #   only the nodes in `retained_nodes`.`
 
         while True:
             # Pick the remaining node causing the largest number of conflicts.
             ranked_nodes = [
-                (node, len(simplified_graph.neighbors(node))) for node in retained_nodes
+                (node, len(list(simplified_graph.neighbors(node))))
+                for node in simplified_graph.nodes
             ]
             highest_node = max(ranked_nodes, key=lambda tup: tup[1])
 
-            # Remove this node from both `retained_nodes` and `simplified_graph`.
-            # Eventually, `simplified_graph` will become an independent set.
+            # Remove this node from. Eventually, `simplified_graph` will become an independent
+            # set (at worst, a singleton).
             simplified_graph.remove_node(highest_node[0])
-            retained_nodes.remove(highest_node[0])
+            retained_nodes = set(simplified_graph.nodes)
 
             candidate = list(retained_nodes)
             if self.is_independent_list(graph=solution.original, nodes=candidate):

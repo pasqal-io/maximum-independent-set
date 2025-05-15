@@ -3,7 +3,7 @@ import abc
 from mis.shared.types import MISSolution
 
 
-class Postprocessor(abc.ABC):
+class BasePostprocessor(abc.ABC):
     @abc.abstractmethod
     def postprocess(self, solution: MISSolution) -> MISSolution | None:
         """
@@ -12,5 +12,3 @@ class Postprocessor(abc.ABC):
         May return `None` if the solution is deemed unacceptable.
         """
         ...
-
-

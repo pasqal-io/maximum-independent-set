@@ -30,13 +30,11 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
             if self.kernel.has_edge(node, node):
                 self.kernel.remove_node(node)
 
+    @abc.abstractmethod
     def preprocess(self) -> nx.Graph:
         # Invariant: from this point, `self.kernel` does not contain any
         # self-loop.
-        return self.exhaustive_rules_applications()
-
-    @abc.abstractmethod
-    def exhaustive_rules_applications(self) -> nx.Graph: ...
+        ...
 
     """
     Apply all the rules, in every possible order, until the graph cannot
@@ -118,18 +116,18 @@ class Kernelization(BaseKernelization):
     probably use Kernelization in your pipeline.
     """
 
-    def exhaustive_rules_applications(self) -> nx.Graph:
+    def preprocess(self) -> nx.Graph:
         """
         Apply all rules, exhaustively, until the graph cannot be reduced
         further, storing the rules for rebuilding after the fact.
         """
-        while len(list(self.kernel.nodes())) > 0:
-            kernel_size_start: int = len(list(self.kernel.nodes()))
+        while self.kernel.number_of_nodes() > 0:
+            kernel_size_start: int = self.kernel.number_of_nodes()
             self.search_rule_isolated_node_removal()
             self.search_rule_twin_reduction()
             self.search_rule_node_fold()
             self.search_rule_unconfined_and_diamond()
-            kernel_size_end: int = len(list(self.kernel.nodes()))
+            kernel_size_end: int = self.kernel.number_of_nodes()
             if kernel_size_start - kernel_size_end == 0:
                 # We didn't find any rule to apply, time to stop.
                 break
@@ -184,7 +182,7 @@ class Kernelization(BaseKernelization):
         if self.kernel.number_of_nodes() == 0:
             return
         assert isinstance(self.kernel.degree, DegreeView)
-        for v in list(self.kernel):
+        for v in list(self.kernel.nodes()):
             # Since we're modifying `self.kernel` while iterating, we're
             # calling `list()` to make sure that we still have some kind
             # of valid iterator.
