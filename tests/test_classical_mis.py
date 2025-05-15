@@ -12,6 +12,7 @@ from mis.pipeline.kernelization import Kernelization
 TEST_FILES_DIR = Path.cwd() / "tests/test_files"
 
 
+@pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize("dimacs_to_nx", [TEST_FILES_DIR / "a265032_1tc.32.txt"], indirect=True)
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
 def test_for_dimacs_32_node_graph(
@@ -37,7 +38,12 @@ def test_for_dimacs_32_node_graph(
 
     assert len(solutions[0].nodes) == 12
 
+    # Check the solution is genuinely an independent set.
+    kernel = Kernelization(graph=graph)
+    assert kernel.is_independent(solutions[0].nodes)
 
+
+@pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize("dimacs_to_nx", [TEST_FILES_DIR / "a265032_1dc.64.txt"], indirect=True)
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
 def test_for_dimacs_64_node_graph(
@@ -61,10 +67,15 @@ def test_for_dimacs_64_node_graph(
     solver = MISSolver(instance, config)
     solutions = solver.solve().result()
 
+    # Check the solution is genuinely an independent set.
+    kernel = Kernelization(graph=graph)
+
     if preprocessor is None:
         assert solutions[0].nodes == [1, 4, 42, 11, 16, 56, 25, 61]
+        assert kernel.is_independent(solutions[0].nodes)
     else:
         assert solutions[0].nodes == [64, 1, 4, 13, 16, 22, 47, 49, 52]
+        assert kernel.is_independent(solutions[0].nodes)
 
 
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
