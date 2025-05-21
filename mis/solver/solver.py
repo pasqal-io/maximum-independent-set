@@ -74,7 +74,7 @@ class MISSolverClassical(BaseSolver):
         solutions = [self.fixtures.rebuild(sol) for sol in solutions]
         solutions.sort(key=lambda sol: sol.frequency, reverse=True)
 
-        return Execution.success(solutions)
+        return Execution.success(solutions[: self.config.max_number_of_solutions])
 
 
 class MISSolverQuantum(BaseSolver):
@@ -192,7 +192,7 @@ class MISSolverQuantum(BaseSolver):
 
         # And present the most interesting solutions first.
         rebuilt.sort(key=lambda sol: sol.frequency, reverse=True)
-        return rebuilt
+        return rebuilt[: self.config.max_number_of_solutions]
 
     def solve(self) -> Execution[list[MISSolution]]:
         """
