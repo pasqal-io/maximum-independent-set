@@ -73,12 +73,12 @@ class Fixtures:
             return solutions
 
         # Run postprocessing.
-        postprocessed_solutions: dict[set[int], MISSolution] = {}
+        postprocessed_solutions: dict[str, MISSolution] = {}
         for solution in solutions:
             processed_solution = self.postprocessor.postprocess(solution)
             if processed_solution is None:
                 continue
-            key = set(processed_solution.nodes)
+            key = f"{processed_solution.nodes}"  # This is a bit of a waste, we could have used bistrings.
             previous = postprocessed_solutions.get(key)
             if previous is None:
                 postprocessed_solutions[key] = processed_solution
