@@ -73,28 +73,17 @@ class Fixtures:
             return solutions
 
         # Run postprocessing.
-        processed_solutions = []
-        total_frequencies = 0.0
+        postprocessed_solutions: dict[set[int], MISSolution] = {}
         for solution in solutions:
             processed_solution = self.postprocessor.postprocess(solution)
-            if processed_solution is not None:
-                processed_solutions.append(processed_solution)
-                total_frequencies += processed_solution.frequency
+            if processed_solution is None:
+                continue
+            key = set(processed_solution.nodes)
+            previous = postprocessed_solutions.get(key)
+            if previous is None:
+                postprocessed_solutions[key] = processed_solution
+            else:
+                # Merge the two solutions.
+                previous.frequency += processed_solution.frequency
 
-        # Adjust frequency if necessary.
-        if len(processed_solutions) == 0:
-            return []
-
-        assert total_frequencies > 0
-        assert total_frequencies <= 1.00001
-        if total_frequencies == 1:
-            # Nothing to change.
-            return processed_solutions
-        adjusted_frequencies = [
-            MISSolution(
-                original=sol.original, nodes=sol.nodes, frequency=sol.frequency / total_frequencies
-            )
-            for sol in processed_solutions
-        ]
-        adjusted_frequencies.sort(key=lambda sol: sol.frequency, reverse=True)
-        return adjusted_frequencies
+        return list(postprocessed_solutions.values())

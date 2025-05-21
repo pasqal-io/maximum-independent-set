@@ -21,8 +21,8 @@ class Maximization(BasePostprocessor):
         seed: int = 0,
     ):
         """
-        frequency_threshold: Discard any solution which show up with a frequency
-            <= frequency_threshold. Set 0 to never discard any solution.
+        frequency_threshold: Minimal frequency to check. Discard any solution which show
+            up with a frequency <= frequency_threshold. Set 0 to never discard any solution.
         augment_rounds: The number of attempts to augment an independent set to
             add possibly missing nodes.
         seed: A random seed.
@@ -80,12 +80,13 @@ class Maximization(BasePostprocessor):
             # Attempt to grow the list of nodes in this order.
             picked = list(solution.nodes)
             for node in order:
-                maybe_picked = list(picked)
+                maybe_picked = list(picked)  # Copy the list.
                 maybe_picked.append(node)
                 if self.is_independent_list(graph=solution.original, nodes=maybe_picked):
+                    # Commit our pick.
                     picked = maybe_picked
 
-            # Once we have packed as many nodes as possible, time to check whether
+            # Once we have picked as many nodes as possible, time to check whether
             # we have improved on the best solution.
             if len(picked) > len(best_pick):
                 best_pick = picked

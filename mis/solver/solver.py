@@ -72,6 +72,7 @@ class MISSolverClassical(BaseSolver):
 
         solutions = self.fixtures.postprocess([partial_solution])
         solutions = [self.fixtures.rebuild(sol) for sol in solutions]
+        solutions.sort(key=lambda sol: sol.frequency, reverse=True)
 
         return Execution.success(solutions)
 
@@ -163,7 +164,7 @@ class MISSolverQuantum(BaseSolver):
         if len(data) == 0:
             # No data? This can only happen if the graph was empty in the first place.
             # In turn, this can happen if preprocessing was really lucky and managed
-            # to whittle down the original graph to nothing. But we need at least one
+            # to whittle down the original graph to an empty graph. But we need at least one
             # partial solution to be able to rebuild an MIS, so we handle this edge
             # case by injecting an empty solution.
             postprocessed = [
@@ -188,6 +189,9 @@ class MISSolverQuantum(BaseSolver):
 
         # Then rebuild any partial solution into solutions on the full graph.
         rebuilt = [self.fixtures.rebuild(r) for r in postprocessed]
+
+        # And present the most interesting solutions first.
+        rebuilt.sort(key=lambda sol: sol.frequency, reverse=True)
         return rebuilt
 
     def solve(self) -> Execution[list[MISSolution]]:

@@ -121,8 +121,7 @@ class Kernelization(BaseKernelization):
         Apply all rules, exhaustively, until the graph cannot be reduced
         further, storing the rules for rebuilding after the fact.
         """
-        while self.kernel.number_of_nodes() > 0:
-            kernel_size_start: int = self.kernel.number_of_nodes()
+        while kernel_size_start := self.kernel.number_of_nodes() > 0:
             self.search_rule_isolated_node_removal()
             self.search_rule_twin_reduction()
             self.search_rule_node_fold()
