@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from mis.pipeline.backends import BaseBackend
     from mis.pipeline.embedder import BaseEmbedder
     from mis.pipeline.pulse import BasePulseShaper
+    from mis.pipeline.postprocessor import BasePostprocessor
     from mis.pipeline.preprocessor import BasePreprocessor
 from mis.shared.types import MethodType
 
@@ -22,6 +23,12 @@ def default_preprocessor() -> Callable[[nx.Graph], BasePreprocessor]:
     from mis.pipeline.kernelization import Kernelization
 
     return lambda graph: Kernelization(graph)
+
+
+def default_postprocessor() -> BasePostprocessor:
+    from mis.pipeline.maximization import Maximization
+
+    return Maximization()
 
 
 @dataclass
@@ -81,7 +88,7 @@ class SolverConfig:
         default_factory=default_preprocessor
     )
     """
-    preprocessor: If specified, a graph preprocessor, used to decrease
+    preprocessor: A graph preprocessor, used to decrease
         the size of the graph (hence the duration of actual resolution)
         by applying heuristics prior to embedding on a quantum device.
 
@@ -98,4 +105,14 @@ class SolverConfig:
         this purpose, you'll need to write your own subclass of
         `BasePreprocessor` that orchestrates calling the individual
         preprocessors.
+    """
+
+    postprocessor: Callable[[], BasePostprocessor] | None = default_postprocessor
+    """
+        A postprocessor used to sort out and improve results.
+
+        By default, apply Maximization, a set of heuristics that attempt
+        to "fix" quantum results in case of accidental bitflips.
+
+        If you wish to deactivate postprocessing entirely, pass `None`.
     """
