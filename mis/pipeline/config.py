@@ -1,3 +1,7 @@
+"""
+Configuration for MIS solvers.
+"""
+
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable
@@ -26,6 +30,7 @@ def default_preprocessor() -> Callable[[nx.Graph], BasePreprocessor]:
 
 
 def default_postprocessor() -> BasePostprocessor:
+    # Avoid circular dependencies during load.
     from mis.pipeline.maximization import Maximization
 
     return Maximization()
