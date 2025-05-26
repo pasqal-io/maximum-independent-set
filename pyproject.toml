@@ -72,10 +72,8 @@ dependencies = [
 
 [tool.hatch.envs.default.scripts]
 before_tests = "python scripts/before_tests.py"
-# FIXME: Reactivate this! Issue #19
-# test = "pytest -n auto --cov-report=term-missing --cov-config=pyproject.toml --cov=mis --cov=tests --markdown-docs {args}"
-# test_readme = "pytest --markdown-docs README.md"
-test = "pytest -n auto --cov-report=term-missing --cov-config=pyproject.toml --cov=mis --cov=tests"
+test = "pytest -n auto --cov-report=term-missing --cov-config=pyproject.toml --cov=mis --cov=tests --markdown-docs {args}"
+test_readme = "pytest --markdown-docs README.md"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
