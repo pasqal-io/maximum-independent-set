@@ -3,6 +3,7 @@ from __future__ import annotations
 from mis.shared.types import MISInstance, MISSolution
 from mis.pipeline.config import SolverConfig
 from mis.pipeline.preprocessor import BasePreprocessor
+from mis.pipeline.postprocessor import BasePostprocessor
 
 
 class Fixtures:
@@ -28,6 +29,9 @@ class Fixtures:
         self.preprocessor: BasePreprocessor | None = None
         if self.config.preprocessor is not None:
             self.preprocessor = self.config.preprocessor(instance.graph)
+        self.postprocessor: BasePostprocessor | None = None
+        if self.config.postprocessor is not None:
+            self.postprocessor = self.config.postprocessor()
 
     def preprocess(self) -> MISInstance:
         """
@@ -41,9 +45,10 @@ class Fixtures:
             return MISInstance(graph)
         return self.instance
 
-    def postprocess(self, solution: MISSolution) -> MISSolution:
+    def rebuild(self, solution: MISSolution) -> MISSolution:
         """
-        Apply postprocessing steps to the MIS solution after solving.
+        Apply any pending rebuild operations to convert solutions
+        on preprocessed graphs into solutions on the original graph.
 
         Args:
             solution (MISSolution): The raw solution from a solver.
@@ -51,14 +56,34 @@ class Fixtures:
         Returns:
             MISSolution: The cleaned or transformed solution.
         """
-        if self.preprocessor is not None:
-            # If we have preprocessed the graph, we end up with a solution
-            # that only works for the preprocessed graph.
-            #
-            # At this stage, we need to call the preprocessor's rebuilder to
-            # expand this to a solution on the original graph.
-            nodes = self.preprocessor.rebuild(set(solution.nodes))
-            return MISSolution(
-                original=self.instance.graph, nodes=list(nodes), energy=solution.energy
-            )
-        return solution
+        if self.preprocessor is None:
+            return solution
+        # If we have preprocessed the graph, we end up with a solution
+        # that only works for the preprocessed graph.
+        #
+        # At this stage, we need to call the preprocessor's rebuilder to
+        # expand this to a solution on the original graph.
+        nodes = self.preprocessor.rebuild(set(solution.nodes))
+        return MISSolution(
+            original=self.instance.graph, nodes=list(nodes), frequency=solution.frequency
+        )
+
+    def postprocess(self, solutions: list[MISSolution]) -> list[MISSolution]:
+        if self.postprocessor is None:
+            return solutions
+
+        # Run postprocessing.
+        postprocessed_solutions: dict[str, MISSolution] = {}
+        for solution in solutions:
+            processed_solution = self.postprocessor.postprocess(solution)
+            if processed_solution is None:
+                continue
+            key = f"{processed_solution.nodes}"  # This is a bit of a waste, we could have used bistrings.
+            previous = postprocessed_solutions.get(key)
+            if previous is None:
+                postprocessed_solutions[key] = processed_solution
+            else:
+                # Merge the two solutions.
+                previous.frequency += processed_solution.frequency
+
+        return list(postprocessed_solutions.values())
