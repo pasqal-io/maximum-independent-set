@@ -69,7 +69,7 @@ class Lattice:
         """
         return int(round(self.num_nodes() ** 0.5))
 
-    def display(self) -> None:
+    def draw(self) -> None:
         """Draws the lattice with positions and edges."""
         pos = nx.get_node_attributes(self.lattice, "pos")
         plt.figure(figsize=(8, 6))
