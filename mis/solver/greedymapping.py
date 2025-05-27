@@ -3,7 +3,6 @@ from __future__ import annotations
 import math
 import random
 from statistics import mean
-from typing import Dict, List, Set, Tuple
 
 import networkx as nx
 
@@ -19,7 +18,7 @@ class GreedyMapping:
         self,
         instance: MISInstance,
         lattice: Lattice,
-        previously_generated_subgraphs: List[Dict[int, int]],
+        previously_generated_subgraphs: list[dict[int, int]],
         seed: int = 0,
     ) -> None:
         """
@@ -28,7 +27,7 @@ class GreedyMapping:
         Args:
             instance: The MIS problem instance containing the logical graph.
             lattice: The lattice structure defining the physical layout.
-            previous_mappings: List of previous mappings (for scoring reuse).
+            previous_mappings: list of previous mappings (for scoring reuse).
             seed: Random seed for reproducibility.
         """
         self.graph: nx.Graph = instance.graph.copy()
@@ -41,7 +40,7 @@ class GreedyMapping:
                  starting_node: int,
         remove_invalid_placement_nodes: bool = True,
         rank_nodes: bool = True,
-    ) -> Dict[int, int]:
+    ) -> dict[int, int]:
         """
         Generates a subgraph by mapping the input graph onto the lattice using a greedy approach.
 
@@ -53,9 +52,9 @@ class GreedyMapping:
         Returns:
             dict: A dictionary representing the graph-to-lattice mapping.
         """
-        unmapping: Dict[int, int] = {}
-        mapping: Dict[int, int] = {}
-        unexpanded_nodes: Set[int] = set()
+        unmapping: dict[int, int] = {}
+        mapping: dict[int, int] = {}
+        unexpanded_nodes: set[int] = set()
 
         current_lattice_node: int = self._initialize(
             starting_node, mapping, unmapping, unexpanded_nodes
@@ -94,17 +93,17 @@ class GreedyMapping:
     def _initialize(
         self,
         starting_node: int,
-        mapping: Dict[int, int],
-        unmapping: Dict[int, int],
-        unexpanded_nodes: Set[int],
+        mapping: dict[int, int],
+        unmapping: dict[int, int],
+        unexpanded_nodes: set[int],
     ) -> int:
         """Initializes mapping at the center of the lattice.
         
         Args:
             starting_node: The initial node in the graph.
-            mapping: Dictionary for graph-to-lattice mapping.
-            unmapping: Dictionary for lattice-to-graph mapping.
-            unexpanded_nodes: Set of unexpanded nodes in the graph.
+            mapping: dictionary for graph-to-lattice mapping.
+            unmapping: dictionary for lattice-to-graph mapping.
+            unexpanded_nodes: set of unexpanded nodes in the graph.
 
         Returns: 
             The lattice node corresponding to the starting node.
@@ -119,11 +118,11 @@ class GreedyMapping:
 
     def _extend_mapping(
         self,
-        considered_nodes: List[int],
-        unexpanded_nodes: Set[int],
-        free_lattice_neighbors: List[int],
-        mapping: Dict[int, int],
-        unmapping: Dict[int, int],
+        considered_nodes: list[int],
+        unexpanded_nodes: set[int],
+        free_lattice_neighbors: list[int],
+        mapping: dict[int, int],
+        unmapping: dict[int, int],
         remove_invalid_placement_nodes: bool = True,
         rank_nodes: bool = True,
     ) -> None:
@@ -132,15 +131,15 @@ class GreedyMapping:
 
         Args:
             considered_nodes: Nodes in the graph being considered for mapping.
-            unexpanded_nodes: Set of unexpanded nodes.
+            unexpanded_nodes: set of unexpanded nodes.
             free_lattice_neighbors: Available lattice neighbors for mapping.
             mapping: Current graph-to-lattice mapping.
             unmapping: Current lattice-to-graph mapping.
             remove_invalid_placement_nodes: Whether to remove invalid placements.
             rank_nodes: Whether to rank nodes using the scoring heuristic.
         """
-        already_placed_nodes: Set[int] = set(mapping.keys())
-        unplaced_nodes: List[int] = [
+        already_placed_nodes: set[int] = set(mapping.keys())
+        unplaced_nodes: list[int] = [
             n for n in considered_nodes if n not in already_placed_nodes
         ]
 
@@ -185,23 +184,23 @@ class GreedyMapping:
 
     def _score_nodes(
         self,
-        nodes_to_score: List[int],
-        mapping: Dict[int, int],
+        nodes_to_score: list[int],
+        mapping: dict[int, int],
         remove_invalid_placement_nodes: bool,
-    ) -> Dict[int, Tuple[float, float]]:
+    ) -> dict[int, tuple[float, float]]:
         """
         Scores nodes for placement using a greedy heuristic.
 
         Args:
-            nodes_to_score: List of nodes to score.
+            nodes_to_score: list of nodes to score.
             mapping: Current graph-to-lattice mapping.
             remove_invalid_placement_nodes: Whether to penalize invalid placements.
 
         Returns:
-            Dictionary mapping nodes to scores with random tiebreakers.
+            dictionary mapping nodes to scores with random tiebreakers.
         """
         n: int = nx.number_of_nodes(self.graph)
-        node_scores: Dict[int, float] = {}
+        node_scores: dict[int, float] = {}
 
         for node in nodes_to_score:
             degree_score: float = 1 - (
@@ -230,7 +229,7 @@ class GreedyMapping:
         return {node: (score, random.random()) for node, score in node_scores.items()}
 
     def _validate(
-        self, mapping: Dict[int, int], unmapping: Dict[int, int]
+        self, mapping: dict[int, int], unmapping: dict[int, int]
     ) -> bool:
         """
         Checks if the current mapping is valid based on adjacency constraints.
