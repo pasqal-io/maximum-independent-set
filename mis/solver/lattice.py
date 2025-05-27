@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import random
 from statistics import mean
 
 import networkx as nx
@@ -18,18 +17,14 @@ class Lattice:
         self,
         lattice_coords: dict[int, tuple[float, float]],
         rydberg_blockade: float,
-        seed: int = 0,
     ) -> None:
         """
         Args:
             lattice_coords: Mapping from lattice node ID to (x, y) coordinates.
             rydberg_blockade: Max interaction distance (used for edge generation).
-            seed: Optional random seed.
         """
         self.lattice_coords = lattice_coords
         self.rydberg_blockade = rydberg_blockade
-        self.seed = seed
-        random.seed(seed)
 
         self.lattice = self._build_graph()
         self.avg_degree = self._compute_avg_degree()

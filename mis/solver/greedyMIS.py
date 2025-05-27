@@ -21,13 +21,10 @@ class GreedyMISSolver(BaseSolver):
 
         self.original_instance = instance
         self.sub_solver = solver
-        self.config: SolverConfig = solver.config
-        self.seed = 0
 
         self.lattice = Lattice(
             lattice_coords=self.config.lattice_coords,
-            rydberg_blockade=self.config.rydberg_blockade,
-            seed=self.seed,
+            rydberg_blockade=self.config.rydberg_blockade
         )
 
     def solve(self) -> Execution[list[MISSolution]]:
@@ -96,8 +93,7 @@ class GreedyMISSolver(BaseSolver):
             mapper = GreedyMapping(
                 instance=MISInstance(graph),
                 lattice=self.lattice,
-                previously_generated_subgraphs=mappings,
-                seed=self.seed,
+                previously_generated_subgraphs=mappings
             )
             mapping = mapper.generate(starting_node=node)
             mappings.append(mapping)
