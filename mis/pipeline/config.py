@@ -53,7 +53,7 @@ class SolverConfig:
     """
 
     lattice_coords: dict[int, tuple[float, float]] = None
-    rydberg_blockade: float = None
+    rydberg_blockade: float | None = None
     exact_solving_threshold: int = 10
     subgraph_quantity: int = 5
     mis_sample_quantity: int = 1
