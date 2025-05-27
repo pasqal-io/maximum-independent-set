@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import random
 from statistics import mean
-from typing import Dict, Tuple
 
 import networkx as nx
 import matplotlib.pyplot as plt
@@ -17,7 +16,7 @@ class Lattice:
 
     def __init__(
         self,
-        lattice_coords: Dict[int, Tuple[float, float]],
+        lattice_coords: dict[int, tuple[float, float]],
         rydberg_blockade: float,
         seed: int = 0,
     ) -> None:

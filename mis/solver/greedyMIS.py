@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import copy
-from typing import Dict, List, Tuple
 
 import networkx as nx
 
@@ -32,10 +30,10 @@ class GreedyMISSolver(BaseSolver):
             seed=self.seed,
         )
 
-    def solve(self) -> Execution[List[MISSolution]]:
+    def solve(self) -> Execution[list[MISSolution]]:
         return self._solve_recursive(self.original_instance)
 
-    def _solve_recursive(self, instance: MISInstance) -> Execution[List[MISSolution]]:
+    def _solve_recursive(self, instance: MISInstance) -> Execution[list[MISSolution]]:
         graph = instance.graph
         if len(graph) <= self.config.exact_solving_threshold:
             return self._exact_mis(instance)
@@ -75,15 +73,15 @@ class GreedyMISSolver(BaseSolver):
             return Execution.success([MISSolution(original=graph, nodes=[], energy=0)])
         return Execution.success([best_solution])
 
-    def _exact_mis(self, instance: MISInstance) -> Execution[List[MISSolution]]:
+    def _exact_mis(self, instance: MISInstance) -> Execution[list[MISSolution]]:
         graph = instance.graph
-        best: List[int] = []
+        best: list[int] = []
         self._backtrack(graph, [], 0, [best])
         energy = -self._calculate_weight(best)
         solution = MISSolution(original=graph, nodes=best, energy=energy)
         return Execution.success([solution])
 
-    def _backtrack(self, graph: nx.Graph, subset: List[int], index: int, best: List[List[int]]) -> None:
+    def _backtrack(self, graph: nx.Graph, subset: list[int], index: int, best: list[list[int]]) -> None:
         nodes = list(graph.nodes())
         if self._is_independent(graph, subset) and self._calculate_weight(subset) > self._calculate_weight(best[0]):
             best[0] = subset[:]
@@ -92,7 +90,7 @@ class GreedyMISSolver(BaseSolver):
             self._backtrack(graph, subset, i + 1, best)
             subset.pop()
 
-    def _generate_subgraphs(self, graph: nx.Graph) -> List[Dict[int, int]]:
+    def _generate_subgraphs(self, graph: nx.Graph) -> list[dict[int, int]]:
         mappings = []
         for node in graph.nodes():
             mapper = GreedyMapping(
@@ -105,7 +103,7 @@ class GreedyMISSolver(BaseSolver):
             mappings.append(mapping)
         return sorted(mappings, key=lambda m: len(m), reverse=True)[:self.config.subgraph_quantity]
 
-    def _generate_lattice_graph(self, graph: nx.Graph, mapping: Dict[int, int]) -> nx.Graph:
+    def _generate_lattice_graph(self, graph: nx.Graph, mapping: dict[int, int]) -> nx.Graph:
         G = nx.Graph()
         for logical, physical in mapping.items():
             weight = graph.nodes[logical].get("weight", 1.0)
@@ -119,7 +117,7 @@ class GreedyMISSolver(BaseSolver):
 
         return G
 
-    def _remove_nodes(self, graph: nx.Graph, nodes: List[int]) -> nx.Graph:
+    def _remove_nodes(self, graph: nx.Graph, nodes: list[int]) -> nx.Graph:
         reduced = graph.copy()
         to_remove = set(nodes)
         for node in nodes:
@@ -127,8 +125,8 @@ class GreedyMISSolver(BaseSolver):
         reduced.remove_nodes_from(to_remove)
         return reduced
 
-    def _calculate_weight(self, nodes: List[int]) -> float:
+    def _calculate_weight(self, nodes: list[int]) -> float:
         return sum(self.original_instance.graph.nodes[n].get("weight", 1.0) for n in nodes)
 
-    def _is_independent(self, graph: nx.Graph, nodes: List[int]) -> bool:
+    def _is_independent(self, graph: nx.Graph, nodes: list[int]) -> bool:
         return not any(graph.has_edge(u, v) for i, u in enumerate(nodes) for v in nodes[i + 1:])

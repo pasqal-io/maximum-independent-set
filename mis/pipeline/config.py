@@ -1,6 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Callable, Dict, Tuple
+from typing import TYPE_CHECKING, Callable
 
 import networkx as nx
 
@@ -30,7 +30,7 @@ class SolverConfig:
     Configuration class for setting up solver parameters.
     """
 
-    lattice_coords: Dict[int, Tuple[float, float]] = None
+    lattice_coords: dict[int, tuple[float, float]] = None
     rydberg_blockade: float = None
     exact_solving_threshold: int = 10
     subgraph_quantity: int = 5
