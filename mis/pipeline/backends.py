@@ -1,3 +1,7 @@
+"""
+Executing a register and a sequence on a quantum device (including emulators).
+"""
+
 from __future__ import annotations
 
 import abc
@@ -37,7 +41,7 @@ def make_sequence(
     device: Device, pulse: targets.Pulse, register: targets.Register
 ) -> pulser.Sequence:
     """
-    Build a sequence for a device from a pulse and a register.
+    Build a Pulser sequence for a device from a pulse and a register.
 
     This function is mostly intended for internal use and will likely move to qool-layer
     in time.

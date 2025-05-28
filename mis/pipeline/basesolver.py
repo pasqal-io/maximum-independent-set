@@ -1,3 +1,10 @@
+"""
+Shared definitions for solvers.
+
+This module is useful mostly for users interested in writing
+new solvers.
+"""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
