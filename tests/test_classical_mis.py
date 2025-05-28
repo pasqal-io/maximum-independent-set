@@ -10,11 +10,13 @@ from mis.shared.types import MethodType
 from mis.pipeline.kernelization import Kernelization
 from mis.pipeline.maximization import Maximization
 
-TEST_FILES_DIR = Path.cwd() / "tests/test_files"
+TEST_DIMACS_FILES_DIR = Path.cwd() / "tests/test_files/dimacs"
 
 
 @pytest.mark.flaky(max_runs=5)
-@pytest.mark.parametrize("dimacs_to_nx", [TEST_FILES_DIR / "a265032_1tc.32.txt"], indirect=True)
+@pytest.mark.parametrize(
+    "dimacs_to_nx", [TEST_DIMACS_FILES_DIR / "a265032_1tc.32.txt"], indirect=True
+)
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
 def test_for_dimacs_32_node_graph(
     dimacs_to_nx: nx.Graph, preprocessor: None | Callable[[nx.Graph], Kernelization]
@@ -45,7 +47,9 @@ def test_for_dimacs_32_node_graph(
 
 
 @pytest.mark.flaky(max_runs=5)
-@pytest.mark.parametrize("dimacs_to_nx", [TEST_FILES_DIR / "a265032_1dc.64.txt"], indirect=True)
+@pytest.mark.parametrize(
+    "dimacs_to_nx", [TEST_DIMACS_FILES_DIR / "a265032_1dc.64.txt"], indirect=True
+)
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
 def test_for_dimacs_64_node_graph(
     dimacs_to_nx: nx.Graph, preprocessor: None | Callable[[nx.Graph], Kernelization]
