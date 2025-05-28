@@ -35,9 +35,11 @@ class MISInstance:
         highlighted_node_kwds = {"node_color": "red", "node_size": 600}
         unhighlighted_node_kwds = {"node_color": "white", "edgecolors": "black", "node_size": 600}
         if nodes: # If nodes is not empty
-            if not set(nodes).issubset(all_nodes):
-                raise Exception("nodes must be a subset of nodes present in the problem instance")
-            nodes_complement = all_nodes - set(nodes)
+            nodeset = set(nodes) # Create a set from node list for easier operations
+            if not nodeset.issubset(all_nodes):
+                invalid_nodes = list(nodeset - all_nodes)
+                raise Exception(f"nodes {invalid_nodes} are not present in the problem instance")
+            nodes_complement = all_nodes - nodeset
             # Draw highlighted nodes
             networkx.draw_networkx_nodes(self.graph, node_positions, nodelist=nodes, **highlighted_node_kwds)
             # Draw unhighlighted nodes
