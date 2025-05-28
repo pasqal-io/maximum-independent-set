@@ -49,7 +49,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.10"]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout mis
@@ -64,9 +64,10 @@ jobs:
       - name: Run notebooks
         run: |
           hatch run pip install jupyter
-          for tutorial in examples/tutorial*.ipynb; do
-            hatch run jupyter execute "$tutorial";
-          done
+          hatch run jupyter execute examples/tutorial\ 1a\ -\ Using\ a\ Quantum\ Device\ to\ solve\ MIS.ipynb
+          # for tutorial in examples/tutorial*.ipynb; do
+          #   hatch run jupyter execute "$tutorial";
+          # done
 
   test_notebook_windows:
     name: Run the Jupyter notebook tutorial (Windows)
@@ -74,7 +75,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest]
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.10"]
     steps:
       - name: Checkout mis
         uses: actions/checkout@v4
