@@ -36,7 +36,6 @@ class Pulse:
         self.pulse.draw()
 
 
-@dataclass
 class Register:
     """
     Specification of a geometry of atoms to be executed on a quantum device
@@ -52,6 +51,11 @@ class Register:
     device: pulser.devices.Device
     register: pulser.Register
     graph: nx.Graph
+
+    def __init__(self, device: pulser.devices.Device, register: pulser.Register, graph: nx.Graph):
+        self.device = device
+        self.graph = graph
+        self.register = register.with_automatic_layout(device)
 
     def __len__(self) -> int:
         """
