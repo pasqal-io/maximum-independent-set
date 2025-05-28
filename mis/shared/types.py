@@ -3,6 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from dataclasses import dataclass
 import networkx
+import matplotlib.pyplot as plt
 
 
 class BackendType(str, Enum):
@@ -24,6 +25,32 @@ class MISInstance:
     def __init__(self, graph: networkx.Graph):
         # FIXME: Make it work with pytorch geometric
         self.graph = graph
+    
+    def draw(self, nodes: list[int] | None = None) -> None:
+        # Obtain a view of all nodes
+        all_nodes = self.graph.nodes
+        # Compute graph layout
+        node_positions = networkx.kamada_kawai_layout(self.graph)
+        # Keyword dictionaries to customize appearance
+        highlighted_node_kwds = {"node_color": "red", "node_size": 600}
+        unhighlighted_node_kwds = {"node_color": "white", "edgecolors": "black", "node_size": 600}
+        if nodes: # If nodes is not empty
+            if not set(nodes).issubset(all_nodes):
+                raise Exception("nodes must be a subset of nodes present in the problem instance")
+            nodes_complement = all_nodes - set(nodes)
+            # Draw highlighted nodes
+            networkx.draw_networkx_nodes(self.graph, node_positions, nodelist=nodes, **highlighted_node_kwds)
+            # Draw unhighlighted nodes
+            networkx.draw_networkx_nodes(self.graph, node_positions, nodelist=list(nodes_complement), **unhighlighted_node_kwds)
+        else:
+            networkx.draw_networkx_nodes(self.graph, node_positions, nodelist=list(all_nodes), **unhighlighted_node_kwds)
+        # Draw node labels
+        networkx.draw_networkx_labels(self.graph, node_positions)
+        # Draw edges
+        networkx.draw_networkx_edges(self.graph, node_positions)
+        plt.tight_layout()
+        plt.axis("off")
+        plt.show()
 
 
 @dataclass
@@ -37,3 +64,6 @@ class MISSolution:
         assert len(self.nodes) == len(set(self.nodes)), "All the nodes in %s should be distinct" % (
             self.nodes,
         )
+
+    def draw(self) -> None:
+        MISInstance(self.original).draw(self.nodes)
