@@ -1,3 +1,7 @@
+"""
+Tools to prepare the geometry (register) of atoms.
+"""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

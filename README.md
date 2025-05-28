@@ -46,31 +46,28 @@ $ pipx install maximum-independent-set
 ## QuickStart
 
 ```python
-from mis import MISSolver, MISInstance
+from mis import MISSolver, MISInstance, SolverConfig
+from mis.pipeline.backends import QutipBackend
 import networkx as nx
 
-# Generate a simple graph (triangle)
+# Generate a simple graph (here, a triangle)
 graph = nx.Graph()
 graph.add_edges_from([(0, 1), (0, 2)])
-
-# Create an instance for the solver
 instance = MISInstance(graph)
 
-# Solve the MIS problem
-results = MISSolver.solve(instance)
+# Use a quantum solver.
+config = SolverConfig(backend=QutipBackend())
+solver = MISSolver(instance, config)
 
-print("MIS solution:", results.solution)
-print("Solution cost:", results.cost)
+# Solve the MIS problem
+results = solver.solve().result()
+
+print("MIS solutions:", results)
 ```
 
 ## Documentation
 
-We have a two parts tutorial:
-
-1. [Using a Quantum Device to solve MIS](https://pasqal-io.github.io/maximum-independent-setl/blob/main/examples/tutorial%201a%20-%20Using%20a%20Quantum%20Device%20to%20solve%20MIS.ipynb)
-2. [Example Use Case](https://pasqal-io.github.io/maximum-independent-setl/blob/main/examples/tutorial%201b%20-%20MIS%20Example%20Use%20Case.ipynb)
-3. [Backend and Solver Configuration](https://pasqal-io.github.io/maximum-independent-setl/blob/main/examples/tutorial%202%20-%20Backend%20and%20Solver%20Configuration.ipynb)
-4. [Sampling & Analysis](https://pasqal-io.github.io/maximum-independent-setl/blob/main/examples/tutorial%203%20-%20Sampling%20&%20Analysis.ipynb)
+[Using a Quantum Device to solve MIS](https://pasqal-io.github.io/maximum-independent-setl/blob/main/examples/tutorial%201a%20-%20Using%20a%20Quantum%20Device%20to%20solve%20MIS.ipynb)
 
 
 See also the [full API documentation](https://pasqal-io.github.io/maximum-independent-set/latest/).

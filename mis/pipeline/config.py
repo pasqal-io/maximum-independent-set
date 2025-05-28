@@ -1,3 +1,7 @@
+"""
+Configuration for MIS solvers.
+"""
+
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable
@@ -19,6 +23,11 @@ __all__ = ["SolverConfig"]  # type: ignore
 
 
 def default_preprocessor() -> Callable[[nx.Graph], BasePreprocessor]:
+    """
+    Instantiate the default preprocessor.
+
+    As of this writing, the default preprocessor is mis.pipeline.kernelization.Kernelization.
+    """
     # Avoid circular dependencies during load.
     from mis.pipeline.kernelization import Kernelization
 
@@ -26,6 +35,12 @@ def default_preprocessor() -> Callable[[nx.Graph], BasePreprocessor]:
 
 
 def default_postprocessor() -> BasePostprocessor:
+    """
+    Instantiate the default postprocessor.
+
+    As of this writing, the default postprocessor is mis.pipeline.maximization.Maximization.
+    """
+    # Avoid circular dependencies during load.
     from mis.pipeline.maximization import Maximization
 
     return Maximization()
@@ -40,13 +55,12 @@ class SolverConfig:
     backend: BaseBackend | None = None
     """
     backend (optional): Backend configuration to use. If `None`,
-    use a reasonable default emulator.
+    use a non-quantum heuristic solver.
     """
 
     method: MethodType = MethodType.EAGER
     """
     method: The method used to solve this instance of MIS.
-    If unspecified, use classical (non-quantum) MIS.
     """
 
     max_iterations: int = 1

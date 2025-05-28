@@ -19,7 +19,9 @@ class MISSolver:
     based on the SolverConfig and delegates execution to it.
     """
 
-    def __init__(self, instance: MISInstance, config: SolverConfig):
+    def __init__(self, instance: MISInstance, config: SolverConfig | None = None):
+        if config is None:
+            config = SolverConfig()
         self._solver: BaseSolver
         self.instance = instance
         self.config = config
