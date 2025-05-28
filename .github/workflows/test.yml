@@ -61,9 +61,6 @@ jobs:
       - name: Install Hatch
         run: |
           pip install hatch
-      - name: Copy samples
-        run: |
-          cp examples/ptcfm_processed_dataset.json .
       - name: Run notebooks
         run: |
           hatch run pip install jupyter
@@ -88,9 +85,6 @@ jobs:
       - name: Install Hatch
         run: |
           pip install hatch
-      - name: Copy samples
-        run: |
-          cp examples/ptcfm_processed_dataset.json .
       - name: Run notebook
         run: |
           hatch run pip install jupyter
