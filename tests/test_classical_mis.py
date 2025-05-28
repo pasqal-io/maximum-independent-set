@@ -75,11 +75,12 @@ def test_for_dimacs_64_node_graph(
     # Check the solution is genuinely an independent set.
     kernel = Kernelization(graph=graph)
 
+    # In this case, pre-processing the data reveals a better solution.
     if preprocessor is None:
-        assert solutions[0].nodes == [1, 4, 42, 11, 16, 56, 25, 61]
+        assert set(solutions[0].nodes) == {1, 4, 42, 11, 16, 56, 25, 61}
         assert kernel.is_independent(solutions[0].nodes)
     else:
-        assert solutions[0].nodes == [64, 1, 4, 13, 16, 22, 47, 49, 52]
+        assert set(solutions[0].nodes) == {64, 1, 4, 13, 16, 22, 47, 49, 52}
         assert kernel.is_independent(solutions[0].nodes)
 
 
