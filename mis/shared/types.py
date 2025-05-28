@@ -30,4 +30,10 @@ class MISInstance:
 class MISSolution:
     original: networkx.Graph
     nodes: list[int]
-    energy: float
+    frequency: float
+
+    def __post_init__(self) -> None:
+        # Consistency check: nodes from the list must be distinct.
+        assert len(self.nodes) == len(set(self.nodes)), "All the nodes in %s should be distinct" % (
+            self.nodes,
+        )
