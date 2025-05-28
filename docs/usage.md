@@ -1,19 +1,21 @@
 # Usage
 
 ```python
-from mis import MISSolver, MISInstance
+from mis import MISSolver, MISInstance, SolverConfig
+from mis.pipeline.backends import QutipBackend
 import networkx as nx
 
-# Generate a simple graph (triangle)
+# Generate a simple graph (here, a triangle)
 graph = nx.Graph()
 graph.add_edges_from([(0, 1), (0, 2)])
-
-# Create an instance for the solver
 instance = MISInstance(graph)
 
-# Solve the MIS problem
-results = MISSolver.solve(instance)
+# Use a quantum solver.
+config = SolverConfig(backend=QutipBackend())
+solver = MISSolver(instance, config)
 
-print("MIS solution:", results.solution)
-print("Solution cost:", results.cost)
+# Solve the MIS problem
+results = solver.solve().result()
+
+print("MIS solutions:", results)
 ```
