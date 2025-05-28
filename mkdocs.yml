@@ -7,7 +7,8 @@ nav:
   - Getting started:
     - Installation: installation.md
     - Usage: usage.md
-    - Tutorials: tutorials.md
+  - Tutorials:
+    - "Tutorial 1 - Using a Quantum Device to solve MIS": "tutorial 1a - Using a Quantum Device to solve MIS.ipynb"
   - Reference: $api/mis.***
   - Open-source:
     - Licence (MIT-Derived): LICENSE.md
