@@ -15,6 +15,10 @@ from mis.solver.solver import MISSolver
 
 @dataclass
 class DIMACSDataset:
+    """
+    A dataset representing a DIMACS graph instance and its solutions.
+    This is used to load DIMACS files and extract the graph and solutions.
+    """
     instance: MISInstance
     solutions: list[list[int]]
 
@@ -36,13 +40,24 @@ def load_dimacs(path: str) -> DIMACSDataset:
     edges = []
     for line in lines:
         if line.startswith('p'):
-            continue  # Skip problem line
+            n_vertices, n_edges = map(int, line.split()[2:4])
+
         if line.startswith('e'):
             parts = line.split()
             edges.append((int(parts[1]), int(parts[2])))
 
     graph = nx.Graph()
     graph.add_edges_from(edges)
+
+    if graph.number_of_nodes() != n_vertices:
+        raise ValueError(
+            "DIMACS file does not match specified number of vertices."
+        )
+    if graph.number_of_edges() != n_edges:
+        raise ValueError(
+            "DIMACS file does not match specified number of edges."
+        )
+
     instance = MISInstance(graph)
     solver = MISSolver(instance, SolverConfig())
     solutions = [e.nodes for e in solver.solve().result()]
