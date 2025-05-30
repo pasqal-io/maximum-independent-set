@@ -49,7 +49,7 @@ class MISInstance:
                     bad_nodes += ", ...]"
                 else:
                     bad_nodes += "]"
-                if len(bad_nodes) == 1:
+                if len(invalid_nodes) == 1:
                     raise Exception(
                         f"node " + bad_nodes + " is not present in the problem instance"
                     )
