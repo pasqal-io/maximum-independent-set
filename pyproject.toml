@@ -28,13 +28,13 @@ classifiers = [
 dependencies = [
   "networkx",
   "numpy",
-  "pulser==1.5.1",
+  "pulser>=1.2.0",
   "rdkit",
   "scikit-learn",
   "torch",
   "torch_geometric",
   "matplotlib",
-  "emu-mps~=2.1.1",
+  "emu-mps",
   "pasqal-cloud",
 ]
 
@@ -72,7 +72,7 @@ dependencies = [
 
 [tool.hatch.envs.default.scripts]
 before_tests = "python scripts/before_tests.py"
-test = "pytest -n auto --cov-report=term-missing --cov-config=pyproject.toml --cov=mis --cov=tests --markdown-docs {args}"
+test = "pytest -n auto --cov-report=term-missing --cov-config=pyproject.toml --cov=mis --cov=tests --markdown-docs {args} --capture=no"
 test_readme = "pytest --markdown-docs README.md"
 
 [tool.pytest.ini_options]

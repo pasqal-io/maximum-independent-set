@@ -107,8 +107,10 @@ def test_star_qtip_mis(
     instance = MISInstance(graph)
 
     # Run the solver
+    print("YORIC: test_star_qtip_mis - before solving")
     solver = MISSolver(instance, config)
     solutions = solver.solve().result()
+    print("YORIC: test_star_qtip_mis - after solving")
 
     # Check that at least one of the solutions makes sense.
     found = False

@@ -41,7 +41,9 @@ class Fixtures:
             MISInstance: The processed or annotated instance.
         """
         if self.preprocessor is not None:
+            print("YORIC: fixtures - before preprocessor")
             graph = self.preprocessor.preprocess()
+            print("YORIC: fixtures - after preprocessor")
             return MISInstance(graph)
         return self.instance
 
@@ -63,7 +65,9 @@ class Fixtures:
         #
         # At this stage, we need to call the preprocessor's rebuilder to
         # expand this to a solution on the original graph.
+        print("YORIC: fixtures - before rebuild")
         nodes = self.preprocessor.rebuild(set(solution.nodes))
+        print("YORIC: fixtures - after rebuild")
         return MISSolution(
             original=self.instance.graph, nodes=list(nodes), frequency=solution.frequency
         )
