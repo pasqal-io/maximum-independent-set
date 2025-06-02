@@ -52,11 +52,14 @@ class SolverConfig:
     Configuration class for setting up solver parameters.
     """
 
-    lattice_coords: dict[int, tuple[float, float]] = None
-    rydberg_blockade: float | None = None
-    exact_solving_threshold: int = 10
-    subgraph_quantity: int = 5
-    mis_sample_quantity: int = 1
+    use_quantum: bool = False
+    """
+    use_quantum (bool): Whether to use quantum hardware or simulation for solving.
+
+    If True, a quantum backend, device, embedder, and pulse shaper will be used to embed and
+    solve the MIS problem. If False, classical logic and heuristics are used entirely.
+    """
+
 
     backend: BaseBackend | None = None
     """
@@ -136,3 +139,49 @@ class SolverConfig:
 
         If you wish to deactivate postprocessing entirely, pass `None`.
     """
+
+    layout_coords: dict[int, tuple[float, float]] = None
+    """
+    layout_coords (optional): A dictionary mapping node IDs to 2D coordinates.
+    Useful when using greedy mis solving method.
+
+    Used to define a custom layout (geometry) for placing qubits on a physical lattice.
+    If this is provided, it will override any automatically generated layout,
+    regardless of whether quantum execution is enabled.
+
+    Each coordinate is a tuple of floats representing (x, y) positions in micrometers.
+    """
+
+    rydberg_blockade: float = 6.6
+    """
+    rydberg_blockade (float): Distance threshold (in micrometers) for interaction radius.
+
+    This parameter defines the maximum distance within which two atoms can influence each other via
+    Rydberg interactions. It is used to determine connectivity between qubits in the layout.
+
+    If not using quantum execution, this value still determines how logical graphs are mapped
+    to physical subgraphs.
+    """
+
+    exact_solving_threshold: int = 10
+    """
+    exact_solving_threshold (int): Used for greedy method.
+    Size threshold (number of nodes) for using MIS solving when greedy method is used.
+
+    If a subgraph has a number of nodes less than or equal to this value, it will be solved
+    using the default solver.
+    """
+
+    subgraph_quantity: int = 5
+    """
+    subgraph_quantity (int): Number of candidate subgraphs to generate during greedy mapping.
+
+    This defines how many alternative graph-to-layout mappings will be generated and evaluated.
+    Increasing this may improve solution quality but also increases runtime.
+    """
+
+    mis_sample_quantity: int = 1
+    """
+    mis_sample_quantity (int): Number of MIS solutions to sample per iteration (if applicable).
+    """
+
