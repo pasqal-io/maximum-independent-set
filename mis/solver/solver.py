@@ -244,6 +244,11 @@ class GreedyMISSolver(BaseSolver):
     """
     A recursive solver that maps an MISInstance onto a physical layout using greedy subgraph embedding.
     Uses an internal exact solver for small subproblems and a greedy decomposition strategy for larger graphs.
+
+    Note:
+        This solver uses recursive decomposition via `_solve_recursive()`.
+        Python's default recursion limit is 1000 (see `sys.getrecursionlimit()`).
+        For large graphs or deep recursion trees, this limit may be hit.
     """
 
     def __init__(
@@ -329,12 +334,12 @@ class GreedyMISSolver(BaseSolver):
             sub_instance = MISInstance(graph=layout_subgraph)
             solver = self.solver_class(sub_instance, self.config)
 
-            results = solver.solve().result()[: self.config.max_number_of_solutions]
+            results = solver.solve().result()
             inv_map = {v: k for k, v in mapping.items()}
 
             for partial in results:
                 logical_nodes = [inv_map[n] for n in partial.nodes]
-                reduced_graph = self._remove_nodes(graph, logical_nodes)
+                reduced_graph = self._remove_neighborhood(graph, logical_nodes)
                 remainder_instance = MISInstance(reduced_graph)
 
                 remainder_exec = self._solve_recursive(remainder_instance)
@@ -344,14 +349,14 @@ class GreedyMISSolver(BaseSolver):
                     combined_nodes = logical_nodes + rem_sol.nodes
                     energy = -calculate_weight(self.instance, combined_nodes)
                     combined_solution = MISSolution(
-                        original=graph, nodes=combined_nodes, energy=energy
+                        original=graph, nodes=combined_nodes, frequency=energy
                     )
 
-                    if (best_solution is None) or (energy < best_solution.energy):
+                    if (best_solution is None) or (energy < best_solution.frequency):
                         best_solution = combined_solution
 
         if best_solution is None:
-            return Execution.success([MISSolution(original=graph, nodes=[], energy=0)])
+            return Execution.success([MISSolution(original=graph, nodes=[], frequency=0)])
         return Execution.success([best_solution])
 
     def _generate_subgraphs(self, graph: nx.Graph) -> list[dict[int, int]]:
@@ -399,7 +404,7 @@ class GreedyMISSolver(BaseSolver):
 
         return G
 
-    def _remove_nodes(self, graph: nx.Graph, nodes: list[int]) -> nx.Graph:
+    def _remove_neighborhood(self, graph: nx.Graph, nodes: list[int]) -> nx.Graph:
         """
         Removes a node and all its neighbors from the graph.
 
