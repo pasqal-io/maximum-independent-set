@@ -3,7 +3,7 @@ from typing import Counter
 
 import networkx as nx
 
-from mis.shared.types import MISInstance, MISSolution
+from mis.shared.types import MISInstance, MISSolution, MethodType
 from mis.pipeline.basesolver import BaseSolver
 from mis.pipeline.execution import Execution
 from mis.pipeline.fixtures import Fixtures
@@ -11,6 +11,7 @@ from mis.pipeline.embedder import DefaultEmbedder
 from mis.pipeline.pulse import BasePulseShaper, DefaultPulseShaper
 from mis.pipeline.targets import Pulse, Register
 from mis.pipeline.config import SolverConfig
+from mis.solver.greedyMIS import GreedyMISSolver
 
 
 class MISSolver:
@@ -24,12 +25,33 @@ class MISSolver:
             config = SolverConfig()
         self._solver: BaseSolver
         self.instance = instance
-        self.config = config
-        if config.backend is None:
-            self._solver = MISSolverClassical(instance, config)
-        else:
-            self._solver = MISSolverQuantum(instance, config)
+        self.config = self._process_config(config)
 
+        if config.use_quantum:
+            if config.method == MethodType.GREEDY:
+                mis_solver = GreedyMISSolver(instance, config, MISSolverQuantum)
+            else:
+                mis_solver = MISSolverQuantum(instance, config)
+        else:
+            if config.method == MethodType.GREEDY:
+                mis_solver = GreedyMISSolver(instance, config, MISSolverClassical)
+            else:
+                mis_solver = MISSolverClassical(instance, config)
+        
+        self._solver = mis_solver
+            
+    def _process_config(self, config: SolverConfig) -> SolverConfig:
+        if config.use_quantum:
+            assert config.backend is not None
+            if config.embedder is None:  # FIXME: That's a side-effect on config
+                config.embedder = DefaultEmbedder()
+            if config.pulse_shaper is None:
+                config.pulse_shaper = DefaultPulseShaper()
+            if config.device is None:
+                config.device = config.backend.device()
+        return config
+
+            
     def solve(self) -> Execution[list[MISSolution]]:
         if len(self.instance.graph.nodes) == 0:
             return Execution.success([])
@@ -94,14 +116,6 @@ class MISSolverQuantum(BaseSolver):
             config (SolverConfig): Solver settings including backend and
                 device.
         """
-        assert config.backend is not None
-        if config.embedder is None:  # FIXME: That's a side-effect on config
-            config.embedder = DefaultEmbedder()
-        if config.pulse_shaper is None:
-            config.pulse_shaper = DefaultPulseShaper()
-        if config.device is None:
-            config.device = config.backend.device()
-
         super().__init__(instance, config)
 
         self.fixtures = Fixtures(instance, self.config)
