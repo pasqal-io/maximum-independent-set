@@ -7,42 +7,43 @@ from statistics import mean
 import networkx as nx
 
 from mis.shared.types import MISInstance
-from mis.solver.lattice import Lattice
+from mis.pipeline.layout import Layout  
 
 class GreedyMapping:
     """
-    Performs a greedy mapping of a MISInstance's graph onto a physical lattice layout.
+    Performs a greedy mapping of a MISInstance's graph onto a physical layout.
     """
 
     def __init__(
         self,
         instance: MISInstance,
-        lattice: Lattice,
+        layout: Layout,
         previously_generated_subgraphs: list[dict[int, int]],
         seed: int = 0,
     ) -> None:
         """
-        Initializes the GreedyMapping algorithm for mapping a graph onto a lattice.
+        Initializes the GreedyMapping algorithm for mapping a graph onto a layout.
 
         Args:
             instance: The MIS problem instance containing the logical graph.
-            lattice: The lattice structure defining the physical layout.
-            previous_mappings: list of previous mappings (for scoring reuse).
+            layout: The layout structure defining the physical geometry.
+            previously_generated_subgraphs: list of previous mappings (for scoring reuse).
             seed: Random seed for reproducibility.
         """
         self.graph: nx.Graph = instance.graph.copy()
-        self.lattice_instance: Lattice = lattice
-        self.lattice: nx.Graph = nx.convert_node_labels_to_integers(self.lattice_instance.lattice)
+        self.layout: Layout = layout
+        self.layout_graph: nx.Graph = nx.convert_node_labels_to_integers(self.layout.get_graph())
         self.previously_generated_subgraphs = previously_generated_subgraphs
         random.seed(seed)
 
-    def generate(self,
-                 starting_node: int,
+    def generate(
+        self,
+        starting_node: int,
         remove_invalid_placement_nodes: bool = True,
         rank_nodes: bool = True,
     ) -> dict[int, int]:
         """
-        Generates a subgraph by mapping the input graph onto the lattice using a greedy approach.
+        Generates a subgraph by mapping the input graph onto the layout using a greedy approach.
 
         Args:
             starting_node: The initial graph node to start mapping.
@@ -50,13 +51,13 @@ class GreedyMapping:
             rank_nodes: Whether to rank nodes using the scoring heuristic.
 
         Returns:
-            dict: A dictionary representing the graph-to-lattice mapping.
+            dict: A dictionary representing the graph-to-layout mapping.
         """
         unmapping: dict[int, int] = {}
         mapping: dict[int, int] = {}
         unexpanded_nodes: set[int] = set()
 
-        current_lattice_node: int = self._initialize(
+        current_layout_node: int = self._initialize(
             starting_node, mapping, unmapping, unexpanded_nodes
         )
         current_node: int = starting_node
@@ -64,9 +65,9 @@ class GreedyMapping:
         while unexpanded_nodes:
             unexpanded_nodes.remove(current_node)
 
-            lattice_neighbors = list(self.lattice.neighbors(current_lattice_node))
-            free_lattice_neighbors = [
-                neighbor for neighbor in lattice_neighbors if neighbor not in unmapping
+            layout_neighbors = list(self.layout_graph.neighbors(current_layout_node))
+            free_layout_neighbors = [
+                neighbor for neighbor in layout_neighbors if neighbor not in unmapping
             ]
 
             neighbors = list(self.graph.neighbors(current_node))
@@ -74,7 +75,7 @@ class GreedyMapping:
             self._extend_mapping(
                 considered_nodes=neighbors,
                 unexpanded_nodes=unexpanded_nodes,
-                free_lattice_neighbors=free_lattice_neighbors,
+                free_layout_neighbors=free_layout_neighbors,
                 mapping=mapping,
                 unmapping=unmapping,
                 remove_invalid_placement_nodes=remove_invalid_placement_nodes,
@@ -83,7 +84,7 @@ class GreedyMapping:
 
             if unexpanded_nodes:
                 current_node = next(iter(unexpanded_nodes))
-                current_lattice_node = mapping[current_node]
+                current_layout_node = mapping[current_node]
 
         if not self._validate(mapping, unmapping):
             raise Exception("Invalid mapping!")
@@ -97,44 +98,44 @@ class GreedyMapping:
         unmapping: dict[int, int],
         unexpanded_nodes: set[int],
     ) -> int:
-        """Initializes mapping at the center of the lattice.
+        """Initializes mapping at the center of the layout.
         
         Args:
             starting_node: The initial node in the graph.
-            mapping: dictionary for graph-to-lattice mapping.
-            unmapping: dictionary for lattice-to-graph mapping.
+            mapping: dictionary for graph-to-layout mapping.
+            unmapping: dictionary for layout-to-graph mapping.
             unexpanded_nodes: set of unexpanded nodes in the graph.
 
-        Returns: 
-            The lattice node corresponding to the starting node.
+        Returns:
+            The layout node corresponding to the starting node.
         """
-        lattice_n: int = nx.number_of_nodes(self.lattice)
-        lattice_grid_size: int = int(math.sqrt(lattice_n))
-        starting_lattice_node: int = int(lattice_n / 2 + lattice_grid_size / 4)
-        mapping[starting_node] = starting_lattice_node
-        unmapping[starting_lattice_node] = starting_node
+        layout_n: int = nx.number_of_nodes(self.layout_graph)
+        layout_grid_size: int = int(math.sqrt(layout_n))
+        starting_layout_node: int = int(layout_n / 2 + layout_grid_size / 4)
+        mapping[starting_node] = starting_layout_node
+        unmapping[starting_layout_node] = starting_node
         unexpanded_nodes.add(starting_node)
-        return starting_lattice_node
+        return starting_layout_node
 
     def _extend_mapping(
         self,
         considered_nodes: list[int],
         unexpanded_nodes: set[int],
-        free_lattice_neighbors: list[int],
+        free_layout_neighbors: list[int],
         mapping: dict[int, int],
         unmapping: dict[int, int],
         remove_invalid_placement_nodes: bool = True,
         rank_nodes: bool = True,
     ) -> None:
         """
-        Extends the mapping by assigning unplaced graph nodes to free lattice nodes.
+        Extends the mapping by assigning unplaced graph nodes to free layout nodes.
 
         Args:
             considered_nodes: Nodes in the graph being considered for mapping.
             unexpanded_nodes: set of unexpanded nodes.
-            free_lattice_neighbors: Available lattice neighbors for mapping.
-            mapping: Current graph-to-lattice mapping.
-            unmapping: Current lattice-to-graph mapping.
+            free_layout_neighbors: Available layout neighbors for mapping.
+            mapping: Current graph-to-layout mapping.
+            unmapping: Current layout-to-graph mapping.
             remove_invalid_placement_nodes: Whether to remove invalid placements.
             rank_nodes: Whether to rank nodes using the scoring heuristic.
         """
@@ -149,15 +150,14 @@ class GreedyMapping:
             )
             unplaced_nodes.sort(key=lambda n: node_scoring[n], reverse=True)
 
-        for free_latt_neighbor in free_lattice_neighbors:
+        for free_layout_node in free_layout_neighbors:
             for unplaced_node in unplaced_nodes:
                 valid_placement: bool = True
 
-                free_latt_neighbor_neighbors = list(self.lattice.neighbors(free_latt_neighbor))
-                free_latt_neighbor_mapped_neighbors = [
-                    n for n in free_latt_neighbor_neighbors if n in unmapping
-                ]
-                for mapped_neighbor in free_latt_neighbor_mapped_neighbors:
+                layout_neighbors = list(self.layout_graph.neighbors(free_layout_node))
+                mapped_neighbors = [n for n in layout_neighbors if n in unmapping]
+
+                for mapped_neighbor in mapped_neighbors:
                     if not self.graph.has_edge(unplaced_node, unmapping[mapped_neighbor]):
                         valid_placement = False
                         break
@@ -165,15 +165,15 @@ class GreedyMapping:
                 if valid_placement:
                     candidate_neighbors = list(self.graph.neighbors(unplaced_node))
                     for neighbor in candidate_neighbors:
-                        if neighbor in already_placed_nodes and not self.lattice.has_edge(
-                            mapping[neighbor], free_latt_neighbor
+                        if neighbor in already_placed_nodes and not self.layout_graph.has_edge(
+                            mapping[neighbor], free_layout_node
                         ):
                             valid_placement = False
                             break
 
                 if valid_placement:
-                    mapping[unplaced_node] = free_latt_neighbor
-                    unmapping[free_latt_neighbor] = unplaced_node
+                    mapping[unplaced_node] = free_layout_node
+                    unmapping[free_layout_node] = unplaced_node
                     already_placed_nodes.add(unplaced_node)
                     unplaced_nodes.remove(unplaced_node)
                     unexpanded_nodes.add(unplaced_node)
@@ -193,7 +193,7 @@ class GreedyMapping:
 
         Args:
             nodes_to_score: list of nodes to score.
-            mapping: Current graph-to-lattice mapping.
+            mapping: Current graph-to-layout mapping.
             remove_invalid_placement_nodes: Whether to penalize invalid placements.
 
         Returns:
@@ -204,7 +204,7 @@ class GreedyMapping:
 
         for node in nodes_to_score:
             degree_score: float = 1 - (
-                abs(self.lattice_instance.avg_degree - self.graph.degree(node)) / n
+                abs(self.layout.avg_degree - self.graph.degree(node)) / n
             )
             non_adj_score: float = 0
             if not remove_invalid_placement_nodes:
@@ -235,8 +235,8 @@ class GreedyMapping:
         Checks if the current mapping is valid based on adjacency constraints.
 
         Args:
-            mapping: Graph-to-lattice mapping.
-            unmapping: Lattice-to-graph mapping.
+            mapping: Graph-to-layout mapping.
+            unmapping: layout-to-graph mapping.
 
         Return:
             True if the mapping is valid, False otherwise.
@@ -244,16 +244,16 @@ class GreedyMapping:
         for node in self.graph.nodes():
             if node in mapping:
                 for neighbor in self.graph.neighbors(node):
-                    if neighbor in mapping and not self.lattice.has_edge(
+                    if neighbor in mapping and not self.layout_graph.has_edge(
                         mapping[node], mapping[neighbor]
                     ):
                         return False
 
-        for latt_node in self.lattice.nodes():
-            if latt_node in unmapping:
-                for latt_neighbor in self.lattice.neighbors(latt_node):
-                    if latt_neighbor in unmapping and not self.graph.has_edge(
-                        unmapping[latt_node], unmapping[latt_neighbor]
+        for layout_node in self.layout_graph.nodes():
+            if layout_node in unmapping:
+                for layout_neighbor in self.layout_graph.neighbors(layout_node):
+                    if layout_neighbor in unmapping and not self.graph.has_edge(
+                        unmapping[layout_node], unmapping[layout_neighbor]
                     ):
                         return False
 
