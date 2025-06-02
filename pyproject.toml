@@ -28,7 +28,7 @@ classifiers = [
 dependencies = [
   "networkx",
   "numpy",
-  "pulser==1.1.1",
+  "pulser==1.5.1",
   "rdkit",
   "scikit-learn",
   "torch",
