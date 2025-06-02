@@ -40,9 +40,9 @@ class MISInstance:
             save_fig (str | bool, optional): Option to store the figure on the diskspace. Defaults to False.
         """
         if nodes is not None: 
-            color_map = ['blue' if node in nodes else 'red' for node in self.graph.nodes ]
+            color_map = ['lightgray' if node in nodes else 'red' for node in self.graph.nodes ]
         elif nodes is None or len(node)==0:
-            color_map = ['blue' for i in range(len(self.graph.nodes))]
+            color_map = ['lightgray' for i in range(len(self.graph.nodes))]
         
         if self.pos is None:
             self.pos = networkx.spring_layout(self.graph)
