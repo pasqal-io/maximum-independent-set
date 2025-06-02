@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from enum import Enum
 from dataclasses import dataclass
-import networkx
-
+import networkx 
+import matplotlib.pyplot as plt
 
 class BackendType(str, Enum):
     """
@@ -22,8 +22,50 @@ class MethodType(str, Enum):
 
 class MISInstance:
     def __init__(self, graph: networkx.Graph):
+        """MIS Instance that wraps the networkx.Graph
+
+        Args:
+            graph (networkx.Graph): _description_
+        """
         # FIXME: Make it work with pytorch geometric
         self.graph = graph
+        self.pos = None
+        
+    def draw(self, nodes: list[int] | None = None, save_fig:str|bool = False):
+        """Draw method provides the way to plot the Graph nodes and edges and store the figure,
+        the provided input nodes will be displayed in different color
+
+        Args:
+            nodes (list[int] | None, optional): Nodes list to display in different color . Defaults to None.
+            save_fig (str | bool, optional): Option to store the figure on the diskspace. Defaults to False.
+        """
+        if nodes is not None: 
+            color_map = ['grey' if node in nodes else 'red' for node in self.graph.nodes ]
+        else:
+            color_map = ['grey' for i in range(len(self.graph.nodes))]
+        
+        if self.pos is None:
+            self.pos = networkx.spring_layout(self.graph)
+        
+        networkx.draw(self.graph, pos=self.pos,
+                      node_size=200,
+                      with_labels=True,
+                      node_color=color_map,
+                      nodelist=self.graph.nodes)
+       
+
+        ax = plt.gca()
+        ax.margins(0.11)
+        plt.tight_layout()
+        plt.axis("off")
+        if isinstance(save_fig, str):
+            plt.savefig(f"{save_fig}.png")
+        elif save_fig:
+            plt.savefig("graph.png")
+        plt.show()
+        
+        
+
 
 
 @dataclass
