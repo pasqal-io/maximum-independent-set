@@ -40,9 +40,9 @@ class MISInstance:
             save_fig (str | bool, optional): Option to store the figure on the diskspace. Defaults to False.
         """
         if nodes is not None: 
-            color_map = ['grey' if node in nodes else 'red' for node in self.graph.nodes ]
-        else:
-            color_map = ['grey' for i in range(len(self.graph.nodes))]
+            color_map = ['blue' if node in nodes else 'red' for node in self.graph.nodes ]
+        elif nodes is None or len(node)==0:
+            color_map = ['blue' for i in range(len(self.graph.nodes))]
         
         if self.pos is None:
             self.pos = networkx.spring_layout(self.graph)
@@ -79,3 +79,7 @@ class MISSolution:
         assert len(self.nodes) == len(set(self.nodes)), "All the nodes in %s should be distinct" % (
             self.nodes,
         )
+        
+    def draw(self, save_fig:str|bool = False):
+        return MISInstance(self.original).draw(nodes=self.nodes, save_fig=save_fig)
+        
