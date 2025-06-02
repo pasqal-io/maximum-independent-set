@@ -6,8 +6,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-import networkx as nx
-import numpy as np
 import pulser
 
 from mis.shared.types import (

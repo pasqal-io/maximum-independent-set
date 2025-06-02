@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import math
 import random
-from statistics import mean
 
 import networkx as nx
 
 from mis.shared.types import MISInstance
-from mis.pipeline.layout import Layout  
+from mis.pipeline.layout import Layout
+
 
 class GreedyMapping:
     """
@@ -99,7 +99,7 @@ class GreedyMapping:
         unexpanded_nodes: set[int],
     ) -> int:
         """Initializes mapping at the center of the layout.
-        
+
         Args:
             starting_node: The initial node in the graph.
             mapping: dictionary for graph-to-layout mapping.
@@ -140,9 +140,7 @@ class GreedyMapping:
             rank_nodes: Whether to rank nodes using the scoring heuristic.
         """
         already_placed_nodes: set[int] = set(mapping.keys())
-        unplaced_nodes: list[int] = [
-            n for n in considered_nodes if n not in already_placed_nodes
-        ]
+        unplaced_nodes: list[int] = [n for n in considered_nodes if n not in already_placed_nodes]
 
         if rank_nodes:
             node_scoring = self._score_nodes(
@@ -203,13 +201,13 @@ class GreedyMapping:
         node_scores: dict[int, float] = {}
 
         for node in nodes_to_score:
-            degree_score: float = 1 - (
-                abs(self.layout.avg_degree - self.graph.degree(node)) / n
-            )
+            degree_score: float = 1 - (abs(self.layout.avg_degree - self.graph.degree(node)) / n)
             non_adj_score: float = 0
             if not remove_invalid_placement_nodes:
                 non_neighbors = [
-                    neighbor for neighbor in nx.non_neighbors(self.graph, node) if neighbor in mapping
+                    neighbor
+                    for neighbor in nx.non_neighbors(self.graph, node)
+                    if neighbor in mapping
                 ]
                 if n > 0:
                     non_adj_score = len(non_neighbors) / n
@@ -218,8 +216,7 @@ class GreedyMapping:
                 1 for subgraph in self.previously_generated_subgraphs if node in subgraph
             )
             previous_subgraphs_belonging_score: float = (
-                1
-                - (subgraphs_containing_node_count / len(self.previously_generated_subgraphs))
+                1 - (subgraphs_containing_node_count / len(self.previously_generated_subgraphs))
                 if self.previously_generated_subgraphs
                 else 0
             )
@@ -228,9 +225,7 @@ class GreedyMapping:
 
         return {node: (score, random.random()) for node, score in node_scores.items()}
 
-    def _validate(
-        self, mapping: dict[int, int], unmapping: dict[int, int]
-    ) -> bool:
+    def _validate(self, mapping: dict[int, int], unmapping: dict[int, int]) -> bool:
         """
         Checks if the current mapping is valid based on adjacency constraints.
 

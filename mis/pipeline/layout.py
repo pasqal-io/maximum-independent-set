@@ -60,10 +60,7 @@ class Layout:
 
         # Compute all pairwise distances
         distances = [
-            np.linalg.norm(coords[v1] - coords[v2])
-            for v1 in coords
-            for v2 in coords
-            if v1 < v2
+            np.linalg.norm(coords[v1] - coords[v2]) for v1 in coords for v2 in coords if v1 < v2
         ]
 
         if distances:
@@ -108,7 +105,7 @@ class Layout:
         plt.show()
 
     def num_nodes(self) -> int:
-        return self.graph.number_of_nodes()
+        return int(self.graph.number_of_nodes())
 
     def grid_size(self) -> int:
         return int(round(self.num_nodes() ** 0.5))
@@ -117,4 +114,4 @@ class Layout:
         return self.graph
 
     def get_coords(self) -> dict[int, tuple[float, float]]:
-        return self.coords
+        return self.coords  # type: ignore[no-any-return]

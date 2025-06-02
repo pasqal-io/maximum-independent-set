@@ -60,7 +60,6 @@ class SolverConfig:
     solve the MIS problem. If False, classical logic and heuristics are used entirely.
     """
 
-
     backend: BaseBackend | None = None
     """
     backend (optional): Backend configuration to use. If `None`,
@@ -140,7 +139,7 @@ class SolverConfig:
         If you wish to deactivate postprocessing entirely, pass `None`.
     """
 
-    layout_coords: dict[int, tuple[float, float]] = None
+    layout_coords: dict[int, tuple[float, float]] | None = None
     """
     layout_coords (optional): A dictionary mapping node IDs to 2D coordinates.
     Useful when using greedy mis solving method.
@@ -184,4 +183,3 @@ class SolverConfig:
     """
     mis_sample_quantity (int): Number of MIS solutions to sample per iteration (if applicable).
     """
-
