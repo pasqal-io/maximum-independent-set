@@ -35,8 +35,8 @@ class MISInstance:
         Parameters:
 
             nodes (list[int]): List of nodes to highlight.
-            node_size (int): Size of drawn nodes in drawn graph.
-            highlight_color (str): Color to highlight nodes with.
+            node_size (int): Size of drawn nodes in drawn graph. (default: 600)
+            highlight_color (str): Color to highlight nodes with. (default: "red")
         """
         # Obtain a view of all nodes
         all_nodes = self.graph.nodes
@@ -107,7 +107,7 @@ class MISSolution:
 
         Parameters:
 
-            node_size (int): Size of drawn nodes in drawn graph.
-            highlight_color (str): Color to highlight nodes with.
+            node_size (int): Size of drawn nodes in drawn graph. (default: 600)
+            highlight_color (str): Color to highlight nodes with. (default: "red")
         """
         MISInstance(self.original).draw(self.nodes, node_size, highlight_color)
