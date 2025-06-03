@@ -53,13 +53,12 @@ class GreedyMapping:
         Returns:
             dict: A dictionary representing the graph-to-layout mapping.
         """
-        unmapping: dict[int, int] = {}
+        # dictionary for graph-to-layout mapping.
         mapping: dict[int, int] = {}
-        unexpanded_nodes: set[int] = set()
+        # dictionary for layout-to-graph mapping.
+        unmapping: dict[int, int] = {}
 
-        current_layout_node: int = self._initialize(
-            starting_node, mapping, unmapping, unexpanded_nodes
-        )
+        current_layout_node, unexpanded_nodes = self._initialize(starting_node, mapping, unmapping)
         current_node: int = starting_node
 
         while unexpanded_nodes:
@@ -96,26 +95,27 @@ class GreedyMapping:
         starting_node: int,
         mapping: dict[int, int],
         unmapping: dict[int, int],
-        unexpanded_nodes: set[int],
-    ) -> int:
+    ) -> tuple[int, set[int]]:
         """Initializes mapping at the center of the layout.
 
         Args:
             starting_node: The initial node in the graph.
             mapping: dictionary for graph-to-layout mapping.
             unmapping: dictionary for layout-to-graph mapping.
-            unexpanded_nodes: set of unexpanded nodes in the graph.
 
         Returns:
-            The layout node corresponding to the starting node.
+            tuple[int, set[int]]: tuple of
+                - The layout node corresponding to the starting node.
+                - set of unexpanded nodes in the graph.
         """
         layout_n: int = nx.number_of_nodes(self.layout_graph)
         layout_grid_size: int = int(math.sqrt(layout_n))
         starting_layout_node: int = int(layout_n / 2 + layout_grid_size / 4)
         mapping[starting_node] = starting_layout_node
         unmapping[starting_layout_node] = starting_node
+        unexpanded_nodes: set[int] = set()
         unexpanded_nodes.add(starting_node)
-        return starting_layout_node
+        return starting_layout_node, unexpanded_nodes
 
     def _extend_mapping(
         self,

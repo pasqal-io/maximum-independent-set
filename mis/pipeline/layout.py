@@ -17,6 +17,7 @@ class Layout:
 
     Accepts either:
     - dict[int, tuple[float, float]] of coordinates
+        mapping from node (int) to physical coordinates (x, y)
     - MISInstance (graph)
 
     Uses a distance threshold (rydberg_blockade) to create edges.

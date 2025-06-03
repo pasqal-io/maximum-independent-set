@@ -30,3 +30,22 @@ def is_independent(graph: nx.Graph, nodes: list[int]) -> bool:
         True if independent, False otherwise.
     """
     return not any(graph.has_edge(u, v) for i, u in enumerate(nodes) for v in nodes[i + 1 :])
+
+
+def remove_neighborhood(graph: nx.Graph, nodes: list[int]) -> nx.Graph:
+    """
+    Removes a node and all its neighbors from the graph.
+
+    Args:
+        graph: The graph to modify.
+        nodes: List of nodes to remove.
+
+    Returns:
+        The reduced graph.
+    """
+    reduced = graph.copy()
+    to_remove = set(nodes)
+    for node in nodes:
+        to_remove.update(graph.neighbors(node))
+    reduced.remove_nodes_from(to_remove)
+    return reduced

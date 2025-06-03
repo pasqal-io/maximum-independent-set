@@ -13,7 +13,7 @@ from mis.pipeline.targets import Pulse, Register
 from mis.pipeline.config import SolverConfig
 from mis.solver.greedymapping import GreedyMapping
 from mis.pipeline.layout import Layout
-from mis.shared.utils import calculate_weight
+from mis.shared.utils import calculate_weight, remove_neighborhood
 
 
 class MISSolver:
@@ -255,7 +255,7 @@ class GreedyMISSolver(BaseSolver):
         self,
         instance: MISInstance,
         config: SolverConfig,
-        solver_class: Callable[[MISInstance, SolverConfig], BaseSolver],
+        solver_factory: Callable[[MISInstance, SolverConfig], BaseSolver],
     ) -> None:
         """
         Initializes the GreedyMISSolver with a given MIS problem instance and a base solver.
@@ -268,7 +268,7 @@ class GreedyMISSolver(BaseSolver):
         """
         super().__init__(instance, config)
 
-        self.solver_class = solver_class
+        self.solver_factory = solver_factory
         self.layout = self._build_layout()
 
     def _build_layout(self) -> Layout:
@@ -323,25 +323,35 @@ class GreedyMISSolver(BaseSolver):
         """
         graph = instance.graph
         if len(graph) <= self.config.greedy.exact_solving_threshold:  # type: ignore[union-attr]
-            solver = self.solver_class(instance, self.config)
+            solver = self.solver_factory(instance, self.config)
             return solver.solve()
 
+        # these mappings from from graph nodes - to - layout nodes
         mappings = self._generate_subgraphs(graph)
         best_solution: MISSolution | None = None
 
         for mapping in mappings:
             layout_subgraph = self._generate_layout_graph(graph, mapping)
             sub_instance = MISInstance(graph=layout_subgraph)
-            solver = self.solver_class(sub_instance, self.config)
+            solver = self.solver_factory(sub_instance, self.config)
 
+            # Note:
+            # this forces the computation to be in sync.
+            # TODO: Align with async SDK - when it is available in the future.
+            # results in a solution in forms of layout nodes
             results = solver.solve().result()
+
+            # inverse mappings from from layout nodes - to - graph nodes
             inv_map = {v: k for k, v in mapping.items()}
-            current_mis_set = [
+
+            # collections of graph nodes for each solution.
+            # based on the collected layout nodes from the solver.solve()
+            current_mis_bag = [
                 [inv_map[value] for value in mis_lattice.nodes] for mis_lattice in results
             ]
 
-            for current_mis in current_mis_set:
-                reduced_graph = self._remove_neighborhood(graph, current_mis)
+            for current_mis in current_mis_bag:
+                reduced_graph = remove_neighborhood(graph, current_mis)
                 remainder_instance = MISInstance(reduced_graph)
                 remainder_exec = self._solve_recursive(remainder_instance)
                 remainder_solutions = remainder_exec.result()
@@ -363,6 +373,9 @@ class GreedyMISSolver(BaseSolver):
     def _generate_subgraphs(self, graph: nx.Graph) -> list[dict[int, int]]:
         """
         Generates subgraph mappings using greedy layout placement.
+        The largest mappings are returned because they represent the most successful embedding
+        attempt of the original graph onto the quantum-executable lattice, for higher-quality
+        approximations of the original MIS problem.
 
         Args:
             graph: The input logical graph.
@@ -406,21 +419,3 @@ class GreedyMISSolver(BaseSolver):
                     G.add_edge(physical, neighbor)
 
         return G
-
-    def _remove_neighborhood(self, graph: nx.Graph, nodes: list[int]) -> nx.Graph:
-        """
-        Removes a node and all its neighbors from the graph.
-
-        Args:
-            graph: The graph to modify.
-            nodes: List of nodes to remove.
-
-        Returns:
-            The reduced graph.
-        """
-        reduced = graph.copy()
-        to_remove = set(nodes)
-        for node in nodes:
-            to_remove.update(graph.neighbors(node))
-        reduced.remove_nodes_from(to_remove)
-        return reduced
