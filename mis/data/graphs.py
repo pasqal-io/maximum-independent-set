@@ -55,7 +55,7 @@ def load_dimacs(path: str) -> DIMACSDataset:
 
     if graph.number_of_nodes() != n_vertices:
         raise ValueError(
-            "DIMACS file does not match specified number of vertices."
+            "Error in DIMACS file: the graph within this file does not have the number of vertices it claims."
         )
     if graph.number_of_edges() != n_edges:
         raise ValueError(
