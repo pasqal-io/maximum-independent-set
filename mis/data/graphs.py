@@ -21,6 +21,10 @@ class DIMACSDataset:
     """
     instance: MISInstance
     solutions: list[list[int]]
+    """
+    If the dataset provided solutions, the list of solutions.
+    Note that most instances do not provide a solution and those that do do not guarantee that they provide all solutions.
+    """
 
 
 def load_dimacs(path: str) -> DIMACSDataset:
