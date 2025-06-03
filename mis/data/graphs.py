@@ -59,7 +59,7 @@ def load_dimacs(path: str) -> DIMACSDataset:
         )
     if graph.number_of_edges() != n_edges:
         raise ValueError(
-            "DIMACS file does not match specified number of edges."
+            "Error in DIMACS file: the graph within this file does not have the number of edges it claims."
         )
 
     instance = MISInstance(graph)
