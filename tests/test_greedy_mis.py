@@ -23,7 +23,9 @@ def test_greedy_mis_basic(simple_graph: nx.Graph, use_quantum: bool) -> None:
     Test Greedy MIS solver in both classical and quantum modes with default settings.
     """
     backend = QutipBackend() if use_quantum else None
-    config = SolverConfig(method=MethodType.GREEDY, use_quantum=use_quantum, backend=backend)
+    config = SolverConfig(
+        method=MethodType.GREEDY, use_quantum=use_quantum, backend=backend, greedy=GreedyConfig()
+    )
     instance = MISInstance(simple_graph)
     solver = MISSolver(instance, config)
     solutions = solver.solve().result()
