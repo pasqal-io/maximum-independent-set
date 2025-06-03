@@ -2,7 +2,7 @@ import pytest
 import networkx as nx
 
 from mis.solver.solver import MISInstance, MISSolver
-from mis.pipeline.config import SolverConfig
+from mis.pipeline.config import SolverConfig, GreedyConfig
 from mis.pipeline.backends import QutipBackend
 from mis.shared.types import MethodType
 
@@ -39,7 +39,8 @@ def test_greedy_mis_with_layout_and_blockade(
     Test Greedy MIS with custom layout coordinates and rydberg blockade.
     """
     config = SolverConfig(
-        method=MethodType.GREEDY, layout_coords=layout_coords, rydberg_blockade=5.0
+        method=MethodType.GREEDY,
+        greedy=GreedyConfig(layout_coords=layout_coords, rydberg_blockade=5.0),
     )
     instance = MISInstance(simple_graph)
     solver = MISSolver(instance, config)
@@ -59,8 +60,7 @@ def test_quantum_greedy_with_layout(
         method=MethodType.GREEDY,
         use_quantum=True,
         backend=QutipBackend(),
-        layout_coords=layout_coords,
-        rydberg_blockade=5.0,
+        greedy=GreedyConfig(layout_coords=layout_coords, rydberg_blockade=5.0),
     )
     instance = MISInstance(simple_graph)
     solver = MISSolver(instance, config)

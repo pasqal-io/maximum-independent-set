@@ -281,9 +281,13 @@ class GreedyMISSolver(BaseSolver):
         Returns:
             Layout: The constructed layout.
         """
-        if self.config.layout_coords is not None and self.config.rydberg_blockade is not None:
+        if (
+            self.config.greedy.layout_coords is not None  # type: ignore[union-attr]
+            and self.config.greedy.rydberg_blockade is not None  # type: ignore[union-attr]
+        ):
             return Layout(
-                data=self.config.layout_coords, rydberg_blockade=self.config.rydberg_blockade
+                data=self.config.greedy.layout_coords,  # type: ignore[union-attr]
+                rydberg_blockade=self.config.greedy.rydberg_blockade,  # type: ignore[union-attr]
             )
         elif self.config.use_quantum:
             if self.config.device is not None:
@@ -294,7 +298,7 @@ class GreedyMISSolver(BaseSolver):
                     "or a backend must be provided in config."
                 )
         elif not self.config.use_quantum:
-            return Layout(data=self.instance, rydberg_blockade=self.config.rydberg_blockade)
+            return Layout(data=self.instance, rydberg_blockade=self.config.greedy.rydberg_blockade)  # type: ignore[union-attr]
 
     def solve(self) -> Execution[list[MISSolution]]:
         """
@@ -318,7 +322,7 @@ class GreedyMISSolver(BaseSolver):
             Execution containing a list of solutions.
         """
         graph = instance.graph
-        if len(graph) <= self.config.exact_solving_threshold:
+        if len(graph) <= self.config.greedy.exact_solving_threshold:  # type: ignore[union-attr]
             solver = self.solver_class(instance, self.config)
             return solver.solve()
 
@@ -375,7 +379,9 @@ class GreedyMISSolver(BaseSolver):
             )
             mapping = mapper.generate(starting_node=node)
             mappings.append(mapping)
-        return sorted(mappings, key=lambda m: len(m), reverse=True)[: self.config.subgraph_quantity]
+        return sorted(mappings, key=lambda m: len(m), reverse=True)[
+            : self.config.greedy.subgraph_quantity  # type: ignore[union-attr]
+        ]
 
     def _generate_layout_graph(self, graph: nx.Graph, mapping: dict[int, int]) -> nx.Graph:
         """
