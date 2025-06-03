@@ -337,11 +337,11 @@ class GreedyMISSolver(BaseSolver):
 
             results = solver.solve().result()
             inv_map = {v: k for k, v in mapping.items()}
-            current_mis_set = [[inv_map[value] for value in mis_lattice.nodes]
-                                for mis_lattice in results
-                                ]
+            current_mis_set = [
+                [inv_map[value] for value in mis_lattice.nodes] for mis_lattice in results
+            ]
 
-            for current_mis in current_mis_set:         
+            for current_mis in current_mis_set:
                 reduced_graph = self._remove_neighborhood(graph, current_mis)
                 remainder_instance = MISInstance(reduced_graph)
                 remainder_exec = self._solve_recursive(remainder_instance)
