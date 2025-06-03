@@ -326,11 +326,6 @@ class GreedyMISSolver(BaseSolver):
         best_solution: MISSolution | None = None
 
         for mapping in mappings:
-            subgraph = graph.subgraph(mapping.keys())
-            if len(subgraph) <= self.config.exact_solving_threshold:
-                self._solve_recursive(MISInstance(subgraph))
-                continue
-
             layout_subgraph = self._generate_layout_graph(graph, mapping)
             sub_instance = MISInstance(graph=layout_subgraph)
             solver = self.solver_class(sub_instance, self.config)
