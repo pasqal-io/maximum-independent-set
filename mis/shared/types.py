@@ -29,6 +29,15 @@ class MISInstance:
     def draw(
         self, nodes: list[int] | None = None, node_size: int = 600, highlight_color: str = "red"
     ) -> None:
+        """
+        Draw instance graph with highlighted nodes.
+
+        Parameters:
+
+            nodes (list[int]): List of nodes to highlight.
+            node_size (int): Size of drawn nodes in drawn graph.
+            highlight_color (str): Color to highlight nodes with.
+        """
         # Obtain a view of all nodes
         all_nodes = self.graph.nodes
         # Compute graph layout
@@ -50,12 +59,10 @@ class MISInstance:
                 else:
                     bad_nodes += "]"
                 if len(invalid_nodes) == 1:
-                    raise Exception(
-                        f"node " + bad_nodes + " is not present in the problem instance"
-                    )
+                    raise Exception("node " + bad_nodes + " is not present in the problem instance")
                 else:
                     raise Exception(
-                        f"nodes " + bad_nodes + " are not present in the problem instance"
+                        "nodes " + bad_nodes + " are not present in the problem instance"
                     )
             nodes_complement = all_nodes - nodeset
             # Draw highlighted nodes
@@ -94,5 +101,13 @@ class MISSolution:
             self.nodes,
         )
 
-    def draw(self) -> None:
-        MISInstance(self.original).draw(self.nodes)
+    def draw(self, node_size: int = 600, highlight_color: str = "red") -> None:
+        """
+        Draw instance graph with solution nodes highlighted.
+
+        Parameters:
+
+            node_size (int): Size of drawn nodes in drawn graph.
+            highlight_color (str): Color to highlight nodes with.
+        """
+        MISInstance(self.original).draw(self.nodes, node_size, highlight_color)
