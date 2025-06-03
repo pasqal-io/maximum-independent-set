@@ -11,6 +11,7 @@ import networkx as nx
 from mis.pipeline.config import SolverConfig
 from mis.shared.types import MISInstance
 from mis.solver.solver import MISSolver
+from pathlib import Path
 
 
 @dataclass
@@ -37,8 +38,8 @@ def load_dimacs(path: str) -> DIMACSDataset:
     Returns:
         DIMACSDataset: An instance of DIMACSDataset.
     """
-    with open(path, 'r') as f:
-        lines = f.readlines()
+    path = Path(path)
+    lines = path.read_text().splitlines()
 
     # Parse the graph from the DIMACS format
     edges = []

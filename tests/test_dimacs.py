@@ -32,7 +32,7 @@ def test_petersen():
         assert len(solution) <= 5
 
 
-def slowtest_a265032():
+def test_a265032():
     """
     Test loading the Petersen graph from a DIMACS file.
     """
