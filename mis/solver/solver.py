@@ -328,6 +328,7 @@ class GreedyMISSolver(BaseSolver):
         for mapping in mappings:
             subgraph = graph.subgraph(mapping.keys())
             if len(subgraph) <= self.config.exact_solving_threshold:
+                self._solve_recursive(MISInstance(subgraph))
                 continue
 
             layout_subgraph = self._generate_layout_graph(graph, mapping)
@@ -336,23 +337,24 @@ class GreedyMISSolver(BaseSolver):
 
             results = solver.solve().result()
             inv_map = {v: k for k, v in mapping.items()}
+            current_mis_set = [[inv_map[value] for value in mis_lattice.nodes]
+                                for mis_lattice in results
+                                ]
 
-            for partial in results:
-                logical_nodes = [inv_map[n] for n in partial.nodes]
-                reduced_graph = self._remove_neighborhood(graph, logical_nodes)
+            for current_mis in current_mis_set:         
+                reduced_graph = self._remove_neighborhood(graph, current_mis)
                 remainder_instance = MISInstance(reduced_graph)
-
                 remainder_exec = self._solve_recursive(remainder_instance)
                 remainder_solutions = remainder_exec.result()
 
                 for rem_sol in remainder_solutions:
-                    combined_nodes = logical_nodes + rem_sol.nodes
-                    energy = -calculate_weight(self.instance, combined_nodes)
+                    combined_nodes = current_mis + rem_sol.nodes
+                    energy = calculate_weight(self.instance, combined_nodes)
                     combined_solution = MISSolution(
                         original=graph, nodes=combined_nodes, frequency=energy
                     )
 
-                    if (best_solution is None) or (energy < best_solution.frequency):
+                    if (best_solution is None) or (energy > best_solution.frequency):
                         best_solution = combined_solution
 
         if best_solution is None:
@@ -393,7 +395,7 @@ class GreedyMISSolver(BaseSolver):
         """
         G = nx.Graph()
         for logical, physical in mapping.items():
-            weight = graph.nodes[logical].get("weight", 1.0)
+            weight = graph.nodes[logical].get("weight", 0.0)
             pos = self.layout.graph.nodes[physical].get("pos", (0, 0))
             G.add_node(physical, weight=weight, pos=pos)
 

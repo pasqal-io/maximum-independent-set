@@ -151,7 +151,7 @@ class SolverConfig:
     Each coordinate is a tuple of floats representing (x, y) positions in micrometers.
     """
 
-    rydberg_blockade: float = 6.6
+    rydberg_blockade: float = 1.0
     """
     rydberg_blockade (float): Distance threshold (in micrometers) for interaction radius.
 
@@ -162,7 +162,7 @@ class SolverConfig:
     to physical subgraphs.
     """
 
-    exact_solving_threshold: int = 10
+    exact_solving_threshold: int = 1
     """
     exact_solving_threshold (int): Used for greedy method.
     Size threshold (number of nodes) for using MIS solving when greedy method is used.
