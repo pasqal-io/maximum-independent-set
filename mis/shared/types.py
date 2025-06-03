@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from enum import Enum
 from dataclasses import dataclass
-import networkx 
+import networkx
 import matplotlib.pyplot as plt
+
 
 class BackendType(str, Enum):
     """
@@ -30,8 +31,8 @@ class MISInstance:
         # FIXME: Make it work with pytorch geometric
         self.graph = graph
         self.pos = None
-        
-    def draw(self, nodes: list[int] | None = None, save_fig:str|bool = False):
+
+    def draw(self, nodes: list[int] | None = None, save_fig: str | bool = False):
         """Draw method provides the way to plot the Graph nodes and edges and store the figure,
         the provided input nodes will be displayed in different color
 
@@ -39,20 +40,22 @@ class MISInstance:
             nodes (list[int] | None, optional): Nodes list to display in different color . Defaults to None.
             save_fig (str | bool, optional): Option to store the figure on the diskspace. Defaults to False.
         """
-        if nodes is not None: 
-            color_map = ['lightgray' if node in nodes else 'red' for node in self.graph.nodes ]
-        elif nodes is None or len(node)==0:
-            color_map = ['lightgray' for i in range(len(self.graph.nodes))]
-        
+        if nodes is not None:
+            color_map = ["lightgray" if node in nodes else "red" for node in self.graph.nodes]
+        elif nodes is None or len(nodes) == 0:
+            color_map = ["lightgray" for i in range(len(self.graph.nodes))]
+
         if self.pos is None:
             self.pos = networkx.spring_layout(self.graph)
-        
-        networkx.draw(self.graph, pos=self.pos,
-                      node_size=200,
-                      with_labels=True,
-                      node_color=color_map,
-                      nodelist=self.graph.nodes)
-       
+
+        networkx.draw(
+            self.graph,
+            pos=self.pos,
+            node_size=200,
+            with_labels=True,
+            node_color=color_map,
+            nodelist=self.graph.nodes,
+        )
 
         ax = plt.gca()
         ax.margins(0.11)
@@ -63,9 +66,6 @@ class MISInstance:
         elif save_fig:
             plt.savefig("graph.png")
         plt.show()
-        
-        
-
 
 
 @dataclass
@@ -79,7 +79,6 @@ class MISSolution:
         assert len(self.nodes) == len(set(self.nodes)), "All the nodes in %s should be distinct" % (
             self.nodes,
         )
-        
-    def draw(self, save_fig:str|bool = False):
+
+    def draw(self, save_fig: str | bool = False):
         return MISInstance(self.original).draw(nodes=self.nodes, save_fig=save_fig)
-        
