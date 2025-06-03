@@ -17,7 +17,7 @@ def test_hexagon():
         assert len(solution) <= 3
 
 
-def slowtest_petersen():
+def test_petersen():
     """
     Test loading the Petersen graph from a DIMACS file.
     """
