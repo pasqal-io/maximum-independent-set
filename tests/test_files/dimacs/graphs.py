@@ -43,6 +43,7 @@ def load_dimacs(path: str) -> DIMACSDataset:
 
     # Parse the graph from the DIMACS format
     edges = []
+    solutions = None
     for line in lines:
         if line.startswith('p'):
             n_vertices, n_edges = map(int, line.split()[2:4])
@@ -51,7 +52,12 @@ def load_dimacs(path: str) -> DIMACSDataset:
             parts = line.split()
             edges.append((int(parts[1]), int(parts[2])))
 
+        if line.startswith('max indep set'):
+            _, line = line.split('=', 1)
+            solutions = [list(map(int, line.strip(' {}').split(',')))]
+
     graph = nx.Graph()
+    graph.add_nodes_from(range(1, n_vertices + 1))
     graph.add_edges_from(edges)
 
     if graph.number_of_nodes() != n_vertices:
@@ -64,6 +70,8 @@ def load_dimacs(path: str) -> DIMACSDataset:
         )
 
     instance = MISInstance(graph)
-    solver = MISSolver(instance, SolverConfig())
-    solutions = [e.nodes for e in solver.solve().result()]
+
+    if solutions is None:
+        solver = MISSolver(instance, SolverConfig())
+        solutions = [e.nodes for e in solver.solve().result()]
     return DIMACSDataset(instance=instance, solutions=solutions)
