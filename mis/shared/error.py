@@ -2,11 +2,13 @@
 Exceptions raised within this library.
 """
 
+
 class MappingError(ValueError):
     """
     An error raised when a graph-to-layout mapping fails validation,
     such as when node placements violate adjacency or physical layout constraints.
     """
+
 
 class CompilationError(Exception):
     """
