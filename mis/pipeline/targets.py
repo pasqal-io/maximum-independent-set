@@ -53,6 +53,9 @@ class Register:
     register: pulser.Register
     graph: nx.Graph
 
+    def __post_init__(self) -> None:
+        self.register = self.register.with_automatic_layout(self.device)
+
     def __len__(self) -> int:
         """
         The number of qubits in this register.
