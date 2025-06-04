@@ -43,7 +43,7 @@ def load_dimacs(path: str) -> DIMACSDataset:
 
     # Parse the graph from the DIMACS format
     edges = []
-    solutions = None
+    solutions = []
     for line in lines:
         if line.startswith('p'):
             n_vertices, n_edges = map(int, line.split()[2:4])
@@ -70,8 +70,4 @@ def load_dimacs(path: str) -> DIMACSDataset:
         )
 
     instance = MISInstance(graph)
-
-    if solutions is None:
-        solver = MISSolver(instance, SolverConfig())
-        solutions = [e.nodes for e in solver.solve().result()]
     return DIMACSDataset(instance=instance, solutions=solutions)

@@ -4,6 +4,7 @@ import pytest
 from pathlib import Path
 
 # Define classical solver configuration
+from mis.data.graphs import load_dimacs
 from mis.solver.solver import MISInstance, MISSolver
 from mis.pipeline.config import SolverConfig
 from mis.shared.types import MethodType
@@ -181,3 +182,47 @@ def test_star_mis(
 
     for node in nodes:
         assert 1 <= node < SIZE
+
+
+@pytest.fixture(params=[
+    ("tests/test_files/dimacs/petersen.txt", 10, 15, 5),
+    ("tests/test_files/dimacs/a265032_1dc.64.txt", 64, 543, 10),
+    ("tests/test_files/dimacs/a265032_1tc.32.txt", 32, 68, 12),
+    ("tests/test_files/dimacs/hexagon.txt", 6, 6, 3),
+])
+def graph_data(request):
+    file_path, num_nodes, num_edges, max_independent_set_size = request.param
+    dataset = load_dimacs(file_path)
+    graph = dataset.instance.graph
+    return graph, num_nodes, num_edges, max_independent_set_size
+
+
+@pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
+@pytest.mark.parametrize("postprocessor", [None, lambda: Maximization()])
+def test_dimacs_mis(
+    graph_data,
+    preprocessor: None | Callable[[nx.Graph], Kernelization],
+    postprocessor: None | Callable[[], Maximization],
+) -> None:
+    """
+    Test loading various graphs from DIMACS files and solving them.
+    """
+    graph, num_nodes, num_edges, max_independent_set_size = graph_data
+
+    config = SolverConfig(
+        method=MethodType.EAGER,
+        max_iterations=1,
+        preprocessor=preprocessor,
+        postprocessor=postprocessor,
+    )
+
+    instance = MISInstance(graph)
+    solver = MISSolver(instance, config)
+    solutions = solver.solve().result()
+
+    assert graph.number_of_nodes() == num_nodes
+    assert graph.number_of_edges() == num_edges
+    assert len(solutions) > 0
+    for solution in solutions:
+        assert Kernelization(graph).is_independent(solution.nodes)
+        assert len(solution.nodes) <= max_independent_set_size
