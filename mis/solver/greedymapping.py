@@ -6,6 +6,7 @@ import random
 import networkx as nx
 
 from mis.shared.types import MISInstance
+from mis.shared.error import MappingError
 from mis.pipeline.layout import Layout
 
 
@@ -88,7 +89,7 @@ class GreedyMapping:
                 current_layout_node = mapping[current_node]
 
         if not self._validate(mapping, unmapping):
-            raise Exception("Invalid mapping!")
+            raise MappingError("Invalid mapping based on adjacency constraints.")
 
         return mapping
 
