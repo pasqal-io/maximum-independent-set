@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import Union
 from statistics import mean
 
 import numpy as np
@@ -25,40 +24,47 @@ class Layout:
 
     def __init__(
         self,
-        data: Union[MISInstance, dict[int, tuple[float, float]]],
+        data: MISInstance | dict[int, tuple[float, float]],
         rydberg_blockade: float,
     ):
-        if isinstance(data, MISInstance):
-            coords = nx.spring_layout(data.graph)
-            coords = {int(k): tuple(map(float, v)) for k, v in coords.items()}
-        elif isinstance(data, dict):
-            coords = data
-        else:
-            raise TypeError("Expected data to be MISInstance or dict[int, tuple[float, float]]")
-
-        self.coords = coords
+        self.coords = self._get_coords(data)
         self.rydberg_blockade = rydberg_blockade
         self.graph = self._build_graph()
         self.avg_degree = self._compute_avg_degree()
 
+    @staticmethod
+    def _get_coords(data: MISInstance | dict[int, tuple[float, float]]) -> dict[int, np.ndarray]:
+        """
+        Get layout coordinates from either a MISInstance or a raw coordinate dictionary.
+
+        If a MISInstance is given, use a spring layout to generate (x, y) positions.
+        If a dictionary is given, return it unchanged.
+
+        Args:
+            data: A MISInstance or dict of coordinates.
+
+        Returns:
+            A dictionary mapping node IDs to (x, y) coordinates.
+        """
+        if isinstance(data, MISInstance):
+            coords = nx.spring_layout(data.graph)
+            return {int(k): np.array(v, dtype=float) for k, v in coords.items()}
+        elif isinstance(data, dict):
+            return {int(k): np.array(v, dtype=float) for k, v in data.items()}
+        else:
+            raise TypeError("Expected data to be MISInstance or dict[int, tuple[float, float]]")
+
     @classmethod
     def from_device(
         cls,
-        data: Union[MISInstance, dict[int, tuple[float, float]]],
+        data: MISInstance | dict[int, tuple[float, float]],
         device: Device,
     ) -> Layout:
         """
         Creates a Layout using `device.min_atom_distance` as the blockade,
         and rescales coordinates so no pair is too close.
         """
-        if isinstance(data, MISInstance):
-            coords = nx.spring_layout(data.graph)
-            coords = {int(k): np.array(v, dtype=float) for k, v in coords.items()}
-        elif isinstance(data, dict):
-            coords = {int(k): np.array(v, dtype=float) for k, v in data.items()}
-        else:
-            raise TypeError("Expected data to be MISInstance or dict[int, tuple[float, float]]")
-
+        coords = cls._get_coords(data)
         # Compute all pairwise distances
         distances = [
             np.linalg.norm(coords[v1] - coords[v2]) for v1 in coords for v2 in coords if v1 < v2
@@ -110,9 +116,3 @@ class Layout:
 
     def grid_size(self) -> int:
         return int(round(self.num_nodes() ** 0.5))
-
-    def get_graph(self) -> nx.Graph:
-        return self.graph
-
-    def get_coords(self) -> dict[int, tuple[float, float]]:
-        return self.coords  # type: ignore[no-any-return]

@@ -50,6 +50,6 @@ class DefaultEmbedder(BaseEmbedder):
 
         # Finally, prepare register.
         reg = pulser.register.Register(
-            qubits={f"q{node}": pos for (node, pos) in layout.get_coords().items()}
+            qubits={f"q{node}": pos for (node, pos) in layout.coords.items()}
         )
         return Register(device=device, register=reg, graph=instance.graph)

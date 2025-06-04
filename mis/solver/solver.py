@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Counter, Callable
+from typing import Counter
 import networkx as nx
 import copy
 
@@ -255,7 +255,7 @@ class GreedyMISSolver(BaseSolver):
         self,
         instance: MISInstance,
         config: SolverConfig,
-        solver_factory: Callable[[MISInstance, SolverConfig], BaseSolver],
+        solver_factory: type[BaseSolver],
     ) -> None:
         """
         Initializes the GreedyMISSolver with a given MIS problem instance and a base solver.
@@ -388,7 +388,7 @@ class GreedyMISSolver(BaseSolver):
             mapper = GreedyMapping(
                 instance=MISInstance(graph),
                 layout=copy.deepcopy(self.layout),
-                previously_generated_subgraphs=[],
+                previous_subgraphs=[],
             )
             mapping = mapper.generate(starting_node=node)
             mappings.append(mapping)

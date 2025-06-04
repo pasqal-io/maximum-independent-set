@@ -18,7 +18,7 @@ class GreedyMapping:
         self,
         instance: MISInstance,
         layout: Layout,
-        previously_generated_subgraphs: list[dict[int, int]],
+        previous_subgraphs: list[dict[int, int]],
         seed: int = 0,
     ) -> None:
         """
@@ -27,13 +27,13 @@ class GreedyMapping:
         Args:
             instance: The MIS problem instance containing the logical graph.
             layout: The layout structure defining the physical geometry.
-            previously_generated_subgraphs: list of previous mappings (for scoring reuse).
+            previous_subgraphs: list of previous mappings (for scoring reuse).
             seed: Random seed for reproducibility.
         """
         self.graph: nx.Graph = instance.graph.copy()
-        self.layout: Layout = layout
-        self.layout_graph: nx.Graph = nx.convert_node_labels_to_integers(self.layout.get_graph())
-        self.previously_generated_subgraphs = previously_generated_subgraphs
+        self.layout_graph: nx.Graph = nx.convert_node_labels_to_integers(layout.graph)
+        self.layout_avg_degree = layout.avg_degree
+        self.previous_subgraphs = previous_subgraphs
         random.seed(seed)
 
     def generate(
@@ -58,7 +58,9 @@ class GreedyMapping:
         # dictionary for layout-to-graph mapping.
         unmapping: dict[int, int] = {}
 
-        current_layout_node, unexpanded_nodes = self._initialize(starting_node, mapping, unmapping)
+        current_layout_node, unexpanded_nodes = self._initialize(
+            self.layout_graph, starting_node, mapping, unmapping
+        )
         current_node: int = starting_node
 
         while unexpanded_nodes:
@@ -90,8 +92,9 @@ class GreedyMapping:
 
         return mapping
 
+    @staticmethod
     def _initialize(
-        self,
+        layout_graph: nx.Graph,
         starting_node: int,
         mapping: dict[int, int],
         unmapping: dict[int, int],
@@ -99,6 +102,7 @@ class GreedyMapping:
         """Initializes mapping at the center of the layout.
 
         Args:
+            layout_graph: Layout graph
             starting_node: The initial node in the graph.
             mapping: dictionary for graph-to-layout mapping.
             unmapping: dictionary for layout-to-graph mapping.
@@ -108,7 +112,7 @@ class GreedyMapping:
                 - The layout node corresponding to the starting node.
                 - set of unexpanded nodes in the graph.
         """
-        layout_n: int = nx.number_of_nodes(self.layout_graph)
+        layout_n: int = nx.number_of_nodes(layout_graph)
         layout_grid_size: int = int(math.sqrt(layout_n))
         starting_layout_node: int = int(layout_n / 2 + layout_grid_size / 4)
         mapping[starting_node] = starting_layout_node
@@ -201,7 +205,7 @@ class GreedyMapping:
         node_scores: dict[int, float] = {}
 
         for node in nodes_to_score:
-            degree_score: float = 1 - (abs(self.layout.avg_degree - self.graph.degree(node)) / n)
+            degree_score: float = 1 - (abs(self.layout_avg_degree - self.graph.degree(node)) / n)
             non_adj_score: float = 0
             if not remove_invalid_placement_nodes:
                 non_neighbors = [
@@ -213,11 +217,11 @@ class GreedyMapping:
                     non_adj_score = len(non_neighbors) / n
 
             subgraphs_containing_node_count: int = sum(
-                1 for subgraph in self.previously_generated_subgraphs if node in subgraph
+                1 for subgraph in self.previous_subgraphs if node in subgraph
             )
             previous_subgraphs_belonging_score: float = (
-                1 - (subgraphs_containing_node_count / len(self.previously_generated_subgraphs))
-                if self.previously_generated_subgraphs
+                1 - (subgraphs_containing_node_count / len(self.previous_subgraphs))
+                if self.previous_subgraphs
                 else 0
             )
 
