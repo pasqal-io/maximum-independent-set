@@ -2,20 +2,19 @@ from __future__ import annotations
 
 import networkx as nx
 
-from mis.shared.types import MISInstance
 
-
-def calculate_weight(instance: MISInstance, nodes: list[int]) -> float:
+def calculate_weight(graph: nx.Graph, nodes: list[int]) -> float:
     """
     Calculates the total weight of a set of nodes in a given MISInstance
 
     Args:
+        graph: The graph to check.
         nodes: List of node indices.
 
     Returns:
         Total weight as a float.
     """
-    return float(sum(instance.graph.nodes[n].get("weight", 1.0) for n in nodes))
+    return float(sum(graph.nodes[n].get("weight", 1.0) for n in nodes))
 
 
 def is_independent(graph: nx.Graph, nodes: list[int]) -> bool:

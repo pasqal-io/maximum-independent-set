@@ -358,9 +358,9 @@ class GreedyMISSolver(BaseSolver):
 
                 for rem_sol in remainder_solutions:
                     combined_nodes = current_mis + rem_sol.nodes
-                    energy = calculate_weight(self.instance, combined_nodes)
+                    energy = calculate_weight(self.instance.graph, combined_nodes)
                     combined_solution = MISSolution(
-                        original=graph, nodes=combined_nodes, frequency=energy
+                        original=graph, nodes=combined_nodes, frequency=1.0
                     )
 
                     if (best_solution is None) or (energy > best_solution.frequency):
