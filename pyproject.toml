@@ -37,6 +37,7 @@ dependencies = [
   "emu-mps~=1.2.0",
   "pasqal-cloud",
   "pandas",
+  "geopy",
 ]
 
 [tool.hatch.metadata]
