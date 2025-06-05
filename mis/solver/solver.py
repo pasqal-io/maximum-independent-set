@@ -274,31 +274,19 @@ class GreedyMISSolver(BaseSolver):
     def _build_layout(self) -> Layout:
         """
         Constructs the Layout object based on config:
-        - Uses explicit coordinates and blockade if provided.
-        - Otherwise uses device information if use_quantum is True.
-        - If use_quantum is False, requires rydberg_blockade for layout generation.
+        - Uses device information if use_quantum is True.
+        - If use_quantum is False, uses default distance 1.0 for layout generation.
 
         Returns:
             Layout: The constructed layout.
         """
-        if (
-            self.config.greedy.layout_coords is not None  # type: ignore[union-attr]
-            and self.config.greedy.rydberg_blockade is not None  # type: ignore[union-attr]
-        ):
-            return Layout(
-                data=self.config.greedy.layout_coords,  # type: ignore[union-attr]
-                rydberg_blockade=self.config.greedy.rydberg_blockade,  # type: ignore[union-attr]
-            )
-        elif self.config.use_quantum:
+        if self.config.use_quantum:
             if self.config.device is not None:
                 return Layout.from_device(data=self.instance, device=self.config.device)
             else:
-                raise ValueError(
-                    "When use_quantum = True, either layout_coords & rydberg_blockade "
-                    "or a backend must be provided in config."
-                )
+                raise ValueError("When use_quantum = True, a backend must be provided in config.")
         elif not self.config.use_quantum:
-            return Layout(data=self.instance, rydberg_blockade=self.config.greedy.rydberg_blockade)  # type: ignore[union-attr]
+            return Layout(data=self.instance, rydberg_blockade=1.0)  # type: ignore[union-attr]
 
     def solve(self) -> Execution[list[MISSolution]]:
         """

@@ -52,29 +52,6 @@ class GreedyConfig:
     Configuration for greedy solving strategies.
     """
 
-    layout_coords: dict[int, tuple[float, float]] | None = None
-    """
-    layout_coords (optional): A dictionary mapping node IDs to 2D coordinates.
-    Useful when using greedy mis solving method.
-
-    Used to define a custom layout (geometry) for placing qubits on a physical lattice.
-    If this is provided, it will override any automatically generated layout,
-    regardless of whether quantum execution is enabled.
-
-    Each coordinate is a tuple of floats representing (x, y) positions in micrometers.
-    """
-
-    rydberg_blockade: float = 1.0
-    """
-    rydberg_blockade (float): Distance threshold (in micrometers) for interaction radius.
-
-    This parameter defines the maximum distance within which two atoms can influence each other via
-    Rydberg interactions. It is used to determine connectivity between qubits in the layout.
-
-    If not using quantum execution, this value still determines how logical graphs are mapped
-    to physical subgraphs.
-    """
-
     exact_solving_threshold: int = 1
     """
     exact_solving_threshold (int): Used for greedy method.
