@@ -18,7 +18,7 @@ class DataLoader:
     coordinates_dataset: list[tuple[float, float]]
 
     @staticmethod
-    def distance_from_coordinates(a_1: tuple[float, float], a_2: tuple[float, float]) -> float:
+    def distance_from_coordinates(coord1: tuple[float, float], coord2: tuple[float, float]) -> float:
         """Calculate the distance between two coordinates."""
         return float(geodesic(a_1, a_2).km)
 
