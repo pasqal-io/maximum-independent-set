@@ -21,22 +21,28 @@ class GraphColoringSolver(BaseSolver):
         antenna_range (float): The maximum distance within which antennas can interfere with each other.
         colors (list[int]): A list where the index represents the antenna and the value represents its color.
         colors_count (int): The total number of colors used in the solution.
+        solver_config (SolverConfig): Configuration for the MIS solver, including backend and other settings.
     """
 
     loader: DataLoader
     antenna_range: float
     colors: list[int]
     colors_count: int
+    solver_config: SolverConfig
 
-    def __init__(self, loader: DataLoader, antenna_range: float):
+    def __init__(
+        self, loader: DataLoader, antenna_range: float, config: SolverConfig = SolverConfig()
+    ):
         """
         Initialize the GraphColoringSolver with a DataLoader instance and antenna range.
         Args:
             loader (DataLoader): An instance of DataLoader to load antenna coordinates.
             antenna_range (float): The maximum distance within which antennas can interfere with each other.
+            config (SolverConfig): Configuration for the MIS solver, including backend and other settings.
         """
         self.loader = loader
         self.antenna_range = antenna_range
+        self.solver_config = config
 
     def solve(self) -> Execution[list[MISSolution]]:
         """
@@ -53,7 +59,7 @@ class GraphColoringSolver(BaseSolver):
         while len(antennas) > 0:
             solver = MISSolver(
                 self.loader.build_mis_instance_from_coordinates(self.antenna_range, antennas),
-                SolverConfig(),
+                self.solver_config,
             )
             solutions = solver.solve().result()
             res.append(solutions[0])
