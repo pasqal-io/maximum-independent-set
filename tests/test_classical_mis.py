@@ -16,20 +16,22 @@ TEST_DIMACS_FILES_DIR = Path.cwd() / "tests/test_files/dimacs"
 
 @pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize(
-    "dimacs_to_nx", [TEST_DIMACS_FILES_DIR / "a265032_1tc.32.txt"], indirect=True
+    "dimacs_to_nx",
+    [(TEST_DIMACS_FILES_DIR / "a265032_1tc.32.txt", 32, 68, 12)],
+    indirect=True
 )
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
 def test_for_dimacs_32_node_graph(
-    dimacs_to_nx: nx.Graph, preprocessor: None | Callable[[nx.Graph], Kernelization]
+    dimacs_to_nx: tuple[nx.Graph, int, int, int], preprocessor: None | Callable[[nx.Graph], Kernelization]
 ) -> None:
     """
     Classical MIS solver for a standard graph benchmark dataset in DIMACS format.
 
     Can be found here: https://oeis.org/A265032/a265032.html
     """
-    graph = dimacs_to_nx
-    assert graph.number_of_nodes() == 32
-    assert graph.number_of_edges() == 68
+    graph, n_nodes, n_edges, mis_size = dimacs_to_nx
+    assert graph.number_of_nodes() == n_nodes
+    assert graph.number_of_edges() == n_edges
 
     config = SolverConfig(method=MethodType.EAGER, max_iterations=1, preprocessor=None)
 
@@ -40,7 +42,7 @@ def test_for_dimacs_32_node_graph(
     solver = MISSolver(instance, config)
     solutions = solver.solve().result()
 
-    assert len(solutions[0].nodes) == 12
+    assert len(solutions[0].nodes) == mis_size
 
     # Check the solution is genuinely an independent set.
     kernel = Kernelization(graph=graph)
@@ -49,20 +51,22 @@ def test_for_dimacs_32_node_graph(
 
 @pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize(
-    "dimacs_to_nx", [TEST_DIMACS_FILES_DIR / "a265032_1dc.64.txt"], indirect=True
+    "dimacs_to_nx",
+    [(TEST_DIMACS_FILES_DIR / "a265032_1dc.64.txt", 64, 543, None)],
+    indirect=True
 )
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
 def test_for_dimacs_64_node_graph(
-    dimacs_to_nx: nx.Graph, preprocessor: None | Callable[[nx.Graph], Kernelization]
+    dimacs_to_nx: tuple[nx.Graph, int, int, int], preprocessor: None | Callable[[nx.Graph], Kernelization]
 ) -> None:
     """
     Classical MIS solver for a standard graph benchmark dataset in DIMACS format.
 
     Can be found here: https://oeis.org/A265032/a265032.html
     """
-    graph = dimacs_to_nx
-    assert graph.number_of_nodes() == 64
-    assert graph.number_of_edges() == 543
+    graph, n_nodes, n_edges, _ = dimacs_to_nx
+    assert graph.number_of_nodes() == n_nodes
+    assert graph.number_of_edges() == n_edges
 
     config = SolverConfig(method=MethodType.EAGER, max_iterations=1, preprocessor=preprocessor)
 
@@ -184,30 +188,23 @@ def test_star_mis(
         assert 1 <= node < SIZE
 
 
-@pytest.fixture(params=[
+@pytest.mark.parametrize("dimacs_to_nx", [
     ("tests/test_files/dimacs/petersen.txt", 10, 15, 5),
     ("tests/test_files/dimacs/a265032_1dc.64.txt", 64, 543, 10),
     ("tests/test_files/dimacs/a265032_1tc.32.txt", 32, 68, 12),
     ("tests/test_files/dimacs/hexagon.txt", 6, 6, 3),
-])
-def graph_data(request):
-    file_path, num_nodes, num_edges, max_independent_set_size = request.param
-    dataset = load_dimacs(file_path)
-    graph = dataset.instance.graph
-    return graph, num_nodes, num_edges, max_independent_set_size
-
-
+], indirect=True)
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
 @pytest.mark.parametrize("postprocessor", [None, lambda: Maximization()])
 def test_dimacs_mis(
-    graph_data,
+    dimacs_to_nx: tuple[nx.Graph, int, int, int],
     preprocessor: None | Callable[[nx.Graph], Kernelization],
     postprocessor: None | Callable[[], Maximization],
 ) -> None:
     """
     Test loading various graphs from DIMACS files and solving them.
     """
-    graph, num_nodes, num_edges, max_independent_set_size = graph_data
+    graph, num_nodes, num_edges, max_independent_set_size = dimacs_to_nx
 
     config = SolverConfig(
         method=MethodType.EAGER,

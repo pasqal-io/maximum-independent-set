@@ -38,8 +38,7 @@ def load_dimacs(path: str) -> DIMACSDataset:
     Returns:
         DIMACSDataset: An instance of DIMACSDataset.
     """
-    path = Path(path)
-    lines = path.read_text().splitlines()
+    lines = Path(path).read_text().splitlines()
 
     # Parse the graph from the DIMACS format
     edges = []
