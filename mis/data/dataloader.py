@@ -1,8 +1,3 @@
-"""This module provides functionality to load data from CSV files containing coordinates,
-calculate distances between coordinates, and build a Maximum Independent Set (MIS) instance
-from those coordinates. It uses the Haversine formula to compute distances and NetworkX to
-construct the graph representation of the MIS problem."""
-
 import pandas as pd
 import networkx as nx
 from mis import MISInstance
@@ -11,23 +6,63 @@ from pathlib import Path
 
 
 class DataLoader:
-    """DataLoader class to handle loading of coordinates from CSV files,
+    """
+    DataLoader class to handle loading of coordinates from CSV files,
     calculating distances between coordinates, and building a Maximum Independent Set (MIS) instance.
+
+    Attributes:
+        coordinates_dataset (list[tuple[float, float]]): A list of tuples representing coordinates (latitude, longitude).
     """
 
     coordinates_dataset: list[tuple[float, float]]
 
     @staticmethod
-    def distance_from_coordinates(coord1: tuple[float, float], coord2: tuple[float, float]) -> float:
-        """Calculate the distance between two coordinates."""
-        return float(geodesic(a_1, a_2).km)
+    def distance_from_coordinates(
+        coord1: tuple[float, float], coord2: tuple[float, float]
+    ) -> float:
+        """
+        Calculate the distance between two geodesic coordinates.
+
+        Args:
+            coord1 (tuple[float, float]): The first coordinate as a tuple (latitude, longitude).
+            coord2 (tuple[float, float]): The second coordinate as a tuple (latitude, longitude).
+
+        Returns:
+            float: The distance between the two coordinates in kilometers.
+        """
+        return float(geodesic(coord1, coord2).km)
 
     def load_from_csv_coordinates(self, file_path: Path) -> list[tuple[float, float]]:
         """
         Load coordinates from a CSV file and return them as a list of tuples.
         The CSV file should have a column named 'coordonnees' with coordinates in the format "lat,lon".
+
+        Args:
+            file_path (Path): The path to the CSV file containing coordinates.
+        Returns:
+            list[tuple[float, float]]: A list of tuples where each tuple contains latitude and longitude.
         """
+        # error handling with a try-except block
+        if not file_path.exists():
+            raise FileNotFoundError(f"The file {file_path} does not exist.")
+        if not file_path.is_file():
+            raise ValueError(f"The path {file_path} is not a file.")
+        if not file_path.suffix == ".csv":
+            raise ValueError(f"The file {file_path} is not a CSV file.")
+
         df = pd.read_csv(file_path, sep=";")
+
+        if "coordonnees" not in df.columns:
+            raise ValueError("The CSV file must contain a 'coordonnees' column.")
+        if df.empty:
+            raise ValueError("The CSV file is empty.")
+        if df["coordonnees"].isnull().any():
+            raise ValueError("The 'coordonnees' column contains null values.")
+        if not all(df["coordonnees"].apply(lambda x: len(x.split(",")) == 2)):
+            raise ValueError(
+                "All entries in the 'coordonnees' column must be in the format 'lat,lon'."
+            )
+
         self.coordinates_dataset = [
             (float(c.split(",")[0]), float(c.split(",")[1])) for c in df["coordonnees"]
         ]
@@ -44,6 +79,8 @@ class DataLoader:
             antenna_range (float): The maximum distance between antennas to consider them connected.
             antennas (set[int], optional): A set of indices representing the antennas to include in the graph.
                                            If None, all antennas in the dataset are included.
+        Returns:
+            MISInstance: An instance of the Maximum Independent Set problem represented as a graph.
         """
         if self.coordinates_dataset is None:
             raise ValueError(
@@ -54,10 +91,9 @@ class DataLoader:
             antennas = set(range(len(self.coordinates_dataset)))
 
         graph = nx.Graph()
-        for i in antennas:
-            graph.add_node(i)
 
         for i in antennas:
+            graph.add_node(i)
             for j in antennas:
                 if (
                     i < j

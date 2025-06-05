@@ -15,11 +15,18 @@ class GraphColoringSolver(BaseSolver):
     Given the coordinates of antennas and a specified antenna range,
     it finds a coloring of the graph such that no two antennas in the range
     of each other share the same color.
+
+    Attributes:
+        loader (DataLoader): An instance of DataLoader to load antenna coordinates.
+        antenna_range (float): The maximum distance within which antennas can interfere with each other.
+        colors (list[int]): A list where the index represents the antenna and the value represents its color.
+        colors_count (int): The total number of colors used in the solution.
     """
 
     loader: DataLoader
     antenna_range: float
     colors: list[int]
+    colors_count: int
 
     def __init__(self, loader: DataLoader, antenna_range: float):
         """
@@ -41,8 +48,8 @@ class GraphColoringSolver(BaseSolver):
         antennas = set([x for x in range(len(self.loader.coordinates_dataset))])
         self.colors = [-1] * len(antennas)
 
-        color = 0
         res = []
+        self.colors_count = 0
         while len(antennas) > 0:
             solver = MISSolver(
                 self.loader.build_mis_instance_from_coordinates(self.antenna_range, antennas),
@@ -51,9 +58,9 @@ class GraphColoringSolver(BaseSolver):
             solutions = solver.solve().result()
             res.append(solutions[0])
             for antenna in solutions[0].nodes:
-                self.colors[antenna] = color
+                self.colors[antenna] = self.colors_count
             antennas = antennas - set(solutions[0].nodes)
-            color += 1
+            self.colors_count += 1
 
         return Execution.success(res)
 
@@ -62,6 +69,9 @@ class GraphColoringSolver(BaseSolver):
         Visualize the solution by plotting the antennas on a 2D plane.
         Each antenna is represented by a point, and antennas that are in the same
         independent set (i.e., do not interfere with each other) are colored the same.
+
+        Returns:
+            plt: A matplotlib plot object showing the antenna coverage solution.
         """
         plt.figure(figsize=(10, 8))
         for i, (lat, lon) in enumerate(self.loader.coordinates_dataset):
