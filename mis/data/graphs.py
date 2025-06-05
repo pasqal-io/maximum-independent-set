@@ -8,9 +8,7 @@ from dataclasses import dataclass
 
 import networkx as nx
 
-from mis.pipeline.config import SolverConfig
 from mis.shared.types import MISInstance
-from mis.solver.solver import MISSolver
 from pathlib import Path
 
 
@@ -20,6 +18,7 @@ class DIMACSDataset:
     A dataset representing a DIMACS graph instance and its solutions.
     This is used to load DIMACS files and extract the graph and solutions.
     """
+
     instance: MISInstance
     solutions: list[list[int]]
     """
@@ -44,16 +43,16 @@ def load_dimacs(path: str) -> DIMACSDataset:
     edges = []
     solutions = []
     for line in lines:
-        if line.startswith('p'):
+        if line.startswith("p"):
             n_vertices, n_edges = map(int, line.split()[2:4])
 
-        if line.startswith('e'):
+        if line.startswith("e"):
             parts = line.split()
             edges.append((int(parts[1]), int(parts[2])))
 
-        if line.startswith('max indep set'):
-            _, line = line.split('=', 1)
-            solutions = [list(map(int, line.strip(' {}').split(',')))]
+        if line.startswith("max indep set"):
+            _, line = line.split("=", 1)
+            solutions = [list(map(int, line.strip(" {}").split(",")))]
 
     graph = nx.Graph()
     graph.add_nodes_from(range(1, n_vertices + 1))

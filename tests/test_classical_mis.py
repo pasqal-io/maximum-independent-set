@@ -4,7 +4,6 @@ import pytest
 from pathlib import Path
 
 # Define classical solver configuration
-from mis.data.graphs import load_dimacs
 from mis.solver.solver import MISInstance, MISSolver
 from mis.pipeline.config import SolverConfig
 from mis.shared.types import MethodType
@@ -16,13 +15,12 @@ TEST_DIMACS_FILES_DIR = Path.cwd() / "tests/test_files/dimacs"
 
 @pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize(
-    "dimacs_to_nx",
-    [(TEST_DIMACS_FILES_DIR / "a265032_1tc.32.txt", 32, 68, 12)],
-    indirect=True
+    "dimacs_to_nx", [(TEST_DIMACS_FILES_DIR / "a265032_1tc.32.txt", 32, 68, 12)], indirect=True
 )
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
 def test_for_dimacs_32_node_graph(
-    dimacs_to_nx: tuple[nx.Graph, int, int, int], preprocessor: None | Callable[[nx.Graph], Kernelization]
+    dimacs_to_nx: tuple[nx.Graph, int, int, int],
+    preprocessor: None | Callable[[nx.Graph], Kernelization],
 ) -> None:
     """
     Classical MIS solver for a standard graph benchmark dataset in DIMACS format.
@@ -51,13 +49,12 @@ def test_for_dimacs_32_node_graph(
 
 @pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize(
-    "dimacs_to_nx",
-    [(TEST_DIMACS_FILES_DIR / "a265032_1dc.64.txt", 64, 543, None)],
-    indirect=True
+    "dimacs_to_nx", [(TEST_DIMACS_FILES_DIR / "a265032_1dc.64.txt", 64, 543, None)], indirect=True
 )
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
 def test_for_dimacs_64_node_graph(
-    dimacs_to_nx: tuple[nx.Graph, int, int, int], preprocessor: None | Callable[[nx.Graph], Kernelization]
+    dimacs_to_nx: tuple[nx.Graph, int, int, int],
+    preprocessor: None | Callable[[nx.Graph], Kernelization],
 ) -> None:
     """
     Classical MIS solver for a standard graph benchmark dataset in DIMACS format.
@@ -188,12 +185,16 @@ def test_star_mis(
         assert 1 <= node < SIZE
 
 
-@pytest.mark.parametrize("dimacs_to_nx", [
-    ("tests/test_files/dimacs/petersen.txt", 10, 15, 5),
-    ("tests/test_files/dimacs/a265032_1dc.64.txt", 64, 543, 10),
-    ("tests/test_files/dimacs/a265032_1tc.32.txt", 32, 68, 12),
-    ("tests/test_files/dimacs/hexagon.txt", 6, 6, 3),
-], indirect=True)
+@pytest.mark.parametrize(
+    "dimacs_to_nx",
+    [
+        ("tests/test_files/dimacs/petersen.txt", 10, 15, 5),
+        ("tests/test_files/dimacs/a265032_1dc.64.txt", 64, 543, 10),
+        ("tests/test_files/dimacs/a265032_1tc.32.txt", 32, 68, 12),
+        ("tests/test_files/dimacs/hexagon.txt", 6, 6, 3),
+    ],
+    indirect=True,
+)
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
 @pytest.mark.parametrize("postprocessor", [None, lambda: Maximization()])
 def test_dimacs_mis(
