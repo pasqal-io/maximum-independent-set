@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Counter
+from typing import Counter, Callable
 import networkx as nx
 import copy
 
@@ -255,16 +255,17 @@ class GreedyMISSolver(BaseSolver):
         self,
         instance: MISInstance,
         config: SolverConfig,
-        solver_factory: type[BaseSolver],
+        solver_factory: Callable[[MISInstance, SolverConfig], BaseSolver],
     ) -> None:
         """
         Initializes the GreedyMISSolver with a given MIS problem instance and a base solver.
 
         Args:
-            instance: The full MIS problem instance to solve.
+            instance (MISInstance): The full MIS problem instance to solve.
             config (SolverConfig): Solver settings including backend and
                 device.
-            solver: The base solver (used for solving subproblems recursively).
+            solver_factory (Callable[[MISInstance, SolverConfig], BaseSolver]):
+                The solver factory (used for solving subproblems recursively).
         """
         super().__init__(instance, config)
 
