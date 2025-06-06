@@ -34,7 +34,7 @@ dependencies = [
   "torch",
   "torch_geometric",
   "matplotlib",
-  "emu-mps~=1.2.0",
+  "emu-mps==2.1.1",
   "pasqal-cloud",
 ]
 
