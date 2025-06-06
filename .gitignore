@@ -3,6 +3,9 @@ test.png
 *.swp
 .python-version
 
+uv.lock
+
+
 # Default ignored files
 /.idea/
 /__pycache__/
