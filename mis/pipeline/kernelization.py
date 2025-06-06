@@ -3,7 +3,7 @@ import abc
 import networkx as nx
 from networkx.classes.reportviews import DegreeView
 from mis.pipeline.preprocessor import BasePreprocessor
-from mis.shared.utils import is_independent
+from mis.shared.graphs import is_independent
 
 
 class BaseKernelization(BasePreprocessor, abc.ABC):

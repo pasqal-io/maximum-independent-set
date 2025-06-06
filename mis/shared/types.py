@@ -4,7 +4,7 @@ from enum import Enum
 from dataclasses import dataclass, field
 import networkx
 import matplotlib.pyplot as plt
-from mis.shared.utils import calculate_weight
+from mis.shared.graphs import calculate_weight
 
 
 class BackendType(str, Enum):
