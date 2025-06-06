@@ -20,21 +20,8 @@ from pulser.json.abstract_repr.deserializer import deserialize_device
 from pulser_simulation import QutipEmulator
 
 import mis.pipeline.targets as targets
+from mis.shared.error import CompilationError, ExecutionError
 from .execution import Execution, Status, WaitingExecution
-
-
-class CompilationError(Exception):
-    """
-    An error raised when attempting to compile a graph for an architecture
-    that does not support it, e.g. because it requires too many qubits or
-    because the physical constraints on the geometry are not satisfied.
-    """
-
-    pass
-
-
-class ExecutionError(Exception):
-    pass
 
 
 def make_sequence(

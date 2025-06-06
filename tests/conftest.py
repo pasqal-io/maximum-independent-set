@@ -18,3 +18,8 @@ def dimacs_to_nx(request: pytest.FixtureRequest) -> nx.Graph:
                 _, node1, node2 = line.strip().split()
                 graph.add_edge(int(node1), int(node2))
     return graph
+
+
+@pytest.fixture
+def simple_graph() -> nx.Graph:
+    return nx.erdos_renyi_graph(n=15, p=0.3, seed=42)

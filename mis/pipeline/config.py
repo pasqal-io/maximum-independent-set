@@ -47,9 +47,46 @@ def default_postprocessor() -> BasePostprocessor:
 
 
 @dataclass
+class GreedyConfig:
+    """
+    Configuration for greedy solving strategies.
+    """
+
+    exact_solving_threshold: int = 2
+    """
+    exact_solving_threshold (int): Size threshold (number of nodes) for using MIS solving
+    when greedy method is used.
+
+    If a subgraph has a number of nodes less than or equal to this value, it will be solved
+    using the default solver.
+    """
+
+    subgraph_quantity: int = 5
+    """
+    subgraph_quantity (int): Number of candidate subgraphs to generate during greedy mapping.
+
+    This defines how many alternative graph-to-layout mappings will be generated and evaluated.
+    Increasing this may improve solution quality but also increases runtime.
+    """
+
+    mis_sample_quantity: int = 1
+    """
+    mis_sample_quantity (int): Number of MIS solutions to sample per iteration (if applicable).
+    """
+
+
+@dataclass
 class SolverConfig:
     """
     Configuration class for setting up solver parameters.
+    """
+
+    use_quantum: bool = False
+    """
+    use_quantum (bool): Whether to use quantum hardware or simulation for solving.
+
+    If True, a quantum backend, device, embedder, and pulse shaper will be used to embed and
+    solve the MIS problem. If False, classical logic and heuristics are used entirely.
     """
 
     backend: BaseBackend | None = None
@@ -129,4 +166,10 @@ class SolverConfig:
         to "fix" quantum results in case of accidental bitflips.
 
         If you wish to deactivate postprocessing entirely, pass `None`.
+    """
+
+    greedy: GreedyConfig = field(default_factory=GreedyConfig)
+    """
+    If specified, use this for solving the GreedyMIS.
+    Needs to be specified when method is GreedyMIS
     """

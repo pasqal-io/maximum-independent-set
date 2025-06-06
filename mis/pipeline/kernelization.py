@@ -3,6 +3,7 @@ import abc
 import networkx as nx
 from networkx.classes.reportviews import DegreeView
 from mis.pipeline.preprocessor import BasePreprocessor
+from mis.shared.graphs import is_independent
 
 
 class BaseKernelization(BasePreprocessor, abc.ABC):
@@ -66,11 +67,7 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
             False otherwise, i.e. if there's at least one connection
                 between two nodes of `nodes`
         """
-        for i, u in enumerate(nodes):
-            for v in nodes[i + 1 :]:
-                if self.kernel.has_edge(u, v):
-                    return False
-        return True
+        return is_independent(self.kernel, nodes)
 
     def is_subclique(self, nodes: list[int]) -> bool:
         """
