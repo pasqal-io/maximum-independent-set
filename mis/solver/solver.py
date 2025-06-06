@@ -290,10 +290,32 @@ class GreedyMISSolver(BaseSolver):
 
     def solve(self) -> Execution[list[MISSolution]]:
         """
-        Entry point for solving the full MISInstance using recursive greedy decomposition.
+                Entry point for solving the full MISInstance using recursive greedy decomposition.
+                Greedy MIS Solver (recursive MIS via subgraph decomposition)
 
-        Returns:
-            Execution containing a list of optimal or near-optimal MIS solutions.
+                Algorithm:
+                Input: MISInstance (graph), SolverConfig (with greedy & quantum options),
+                    SolverFactory (used for exact or quantum solving)
+                Output: best_solution: approx MIS set
+
+                1. If graph size ≤ exact_solving_threshold:
+                    - Solve directly using base solver
+                    - Return result
+                2. Generate greedy mappings (subgraph_quantity of them)
+                3. For each mapping:
+                    a. Build layout subgraph
+                    b. Solve subgraph using solver_factory
+                    c. Map solution back to original graph nodes
+                    d. For each MIS solution:
+                        i. Remove closed neighborhood from graph
+                        ii. Solve recursively on the remainder
+                        iii. Combine with current MIS
+                        iv. If better than best_solution → update
+
+                4. Return best_solution (or empty solution if none found)
+        `
+                Returns:
+                    Execution containing a list of optimal or near-optimal MIS solutions.
         """
         return self._solve_recursive(self.instance)
 
@@ -346,13 +368,12 @@ class GreedyMISSolver(BaseSolver):
 
                 for rem_sol in remainder_solutions:
                     combined_nodes = current_mis + rem_sol.nodes
-                    energy = calculate_weight(self.instance.graph, combined_nodes)
-                    combined_solution = MISSolution(
-                        original=graph, nodes=combined_nodes, frequency=1.0
-                    )
-
-                    if (best_solution is None) or (energy > best_solution.frequency):
-                        best_solution = combined_solution
+                    if (best_solution is None) or (
+                        calculate_weight(self.instance.graph, combined_nodes) > best_solution.weight
+                    ):
+                        best_solution = MISSolution(
+                            original=graph, nodes=combined_nodes, frequency=1.0
+                        )
 
         if best_solution is None:
             return Execution.success([MISSolution(original=graph, nodes=[], frequency=0)])

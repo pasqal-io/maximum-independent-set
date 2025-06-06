@@ -17,9 +17,10 @@ class Layout:
     Accepts either:
     - dict[int, tuple[float, float]] of coordinates
         mapping from node (int) to physical coordinates (x, y)
+        UNIT = "µm"
     - MISInstance (graph)
 
-    Uses a distance threshold (rydberg_blockade) to create edges.
+    Uses a distance threshold (rydberg_blockade ("µm")) to create edges.
     """
 
     def __init__(
@@ -65,18 +66,16 @@ class Layout:
         and rescales coordinates so no pair is too close.
         """
         coords = cls._get_coords(data)
+        assert len(coords) >= 1
+
         # Compute all pairwise distances
         distances = [
             np.linalg.norm(coords[v1] - coords[v2]) for v1 in coords for v2 in coords if v1 < v2
         ]
-
-        if distances:
-            min_distance = min(distances)
-            if min_distance < device.min_atom_distance:
-                scale = device.min_atom_distance / min_distance
-                coords = {k: tuple(v * scale) for k, v in coords.items()}
-            else:
-                coords = {k: tuple(v) for k, v in coords.items()}
+        min_distance = min(distances)
+        if min_distance < device.min_atom_distance:
+            scale = device.min_atom_distance / min_distance
+            coords = {k: tuple(v * scale) for k, v in coords.items()}
         else:
             coords = {k: tuple(v) for k, v in coords.items()}
 
