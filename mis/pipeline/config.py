@@ -168,7 +168,7 @@ class SolverConfig:
         If you wish to deactivate postprocessing entirely, pass `None`.
     """
 
-    greedy: GreedyConfig | None = GreedyConfig()
+    greedy: GreedyConfig | None = field(default_factory=GreedyConfig)
     """
     If specified, use this for solving the GreedyMIS.
     Needs to be specified when method is GreedyMIS

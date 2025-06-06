@@ -61,6 +61,13 @@ markdown_extensions:
 plugins:
 - search
 - section-index
+- mkdocs-jupyter:
+    include: ["*.ipynb"]
+    execute: True
+    include_source: True
+    remove_tag_config:
+        remove_input_tags:
+              - ignore_warnings
 - markdown-exec
 - mkapi
 - mkdocstrings:
