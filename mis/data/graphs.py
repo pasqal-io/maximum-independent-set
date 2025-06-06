@@ -27,17 +27,17 @@ class DIMACSDataset:
     """
 
 
-def load_dimacs(path: str) -> DIMACSDataset:
+def load_dimacs(path: Path) -> DIMACSDataset:
     """
     Load a DIMACS file and return a DIMACSDataset.
 
     Args:
-        path (str): Path to the DIMACS file.
+        path (Path): Path to the DIMACS file.
 
     Returns:
         DIMACSDataset: An instance of DIMACSDataset.
     """
-    lines = Path(path).read_text().splitlines()
+    lines = path.read_text().splitlines()
 
     # Parse the graph from the DIMACS format
     edges = []
