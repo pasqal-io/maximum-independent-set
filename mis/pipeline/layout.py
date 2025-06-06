@@ -82,18 +82,21 @@ class Layout:
         return cls(data=coords, rydberg_blockade=device.min_atom_distance)
 
     def _build_graph(self) -> nx.Graph:
-        G = nx.Graph()
-        for node_id, position in self.coords.items():
-            G.add_node(node_id, pos=position)
+        node_ids = list(self.coords.keys())
+        positions = np.array([self.coords[node_id] for node_id in node_ids])  # shape: (n, 2)
+        diff = positions[:, np.newaxis, :] - positions[np.newaxis, :, :]  # shape: (n, n, 2)
+        dist_matrix = np.linalg.norm(diff, axis=2)  # shape: (n, n)
 
-        node_items = list(self.coords.items())
-        for i in range(len(node_items)):
-            id1, coord1 = node_items[i]
-            for j in range(i + 1, len(node_items)):
-                id2, coord2 = node_items[j]
-                distance = ((coord1[0] - coord2[0]) ** 2 + (coord1[1] - coord2[1]) ** 2) ** 0.5
-                if distance < self.rydberg_blockade:
-                    G.add_edge(id1, id2)
+        G = nx.Graph()
+        for node_id, pos in zip(node_ids, positions):
+            G.add_node(node_id, pos=tuple(pos))
+
+        # Add edges where distance < rydberg_blockade (exclude diagonal)
+        for i in range(len(node_ids)):
+            for j in range(i + 1, len(node_ids)):
+                if dist_matrix[i, j] < self.rydberg_blockade:
+                    G.add_edge(node_ids[i], node_ids[j])
+
         return G
 
     def _compute_avg_degree(self) -> int:

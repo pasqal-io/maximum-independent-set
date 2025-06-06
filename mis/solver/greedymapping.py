@@ -57,7 +57,7 @@ class GreedyMapping:
         # dictionary for graph-to-layout mapping.
         mapping: dict[int, int] = dict()
         # dictionary for layout-to-graph mapping.
-        unmapping: dict[int, int] = {}
+        unmapping: dict[int, int] = dict()
 
         current_layout_node, unexpanded_nodes = self._initialize(
             self.layout_graph, starting_node, mapping, unmapping
