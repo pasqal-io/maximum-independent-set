@@ -55,7 +55,7 @@ class GreedyMapping:
             dict: A dictionary representing the graph-to-layout mapping.
         """
         # dictionary for graph-to-layout mapping.
-        mapping: dict[int, int] = {}
+        mapping: dict[int, int] = dict()
         # dictionary for layout-to-graph mapping.
         unmapping: dict[int, int] = {}
 
