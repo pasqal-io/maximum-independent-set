@@ -37,12 +37,31 @@ jobs:
       run: |
         hatch -v run test
         hatch -v run test_readme
-    - name: Upload coverage data
-      uses: actions/upload-artifact@v4
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v5
       with:
-        name: "coverage-data"
-        path: .coverage.*
-        if-no-files-found: ignore
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+  test_doc:
+    name: Test docs build
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        python-version: ["3.10"]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout MIS
+      uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install Hatch
+      run: |
+        pip install hatch
+    - name: Run tests
+      run: |
+        hatch -v run docs:build
 
   test_notebook:
     name: Run the Jupyter notebook tutorial (Unix)
@@ -64,10 +83,9 @@ jobs:
       - name: Run notebooks
         run: |
           hatch run pip install jupyter
-          hatch run jupyter execute examples/tutorial\ 1a\ -\ Using\ a\ Quantum\ Device\ to\ solve\ MIS.ipynb
-          # for tutorial in examples/tutorial*.ipynb; do
-          #   hatch run jupyter execute "$tutorial";
-          # done
+          for tutorial in examples/tutorial*.ipynb; do
+            hatch run jupyter execute "$tutorial";
+          done
 
   test_notebook_windows:
     name: Run the Jupyter notebook tutorial (Windows)
