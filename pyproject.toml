@@ -110,7 +110,7 @@ dependencies = [
 ]
 
 [tool.hatch.envs.docs.scripts]
-build = "cp -r examples/ docs; mkdocs build --clean --strict {args}"
+build = "cp examples/*.ipynb docs; cp examples/datasets/* docs/datasets; mkdocs build --clean --strict {args}"
 serve = "mkdocs serve --dev-addr localhost:8000"
 test = "mkdocs build --clean --strict"
 
