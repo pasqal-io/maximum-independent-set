@@ -6,8 +6,6 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-import networkx as nx
-import numpy as np
 import pulser
 
 from mis.shared.types import (
@@ -16,6 +14,7 @@ from mis.shared.types import (
 from mis.pipeline.config import SolverConfig
 
 from .targets import Register
+from .layout import Layout
 
 
 class BaseEmbedder(ABC):
@@ -46,24 +45,11 @@ class DefaultEmbedder(BaseEmbedder):
         device = config.device
         assert device is not None
 
-        # Layout based on edges.
-        positions = nx.spring_layout(instance.graph)
-
-        # Rescale to ensure that minimal distances are respected.
-        distances = [
-            np.linalg.norm(positions[v1] - positions[v2])
-            for v1 in instance.graph.nodes()
-            for v2 in instance.graph.nodes()
-            if v1 != v2
-        ]
-        if len(distances) != 0:
-            min_distance = np.min(distances)
-            if min_distance < device.min_atom_distance:
-                multiplier = device.min_atom_distance / min_distance
-                positions = {i: v * multiplier for (i, v) in positions.items()}
+        # Use Layout helper to get rescaled coordinates and interaction graph
+        layout = Layout.from_device(data=instance, device=device)
 
         # Finally, prepare register.
         reg = pulser.register.Register(
-            qubits={f"q{node}": pos for (node, pos) in positions.items()}
+            qubits={f"q{node}": pos for (node, pos) in layout.coords.items()}
         )
         return Register(device=device, register=reg, graph=instance.graph)

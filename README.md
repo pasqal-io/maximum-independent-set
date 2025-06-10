@@ -1,3 +1,8 @@
+[![PyPI version](https://badge.fury.io/py/maximum-independent-set.svg)](https://pypi.org/project/maximum-independent-set/)
+[![Tests](https://github.com/pasqal-io/maximum-independent-set/actions/workflows/test.yml/badge.svg)](https://github.com/pasqal-io/maximum-independent-set/actions/workflows/test.yml)
+![Coverage](https://img.shields.io/codecov/c/github/pasqal-io/maximum-independent-set?style=flat-square)
+
+
 # Maximum independent set
 
 

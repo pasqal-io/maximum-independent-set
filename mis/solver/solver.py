@@ -1,9 +1,9 @@
 from __future__ import annotations
-from typing import Counter
-
+from typing import Counter, Callable
 import networkx as nx
+import copy
 
-from mis.shared.types import MISInstance, MISSolution
+from mis.shared.types import MISInstance, MISSolution, MethodType
 from mis.pipeline.basesolver import BaseSolver
 from mis.pipeline.execution import Execution
 from mis.pipeline.fixtures import Fixtures
@@ -11,6 +11,9 @@ from mis.pipeline.embedder import DefaultEmbedder
 from mis.pipeline.pulse import BasePulseShaper, DefaultPulseShaper
 from mis.pipeline.targets import Pulse, Register
 from mis.pipeline.config import SolverConfig
+from mis.solver.greedymapping import GreedyMapping
+from mis.pipeline.layout import Layout
+from mis.shared.graphs import calculate_weight, remove_neighborhood
 
 
 class MISSolver:
@@ -24,11 +27,29 @@ class MISSolver:
             config = SolverConfig()
         self._solver: BaseSolver
         self.instance = instance
-        self.config = config
-        if config.backend is None:
-            self._solver = MISSolverClassical(instance, config)
+        self.config = self._process_config(config)
+
+        if config.use_quantum:
+            if config.method == MethodType.GREEDY:
+                self._solver = GreedyMISSolver(instance, config, MISSolverQuantum)
+            else:
+                self._solver = MISSolverQuantum(instance, config)
         else:
-            self._solver = MISSolverQuantum(instance, config)
+            if config.method == MethodType.GREEDY:
+                self._solver = GreedyMISSolver(instance, config, MISSolverClassical)
+            else:
+                self._solver = MISSolverClassical(instance, config)
+
+    def _process_config(self, config: SolverConfig) -> SolverConfig:
+        if config.use_quantum:
+            assert config.backend is not None
+            if config.embedder is None:  # FIXME: That's a side-effect on config
+                config.embedder = DefaultEmbedder()
+            if config.pulse_shaper is None:
+                config.pulse_shaper = DefaultPulseShaper()
+            if config.device is None:
+                config.device = config.backend.device()
+        return config
 
     def solve(self) -> Execution[list[MISSolution]]:
         if len(self.instance.graph.nodes) == 0:
@@ -94,14 +115,6 @@ class MISSolverQuantum(BaseSolver):
             config (SolverConfig): Solver settings including backend and
                 device.
         """
-        assert config.backend is not None
-        if config.embedder is None:  # FIXME: That's a side-effect on config
-            config.embedder = DefaultEmbedder()
-        if config.pulse_shaper is None:
-            config.pulse_shaper = DefaultPulseShaper()
-        if config.device is None:
-            config.device = config.backend.device()
-
         super().__init__(instance, config)
 
         self.fixtures = Fixtures(instance, self.config)
@@ -225,3 +238,194 @@ class MISSolverQuantum(BaseSolver):
             Result: The solution from execution.
         """
         return self.executor.submit_job(pulse, embedding)
+
+
+class GreedyMISSolver(BaseSolver):
+    """
+    A recursive solver that maps an MISInstance onto a physical layout using greedy subgraph embedding.
+    Uses an internal exact solver for small subproblems and a greedy decomposition strategy for larger graphs.
+
+    Note:
+        This solver uses recursive decomposition via `_solve_recursive()`.
+        Python's default recursion limit is 1000 (see `sys.getrecursionlimit()`).
+        For large graphs or deep recursion trees, this limit may be hit.
+    """
+
+    def __init__(
+        self,
+        instance: MISInstance,
+        config: SolverConfig,
+        solver_factory: Callable[[MISInstance, SolverConfig], BaseSolver],
+    ) -> None:
+        """
+        Initializes the GreedyMISSolver with a given MIS problem instance and a base solver.
+
+        Args:
+            instance (MISInstance): The full MIS problem instance to solve.
+            config (SolverConfig): Solver settings including backend and
+                device.
+            solver_factory (Callable[[MISInstance, SolverConfig], BaseSolver]):
+                The solver factory (used for solving subproblems recursively).
+        """
+        super().__init__(instance, config)
+
+        self.solver_factory = solver_factory
+        self.layout = self._build_layout()
+
+    def _build_layout(self) -> Layout:
+        """
+        Constructs the Layout object based on config:
+        - Uses device information if use_quantum is True.
+        - If use_quantum is False, uses default distance 1.0 for layout generation.
+
+        Returns:
+            Layout: The constructed layout.
+        """
+        if self.config.use_quantum:
+            if self.config.device is not None:
+                return Layout.from_device(data=self.instance, device=self.config.device)
+            else:
+                raise ValueError("When use_quantum = True, a backend must be provided in config.")
+        elif not self.config.use_quantum:
+            return Layout(data=self.instance, rydberg_blockade=1.0)  # type: ignore[union-attr]
+
+    def solve(self) -> Execution[list[MISSolution]]:
+        """
+                Entry point for solving the full MISInstance using recursive greedy decomposition.
+                Greedy MIS Solver (recursive MIS via subgraph decomposition)
+
+                Algorithm:
+                Input: MISInstance (graph), SolverConfig (with greedy & quantum options),
+                    SolverFactory (used for exact or quantum solving)
+                Output: best_solution: approx MIS set
+
+                1. If graph size ≤ exact_solving_threshold:
+                    - Solve directly using base solver
+                    - Return result
+                2. Generate greedy mappings (subgraph_quantity of them)
+                3. For each mapping:
+                    a. Build layout subgraph
+                    b. Solve subgraph using solver_factory
+                    c. Map solution back to original graph nodes
+                    d. For each MIS solution:
+                        i. Remove closed neighborhood from graph
+                        ii. Solve recursively on the remainder
+                        iii. Combine with current MIS
+                        iv. If better than best_solution → update
+
+                4. Return best_solution (or empty solution if none found)
+        `
+                Returns:
+                    Execution containing a list of optimal or near-optimal MIS solutions.
+        """
+        return self._solve_recursive(self.instance)
+
+    def _solve_recursive(self, instance: MISInstance) -> Execution[list[MISSolution]]:
+        """
+        Recursively solves an MISInstance:
+        - Uses exact backtracking for small subgraphs.
+        - Otherwise partitions and solves using greedy mapping and recursion.
+
+        Args:
+            instance: The current MISInstance to solve.
+
+        Returns:
+            Execution containing a list of solutions.
+        """
+        graph = instance.graph
+        if len(graph) <= self.config.greedy.exact_solving_threshold:  # type: ignore[union-attr]
+            solver = self.solver_factory(instance, self.config)
+            return solver.solve()
+
+        # these mappings from from graph nodes - to - layout nodes
+        mappings = self._generate_subgraphs(graph)
+        best_solution: MISSolution | None = None
+
+        for mapping in mappings:
+            layout_subgraph = self._generate_layout_graph(graph, mapping)
+            sub_instance = MISInstance(graph=layout_subgraph)
+            solver = self.solver_factory(sub_instance, self.config)
+
+            # Note:
+            # this forces the computation to be in sync.
+            # TODO: Align with async SDK - when it is available in the future.
+            # results in a solution in forms of layout nodes
+            results = solver.solve().result()
+
+            # inverse mappings from from layout nodes - to - graph nodes
+            inv_map = {v: k for k, v in mapping.items()}
+
+            # collections of graph nodes for each solution.
+            # based on the collected layout nodes from the solver.solve()
+            current_mis_bag = [
+                [inv_map[value] for value in mis_lattice.nodes] for mis_lattice in results
+            ]
+
+            for current_mis in current_mis_bag:
+                reduced_graph = remove_neighborhood(graph, current_mis)
+                remainder_instance = MISInstance(reduced_graph)
+                remainder_exec = self._solve_recursive(remainder_instance)
+                remainder_solutions = remainder_exec.result()
+
+                for rem_sol in remainder_solutions:
+                    combined_nodes = current_mis + rem_sol.nodes
+                    if (best_solution is None) or (
+                        calculate_weight(self.instance.graph, combined_nodes) > best_solution.weight
+                    ):
+                        best_solution = MISSolution(
+                            original=graph, nodes=combined_nodes, frequency=1.0
+                        )
+
+        if best_solution is None:
+            return Execution.success([MISSolution(original=graph, nodes=[], frequency=0)])
+        return Execution.success([best_solution])
+
+    def _generate_subgraphs(self, graph: nx.Graph) -> list[dict[int, int]]:
+        """
+        Generates subgraph mappings using greedy layout placement.
+        The largest mappings are returned because they represent the most successful embedding
+        attempt of the original graph onto the quantum-executable lattice, for higher-quality
+        approximations of the original MIS problem.
+
+        Args:
+            graph: The input logical graph.
+
+        Returns:
+            List of mappings from logical node → layout node.
+        """
+        mappings = []
+        for node in graph.nodes():
+            mapper = GreedyMapping(
+                instance=MISInstance(graph),
+                layout=copy.deepcopy(self.layout),
+                previous_subgraphs=[],
+            )
+            mapping = mapper.generate(starting_node=node)
+            mappings.append(mapping)
+        return sorted(mappings, key=lambda m: len(m), reverse=True)[
+            : self.config.greedy.subgraph_quantity  # type: ignore[union-attr]
+        ]
+
+    def _generate_layout_graph(self, graph: nx.Graph, mapping: dict[int, int]) -> nx.Graph:
+        """
+        Creates a subgraph in layout space from a logical-to-layout mapping.
+
+        Args:
+            graph: The logical graph.
+            mapping: Mapping from logical nodes to layout node indices.
+
+        Returns:
+            A new NetworkX graph in physical layout space.
+        """
+        G = nx.Graph()
+        for logical, physical in mapping.items():
+            weight = graph.nodes[logical].get("weight", 0.0)
+            pos = self.layout.graph.nodes[physical].get("pos", (0, 0))
+            G.add_node(physical, weight=weight, pos=pos)
+
+        for _, physical in mapping.items():
+            for neighbor in self.layout.graph.neighbors(physical):
+                if neighbor in mapping.values():
+                    G.add_edge(physical, neighbor)
+
+        return G

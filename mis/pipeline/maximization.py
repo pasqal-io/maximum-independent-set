@@ -91,7 +91,9 @@ class Maximization(BasePostprocessor):
             if len(picked) > len(best_pick):
                 best_pick = picked
         return MISSolution(
-            original=solution.original, frequency=solution.frequency, nodes=best_pick
+            original=solution.original,
+            frequency=solution.frequency,
+            nodes=best_pick,
         )
 
     def reduce_to_independence(self, solution: MISSolution) -> MISSolution:

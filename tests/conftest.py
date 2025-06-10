@@ -11,3 +11,8 @@ def dimacs_to_nx(request: pytest.FixtureRequest) -> tuple[nx.Graph, int, int, in
     dataset = load_dimacs(Path(file_path))
     graph = dataset.instance.graph
     return graph, num_nodes, num_edges, max_independent_set_size
+
+
+@pytest.fixture
+def simple_graph() -> nx.Graph:
+    return nx.erdos_renyi_graph(n=15, p=0.3, seed=42)
