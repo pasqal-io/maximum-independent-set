@@ -11,6 +11,9 @@ nav:
     - "Tutorial 1a - Using a Quantum Device to solve MIS": "tutorial 1a - Using a Quantum Device to solve MIS.ipynb"
     - "Tutorial 1b - MIS Example Use Case": "tutorial 1b - MIS Example Use Case.ipynb"
     - "Tutorial 1c - GreedyMIS Example Use Case": "tutorial 1c - GreedyMIS Example Use Case.ipynb"
+    - "Tutorial 2 - Backend and Solver Configuration.ipynb": "tutorial 2 - Backend and Solver Configuration.ipynb"
+    - "Tutorial 3 - Sampling & Analysis.ipynb": "tutorial 3 - Sampling & Analysis.ipynb"
+    - "Tutorial 4 - 3SAT Solver.ipynb": "tutorial 4 - 3SAT Solver.ipynb"
   - Reference: $api/mis.***
   - Open-source:
     - Licence (MIT-Derived): LICENSE.md
