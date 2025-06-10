@@ -8,12 +8,12 @@ nav:
     - Installation: installation.md
     - Usage: usage.md
   - Tutorials:
-    - "Tutorial 1a - Using a Quantum Device to solve MIS": "tutorial 1a - Using a Quantum Device to solve MIS.ipynb"
-    - "Tutorial 1b - MIS Example Use Case": "tutorial 1b - MIS Example Use Case.ipynb"
-    - "Tutorial 1c - GreedyMIS Example Use Case": "tutorial 1c - GreedyMIS Example Use Case.ipynb"
-    - "Tutorial 2 - Backend and Solver Configuration.ipynb": "tutorial 2 - Backend and Solver Configuration.ipynb"
-    - "Tutorial 3 - Sampling & Analysis.ipynb": "tutorial 3 - Sampling & Analysis.ipynb"
-    - "Tutorial 4 - 3SAT Solver.ipynb": "tutorial 4 - 3SAT Solver.ipynb"
+    - "Tutorial 1a - Using a Quantum Device to solve MIS": "examples/tutorial 1a - Using a Quantum Device to solve MIS"
+    - "Tutorial 1b - MIS Example Use Case": "examples/tutorial 1b - MIS Example Use Case"
+    - "Tutorial 1c - GreedyMIS Example Use Case": "examples/tutorial 1c - GreedyMIS Example Use Case"
+    - "Tutorial 2 - Backend and Solver Configuration.ipynb": "examples/tutorial 2 - Backend and Solver Configuration"
+    - "Tutorial 3 - Sampling & Analysis.ipynb": "examples/tutorial 3 - Sampling & Analysis"
+    - "Tutorial 4 - 3SAT Solver.ipynb": "examples/tutorial 4 - 3SAT Solver"
   - Reference: $api/mis.***
   - Open-source:
     - Licence (MIT-Derived): LICENSE.md
