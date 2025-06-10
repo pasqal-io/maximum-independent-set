@@ -41,6 +41,7 @@ jobs:
       uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
+        slug: pasqal-io/maximum-independent-set
 
   test_doc:
     name: Test docs build
