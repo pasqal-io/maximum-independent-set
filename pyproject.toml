@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "maximum-independent-set"
 description = "A Python library designed to help users design classical- and quantum-driven solutions for the Maximum Independent Set (MIS) problem."
 readme = "README.md"
-version = "0.1.2"
+version = "0.1.3"
 requires-python = ">=3.10,<3.13"
 license = { text = "MIT-derived" }
 keywords = ["quantum"]
@@ -74,8 +74,8 @@ dependencies = [
 
 [tool.hatch.envs.default.scripts]
 before_tests = "python scripts/before_tests.py"
-test = "pytest -n auto --cov-report=term-missing --cov-config=pyproject.toml --cov=mis --cov=tests --markdown-docs {args}"
-test_readme = "pytest --markdown-docs README.md"
+test = "pytest -n auto --cov-report=xml --cov-config=pyproject.toml --cov=mis --cov=tests --markdown-docs {args}"
+test_readme = "pytest --markdown-docs README.md docs/"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -110,7 +110,7 @@ dependencies = [
 ]
 
 [tool.hatch.envs.docs.scripts]
-build = "cp examples/*.ipynb docs; cp examples/datasets/* docs/datasets; mkdocs build --clean --strict {args}"
+build = "cp examples/*.ipynb docs; mkdir -p docs/datasets/dimacs; cp examples/datasets/dimacs/* docs/datasets/dimacs; mkdocs build --clean --strict {args}"
 serve = "mkdocs serve --dev-addr localhost:8000"
 test = "mkdocs build --clean --strict"
 
