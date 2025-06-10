@@ -188,10 +188,10 @@ def test_star_mis(
 @pytest.mark.parametrize(
     "dimacs_to_nx",
     [
-        ("tests/test_files/dimacs/petersen.txt", 10, 15, 5),
-        ("tests/test_files/dimacs/a265032_1dc.64.txt", 64, 543, 10),
-        ("tests/test_files/dimacs/a265032_1tc.32.txt", 32, 68, 12),
-        ("tests/test_files/dimacs/hexagon.txt", 6, 6, 3),
+        (TEST_DIMACS_FILES_DIR / "petersen.txt", 10, 15, 5),
+        (TEST_DIMACS_FILES_DIR / "a265032_1dc.64.txt", 64, 543, 10),
+        (TEST_DIMACS_FILES_DIR / "a265032_1tc.32.txt", 32, 68, 12),
+        (TEST_DIMACS_FILES_DIR / "hexagon.txt", 6, 6, 3),
     ],
     indirect=True,
 )
