@@ -32,15 +32,13 @@ class DataLoader:
         """
         return float(geodesic(coord1, coord2).km)
 
-    def load_from_csv_coordinates(self, file_path: Path) -> list[tuple[float, float]]:
+    def load_from_csv_coordinates(self, file_path: Path) -> None:
         """
-        Load coordinates from a CSV file and return them as a list of tuples.
+        Load coordinates from a CSV file.
         The CSV file should have a column named 'coordonnees' with coordinates in the format "lat,lon".
 
         Args:
             file_path (Path): The path to the CSV file containing coordinates.
-        Returns:
-            list[tuple[float, float]]: A list of tuples where each tuple contains latitude and longitude.
         """
         # error handling with a try-except block
         if not file_path.exists():
@@ -66,7 +64,6 @@ class DataLoader:
         self.coordinates_dataset = [
             (float(c.split(",")[0]), float(c.split(",")[1])) for c in df["coordonnees"]
         ]
-        return self.coordinates_dataset
 
     def build_mis_instance_from_coordinates(
         self, antenna_range: float, antennas: set[int] = None
