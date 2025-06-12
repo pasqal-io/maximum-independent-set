@@ -10,7 +10,7 @@ nav:
   - Tutorials:
     - "Tutorial 1 - Using a Quantum Device to solve MIS": "tutorial 1 - Using a Quantum Device to solve MIS.ipynb"
     - "Tutorial 2 - Using GreedyMIS to take better advantage of Quantum Hardware": "tutorial 2 - Using GreedyMIS to take better advantage of Quantum Hardware.ipynb"
-    - "Tutorial 3 - 3SAT Solver.ipynb": "tutorial 3 - An application of MIS: Solving the 3SAT problem.ipynb"
+    - "Tutorial 3 - 3SAT Solver.ipynb": "tutorial 3 - An application of MIS - Solving the 3SAT problem.ipynb"
   - Reference: $api/mis.***
   - Open-source:
     - Licence (MIT-Derived): LICENSE.md
