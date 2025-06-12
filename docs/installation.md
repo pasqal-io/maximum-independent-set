@@ -1,7 +1,7 @@
 # Installation
 ## Using `hatch`, `uv` or any pyproject-compatible Python manager
 
-Edit file `pyproject.toml` to add the line
+In your project, edit file `pyproject.toml` to add the line
 
 ```toml
   "maximum-independent-set"

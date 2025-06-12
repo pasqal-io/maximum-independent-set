@@ -14,8 +14,10 @@ instance = MISInstance(graph)
 config = SolverConfig(backend=QutipBackend())
 solver = MISSolver(instance, config)
 
-# Solve the MIS problem
+# Solve the MIS problem.
 results = solver.solve().result()
 
+# Show the results.
 print("MIS solutions:", results)
+results[0].draw()
 ```

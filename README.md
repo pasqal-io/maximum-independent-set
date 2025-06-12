@@ -5,8 +5,11 @@
 
 # Maximum independent set
 
+The [Maximum Independent Set](https://en.wikipedia.org/wiki/Independent_set_(graph_theory)) problem (MIS) is a standard and widespread graph problem in scheduling, network theory, error correction, and even in the quantum sector as part of more general optimization algorithms (e.g., QUBO formulations) or as a benchmark on quantum annealers or neutral atom devices.
 
-The **Maximum Independent Set (MIS)** library provides a flexible, powerful, and user-friendly Python interface for solving [Maximum Independent Set](https://en.wikipedia.org/wiki/Independent_set_(graph_theory)) problem using Quantum technologies. It is designed for **scientists and engineers** working on optimization problems—**no quantum computing knowledge required** and **no quantum computer needed** for testing.
+There is currently no known polynomial-time algorithm for general graphs running on classical (non-quantum) devices, which means that, in practice, finding an exact solution for large graphs is generally not possible due to time and hardware limitations. For this reason, most applications of MIS must satisfy themselves with finding approximate solutions. As it turns out, in some cases, even finding approximate solutions is considered hard. For these reasons, there is high interest in solving MIS on Quantum Devices.
+
+The maximum-independent-set library does just that: it compiles an MIS into a form suited for execution on existing analog quantum hardware, such as the commercial QPUs produced by Pasqal. It is designed for **scientists and engineers** working on optimization problems—**no quantum computing knowledge required** and **no quantum computer needed** for testing.
 
 This library lets users treat the solver as a **black box**: feed in a graph, get back an optimal (or near-optimal) independent set. For more advanced users, it offers tools to **fine-tune algorithmic strategies**, leverage **quantum hardware** via the Pasqal cloud, or even **experiment with custom quantum sequences** and processing pipelines.
 
