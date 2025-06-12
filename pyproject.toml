@@ -38,6 +38,8 @@ dependencies = [
   "matplotlib",
   "emu-mps==2.2.0",
   "pasqal-cloud",
+  "pandas",
+  "geopy",
 ]
 
 [tool.hatch.metadata]
