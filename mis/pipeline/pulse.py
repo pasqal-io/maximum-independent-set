@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
+from typing import Any
 
 from networkx.classes.reportviews import DegreeView
 from pulser import InterpolatedWaveform, Pulse as PulserPulse
@@ -58,7 +59,7 @@ class DefaultPulseShaper(BasePulseShaper):
     """
 
     def _get_interactions(
-        self, pos: np.ndarray, graph: nx.Graph, device: Device
+        self, pos: np.ndarray, graph: nx.Graph, device: Device, index_by_node: dict[Any, int]
     ) -> tuple[list[float], list[float]]:
         """Calculate the interaction strengths for connected and disconnected
             nodes.
@@ -67,6 +68,7 @@ class DefaultPulseShaper(BasePulseShaper):
             pos (np.ndarray): The position of the nodes.
             graph (nx.Graph): The associated graph.
             device (BaseDevice): Device used to calculate interaction coeff.
+            index_by_node: A map from node to its index in the list of nodes.
 
         Returns:
             tuple[list[float], list[float]]: Connected interactions,
@@ -74,7 +76,7 @@ class DefaultPulseShaper(BasePulseShaper):
         """
 
         def calculate_edge_interaction(edge: tuple[int, int]) -> float:
-            pos_a, pos_b = pos[edge[0]], pos[edge[1]]
+            pos_a, pos_b = pos[index_by_node[edge[0]]], index_by_node[pos[edge[1]]]
             return float(device.interaction_coeff / (euclidean(pos_a, pos_b) ** 6))
 
         connected = [calculate_edge_interaction(edge) for edge in graph.edges()]
@@ -83,11 +85,18 @@ class DefaultPulseShaper(BasePulseShaper):
         return connected, disconnected
 
     def _calc_bounds(self, reg: Register, device: Device) -> _Bounds:
+        index_by_node = {node: i for (i, node) in enumerate(reg.graph.nodes)}
         _, disconnected = self._get_interactions(
-            pos=reg.register.sorted_coords, graph=reg.graph, device=device
+            pos=reg.register.sorted_coords,
+            graph=reg.graph,
+            device=device,
+            index_by_node=index_by_node,
         )
         u_min, u_max = self._interaction_bounds(
-            pos=reg.register.sorted_coords, graph=reg.graph, device=device
+            pos=reg.register.sorted_coords,
+            graph=reg.graph,
+            device=device,
+            index_by_node=index_by_node,
         )
         max_amp_device = device.channels["rydberg_global"].max_amp or np.inf
         maximum_amplitude = min(max_amp_device, u_max + 0.8 * (u_min - u_max))
@@ -105,13 +114,19 @@ class DefaultPulseShaper(BasePulseShaper):
         return _Bounds(maximum_amplitude=maximum_amplitude, final_detuning=final_detuning)
 
     def _interaction_bounds(
-        self, pos: np.ndarray, graph: nx.Graph, device: Device
+        self,
+        pos: np.ndarray,
+        graph: nx.Graph,
+        device: Device,
+        index_by_node: dict[Any, int],
     ) -> tuple[float, float]:
         """Calculates U_min and U_max given the positions. It uses the edges
         of the graph. U_min corresponds to minimal energy of two nodes
         connected in the graph. U_max corresponds to maximal energy of two
         nodes NOT connected in the graph."""
-        connected, disconnected = self._get_interactions(pos, graph, device)
+        connected, disconnected = self._get_interactions(
+            pos, graph, device, index_by_node=index_by_node
+        )
         if len(connected) == 0:
             u_min = 0
         else:

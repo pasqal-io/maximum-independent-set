@@ -3,6 +3,12 @@ Exceptions raised within this library.
 """
 
 
+class GraphError(ValueError):
+    """
+    An error raised when attempting to compile a graph, for any reason.
+    """
+
+
 class MappingError(ValueError):
     """
     An error raised when a graph-to-layout mapping fails validation,
@@ -10,7 +16,7 @@ class MappingError(ValueError):
     """
 
 
-class CompilationError(Exception):
+class CompilationError(GraphError):
     """
     An error raised when attempting to compile a graph for an architecture
     that does not support it, e.g. because it requires too many qubits or
