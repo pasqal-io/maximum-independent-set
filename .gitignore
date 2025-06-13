@@ -36,6 +36,7 @@ dist/
 
 # Jupyter Notebook
 .ipynb_checkpoints
+docs/*.ipynb
 
 # specific
 .*.db
