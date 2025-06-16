@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "maximum-independent-set"
 description = "A Python library designed to help users design classical- and quantum-driven solutions for the Maximum Independent Set (MIS) problem."
 readme = "README.md"
-version = "0.1.3"
+version = "0.1.4"
 requires-python = ">=3.10,<3.13"
 license = { text = "MIT-derived" }
 keywords = ["quantum"]
@@ -16,7 +16,7 @@ authors = [
   { name = "Roland Guichard", email = "roland.guichard@pasqal.com" },
 ]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 4 - Beta",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
