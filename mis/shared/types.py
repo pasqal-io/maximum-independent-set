@@ -4,6 +4,7 @@ from enum import Enum
 from dataclasses import dataclass, field
 import networkx
 import matplotlib.pyplot as plt
+from mis.shared.error import GraphError
 from mis.shared.graphs import calculate_weight
 
 
@@ -25,7 +26,18 @@ class MethodType(str, Enum):
 class MISInstance:
     def __init__(self, graph: networkx.Graph):
         # FIXME: Make it work with pytorch geometric
-        self.graph = graph
+        self.graph = graph.copy()
+
+        # Check validity.
+        nodes: set[int] = set()
+        for node in graph.nodes():
+            if not isinstance(node, int):
+                raise GraphError("All nodes must be ints")
+            if node < 0:
+                raise GraphError("All nodes must be non-negative ints")
+            if node in nodes:
+                raise GraphError(f"Duplicate node {node}")
+            nodes.add(node)
 
     def draw(
         self, nodes: list[int] | None = None, node_size: int = 600, highlight_color: str = "red"

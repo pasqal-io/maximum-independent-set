@@ -73,3 +73,21 @@ def test_greedy_solver_with_pre_post(
         assert isinstance(solution.nodes, list)
         assert len(set(solution.nodes)) == len(solution.nodes)
         assert is_independent(instance.graph, solution.nodes)
+
+
+@pytest.mark.parametrize("use_quantum", [False, True])
+def test_greedy_mis_long(complex_graph: nx.Graph, use_quantum: bool) -> None:
+    """
+    Test Greedy MIS solver in both classical and quantum modes with default settings.
+    """
+    backend = QutipBackend() if use_quantum else None
+    config = SolverConfig(
+        method=MethodType.GREEDY, use_quantum=use_quantum, backend=backend, greedy=GreedyConfig()
+    )
+    instance = MISInstance(complex_graph)
+    solver = MISSolver(instance, config)
+    solutions = solver.solve().result()
+
+    assert len(solutions) > 0
+    assert all(isinstance(sol.nodes, list) for sol in solutions)
+    assert all(is_independent(instance.graph, sol.nodes) for sol in solutions)
