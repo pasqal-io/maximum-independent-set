@@ -7,13 +7,13 @@ The code is available on GitHub.
 To clone it
 
 ```sh
-$ git clone git@github.com:pasqal-io/quantum-evolution-kernel.git
+$ git clone git@github.com:pasqal-io/maximum-independent-set.git
 ```
 
 or
 
 ```sh
-$ git clone https://github.com/pasqal-io/quantum-evolution-kernel
+$ git clone https://github.com/pasqal-io/maximum-independent-set.git
 ```
 
 ## Hatch instructions
