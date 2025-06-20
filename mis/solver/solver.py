@@ -333,7 +333,7 @@ class GreedyMISSolver(BaseSolver):
             Execution containing a list of solutions.
         """
         graph = instance.graph
-        if len(graph) <= self.config.greedy.exact_solving_threshold:  # type: ignore[union-attr]
+        if len(graph) <= self.config.greedy.classical_solving_threshold:  # type: ignore[union-attr]
             solver = self.solver_factory(instance, self.config)
             return solver.solve()
 
