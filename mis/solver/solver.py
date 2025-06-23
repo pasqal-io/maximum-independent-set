@@ -13,7 +13,7 @@ from mis.pipeline.targets import Pulse, Register
 from mis.pipeline.config import SolverConfig
 from mis.solver.greedymapping import GreedyMapping
 from mis.pipeline.layout import Layout
-from mis.shared.graphs import calculate_weight, remove_neighborhood
+from mis.shared.graphs import remove_neighborhood
 
 
 class MISSolver:
@@ -370,7 +370,7 @@ class GreedyMISSolver(BaseSolver):
                 for rem_sol in remainder_solutions:
                     combined_nodes = current_mis + rem_sol.nodes
                     if (best_solution is None) or (
-                        calculate_weight(self.instance.graph, combined_nodes) > best_solution.size
+                        len(combined_nodes) > best_solution.size
                     ):
                         best_solution = MISSolution(
                             original=graph, nodes=combined_nodes, frequency=1.0
