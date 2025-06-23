@@ -13,7 +13,7 @@ from mis.pipeline.targets import Pulse, Register
 from mis.pipeline.config import SolverConfig
 from mis.solver.greedymapping import GreedyMapping
 from mis.pipeline.layout import Layout
-from mis.shared.graphs import remove_neighborhood
+from mis.shared.graphs import remove_neighborhood, calculate_weight
 
 
 class MISSolver:
