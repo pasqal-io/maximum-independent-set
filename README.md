@@ -75,6 +75,8 @@ print("MIS solutions:", results)
 
 ## Documentation
 
+[Documentation](https://pasqal-io.github.io/maximum-independent-set/latest/)
+
 [Tutorials](https://pasqal-io.github.io/maximum-independent-set/latest/tutorial%201a%20-%20Using%20a%20Quantum%20Device%20to%20solve%20MIS/).
 
 [Full API documentation](https://pasqal-io.github.io/maximum-independent-set/latest/api/mis/).
