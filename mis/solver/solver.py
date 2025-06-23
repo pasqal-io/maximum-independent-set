@@ -369,9 +369,7 @@ class GreedyMISSolver(BaseSolver):
 
                 for rem_sol in remainder_solutions:
                     combined_nodes = current_mis + rem_sol.nodes
-                    if (best_solution is None) or (
-                        len(combined_nodes) > best_solution.size
-                    ):
+                    if (best_solution is None) or (len(combined_nodes) > best_solution.size):
                         best_solution = MISSolution(
                             original=graph, nodes=combined_nodes, frequency=1.0
                         )
