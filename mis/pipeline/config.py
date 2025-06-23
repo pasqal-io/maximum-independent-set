@@ -52,7 +52,7 @@ class GreedyConfig:
     Configuration for greedy solving strategies.
     """
 
-    default_solving_thresholdint = 2
+    default_solving_threshold: int = 2
     """
     classical_solving_threshold (int): Size threshold (number of nodes) for using MIS solving
     when greedy method is used.
