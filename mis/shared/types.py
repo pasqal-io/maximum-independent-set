@@ -40,7 +40,10 @@ class MISInstance:
             nodes.add(node)
 
     def draw(
-        self, nodes: list[int] | None = None, node_size: int = 600, highlight_color: str = "darkgreen"
+        self,
+        nodes: list[int] | None = None,
+        node_size: int = 600,
+        highlight_color: str = "darkgreen",
     ) -> None:
         """
         Draw instance graph with highlighted nodes.
