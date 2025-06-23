@@ -71,7 +71,7 @@ class DefaultPulseShaper(BasePulseShaper):
         pos = register.register.sorted_coords
 
         def calculate_edge_interaction(edge: tuple[int, int]) -> float:
-            pos_a, pos_b = pos[index_by_node[edge[0]]], index_by_node[pos[edge[1]]]
+            pos_a, pos_b = pos[index_by_node[edge[0]]], pos[index_by_node[edge[1]]]
             return float(device.interaction_coeff / (euclidean(pos_a, pos_b) ** 6))
 
         # Interaction strength for connected nodes.
@@ -101,13 +101,16 @@ class DefaultPulseShaper(BasePulseShaper):
         assert isinstance(degree, DegreeView)
         d_min = None
         d_max = None
-        for deg in degree:
+        for _, deg in degree:
+            assert isinstance(deg, int)
             if d_min is None or deg < d_min:
                 d_min = deg
             if d_max is None or deg > d_max:
                 d_max = deg
         assert d_min is not None
         assert d_max is not None
+        assert isinstance(d_min, int)
+        assert isinstance(d_max, int)
         det_max_theory = (d_min / (d_min + 1)) * u_min
         det_min_theory = sum(sorted(disconnected)[-d_max:])
         det_final_theory = max(det_max_theory, det_min_theory)

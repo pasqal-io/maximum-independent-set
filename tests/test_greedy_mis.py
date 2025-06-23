@@ -82,7 +82,10 @@ def test_greedy_mis_long(complex_graph: nx.Graph, use_quantum: bool) -> None:
     """
     backend = QutipBackend() if use_quantum else None
     config = SolverConfig(
-        method=MethodType.GREEDY, use_quantum=use_quantum, backend=backend, greedy=GreedyConfig()
+        method=MethodType.GREEDY,
+        use_quantum=use_quantum,
+        backend=backend,
+        greedy=GreedyConfig(exact_solving_threshold=10),
     )
     instance = MISInstance(complex_graph)
     solver = MISSolver(instance, config)
