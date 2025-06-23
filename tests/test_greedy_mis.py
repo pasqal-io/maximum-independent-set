@@ -85,7 +85,7 @@ def test_greedy_mis_long(complex_graph: nx.Graph, use_quantum: bool) -> None:
         method=MethodType.GREEDY,
         use_quantum=use_quantum,
         backend=backend,
-        greedy=GreedyConfig(exact_solving_threshold=10),
+        greedy=GreedyConfig(default_solving_threshold=10),
     )
     instance = MISInstance(complex_graph)
     solver = MISSolver(instance, config)
