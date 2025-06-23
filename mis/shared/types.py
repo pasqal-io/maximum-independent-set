@@ -40,7 +40,7 @@ class MISInstance:
             nodes.add(node)
 
     def draw(
-        self, nodes: list[int] | None = None, node_size: int = 600, highlight_color: str = "red"
+        self, nodes: list[int] | None = None, node_size: int = 600, highlight_color: str = "darkgreen"
     ) -> None:
         """
         Draw instance graph with highlighted nodes.
@@ -49,7 +49,7 @@ class MISInstance:
 
             nodes (list[int]): List of nodes to highlight.
             node_size (int): Size of drawn nodes in drawn graph. (default: 600)
-            highlight_color (str): Color to highlight nodes with. (default: "red")
+            highlight_color (str): Color to highlight nodes with. (default: "darkgreen")
         """
         # Obtain a view of all nodes
         all_nodes = self.graph.nodes
@@ -118,13 +118,13 @@ class MISSolution:
         self.weight = calculate_weight(self.original, self.nodes)
         self.size = len(self.nodes)
 
-    def draw(self, node_size: int = 600, highlight_color: str = "red") -> None:
+    def draw(self, node_size: int = 600, highlight_color: str = "darkgreen") -> None:
         """
         Draw instance graph with solution nodes highlighted.
 
         Parameters:
 
             node_size (int): Size of drawn nodes in drawn graph. (default: 600)
-            highlight_color (str): Color to highlight nodes with. (default: "red")
+            highlight_color (str): Color to highlight nodes with. (default: "darkgreen")
         """
         MISInstance(self.original).draw(self.nodes, node_size, highlight_color)
