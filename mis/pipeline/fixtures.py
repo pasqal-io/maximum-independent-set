@@ -64,9 +64,7 @@ class Fixtures:
         # At this stage, we need to call the preprocessor's rebuilder to
         # expand this to a solution on the original graph.
         nodes = self.preprocessor.rebuild(set(solution.nodes))
-        return MISSolution(
-            original=self.instance.graph, nodes=list(nodes), frequency=solution.frequency
-        )
+        return MISSolution(instance=self.instance, nodes=list(nodes), frequency=solution.frequency)
 
     def postprocess(self, solutions: list[MISSolution]) -> list[MISSolution]:
         if self.postprocessor is None:

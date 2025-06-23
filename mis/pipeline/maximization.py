@@ -40,7 +40,7 @@ class Maximization(BasePostprocessor):
         if not self.is_independent_solution(solution):
             solution = self.reduce_to_independence(solution)
         # From this point, we're sure that `solution` is independent.
-        if nx.is_dominating_set(solution.original, solution.nodes):
+        if nx.is_dominating_set(solution.instance.graph, solution.nodes):
             # Maximum independent set, we can't do better.
             return solution
         return self.augment_to_maximal(solution)
@@ -49,7 +49,7 @@ class Maximization(BasePostprocessor):
         """
         Check whether a solution is independent.
         """
-        return self.is_independent_list(graph=solution.original, nodes=solution.nodes)
+        return self.is_independent_list(graph=solution.instance.graph, nodes=solution.nodes)
 
     def is_independent_list(self, graph: nx.Graph, nodes: list[int]) -> bool:
         """
@@ -66,10 +66,10 @@ class Maximization(BasePostprocessor):
 
         See https://doi.org/10.48550/arXiv.2202.09372 section 2.3 of supplementary material for reference.
         """
-        unpicked_nodes = set(solution.original.nodes) - set(solution.nodes)
+        unpicked_nodes: set[int] = set(solution.instance.graph.nodes) - set(solution.node_indices)
 
         # The best solution so far.
-        best_pick = solution.nodes
+        best_pick = solution.node_indices
 
         rng = random.Random(self.seed)
         for _ in range(self.augment_rounds):
@@ -78,11 +78,11 @@ class Maximization(BasePostprocessor):
             rng.shuffle(order)
 
             # Attempt to grow the list of nodes in this order.
-            picked = list(solution.nodes)
+            picked = list(solution.node_indices)
             for node in order:
                 maybe_picked = list(picked)  # Copy the list.
                 maybe_picked.append(node)
-                if self.is_independent_list(graph=solution.original, nodes=maybe_picked):
+                if self.is_independent_list(graph=solution.instance.graph, nodes=maybe_picked):
                     # Commit our pick.
                     picked = maybe_picked
 
@@ -91,7 +91,7 @@ class Maximization(BasePostprocessor):
             if len(picked) > len(best_pick):
                 best_pick = picked
         return MISSolution(
-            original=solution.original,
+            instance=solution.instance,
             frequency=solution.frequency,
             nodes=best_pick,
         )
@@ -105,7 +105,7 @@ class Maximization(BasePostprocessor):
         """
 
         # Simplify the graph by removing the nodes that we have already rejected.
-        simplified_graph = solution.original.copy()
+        simplified_graph = solution.instance.graph.copy()
         rejected_nodes = set(simplified_graph.nodes) - set(solution.nodes)
         simplified_graph.remove_nodes_from(rejected_nodes)
 
@@ -117,15 +117,15 @@ class Maximization(BasePostprocessor):
             ]
             highest_node = max(ranked_nodes, key=lambda tup: tup[1])
 
-            # Remove this node from. Eventually, `simplified_graph` will become an independent
+            # Remove this node from the graph. Eventually, `simplified_graph` will become an independent
             # set (at worst, a singleton).
             simplified_graph.remove_node(highest_node[0])
             retained_nodes = set(simplified_graph.nodes)
 
             candidate = list(retained_nodes)
-            if self.is_independent_list(graph=solution.original, nodes=candidate):
+            if self.is_independent_list(graph=solution.instance.graph, nodes=candidate):
                 # As the empty set is independent and `candidates` keeps decreasing,
                 # this will eventually be `True`.
                 return MISSolution(
-                    original=solution.original, nodes=candidate, frequency=solution.frequency
+                    instance=solution.instance, nodes=candidate, frequency=solution.frequency
                 )

@@ -42,8 +42,12 @@ def load_dimacs(path: Path) -> DIMACSDataset:
     # Parse the graph from the DIMACS format
     edges = []
     solutions = []
+    n_vertices = None
+    n_edges = None
     for line in lines:
         if line.startswith("p"):
+            if n_vertices is not None:
+                raise ValueError("Error in DIMACS file: duplicate number of vertices/edges.")
             n_vertices, n_edges = map(int, line.split()[2:4])
 
         if line.startswith("e"):
@@ -53,6 +57,10 @@ def load_dimacs(path: Path) -> DIMACSDataset:
         if line.startswith("max indep set"):
             _, line = line.split("=", 1)
             solutions = [list(map(int, line.strip(" {}").split(",")))]
+    if n_vertices is None:
+        raise ValueError("Error in DIMACS file: missing number of vertices.")
+    if n_edges is None:
+        raise ValueError("Error in DIMACS file: missing number of edges.")
 
     graph = nx.Graph()
     graph.add_nodes_from(range(1, n_vertices + 1))

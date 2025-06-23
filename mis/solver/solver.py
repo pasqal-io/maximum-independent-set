@@ -81,14 +81,12 @@ class MISSolverClassical(BaseSolver):
         preprocessed_instance = self.fixtures.preprocess()
         if len(preprocessed_instance.graph) == 0:
             # Edge case: nx.maximal_independent_set doesn't work with an empty graph.
-            partial_solution = MISSolution(
-                original=preprocessed_instance.graph, frequency=1.0, nodes=[]
-            )
+            partial_solution = MISSolution(instance=preprocessed_instance, frequency=1.0, nodes=[])
         else:
             mis = nx.approximation.maximum_independent_set(G=preprocessed_instance.graph)
             assert isinstance(mis, set)
             partial_solution = MISSolution(
-                original=preprocessed_instance.graph,
+                instance=preprocessed_instance,
                 frequency=1.0,
                 nodes=list(mis),
             )
@@ -183,7 +181,7 @@ class MISSolverQuantum(BaseSolver):
             # partial solution to be able to rebuild an MIS, so we handle this edge
             # case by injecting an empty solution.
             postprocessed = [
-                MISSolution(original=self._preprocessed_instance.graph, frequency=1, nodes=[])
+                MISSolution(instance=self._preprocessed_instance, frequency=1, nodes=[])
             ]
 
             # No noise here, since there wasn't any quantum measurement, so no
@@ -191,7 +189,7 @@ class MISSolverQuantum(BaseSolver):
         else:
             raw = [
                 MISSolution(
-                    original=self._preprocessed_instance.graph,
+                    instance=self._preprocessed_instance,
                     frequency=count
                     / total,  # Note: If total == 0, the list is empty, so this line is never called.
                     nodes=self._bitstring_to_nodes(bitstr),
@@ -373,11 +371,11 @@ class GreedyMISSolver(BaseSolver):
                         calculate_weight(self.instance.graph, combined_nodes) > best_solution.weight
                     ):
                         best_solution = MISSolution(
-                            original=graph, nodes=combined_nodes, frequency=1.0
+                            instance=instance, nodes=combined_nodes, frequency=1.0
                         )
 
         if best_solution is None:
-            return Execution.success([MISSolution(original=graph, nodes=[], frequency=0)])
+            return Execution.success([MISSolution(instance=instance, nodes=[], frequency=0)])
         return Execution.success([best_solution])
 
     def _generate_subgraphs(self, graph: nx.Graph) -> list[dict[int, int]]:

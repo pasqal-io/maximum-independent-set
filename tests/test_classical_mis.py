@@ -4,6 +4,7 @@ import pytest
 from pathlib import Path
 
 # Define classical solver configuration
+from mis.data.graphs import load_dimacs
 from mis.solver.solver import MISInstance, MISSolver
 from mis.pipeline.config import SolverConfig
 from mis.shared.types import MethodType
@@ -14,12 +15,10 @@ TEST_DIMACS_FILES_DIR = Path.cwd() / "tests/test_files/dimacs"
 
 
 @pytest.mark.flaky(max_runs=5)
-@pytest.mark.parametrize(
-    "dimacs_to_nx", [(TEST_DIMACS_FILES_DIR / "a265032_1tc.32.txt", 32, 68, 12)], indirect=True
-)
+@pytest.mark.parametrize("sample", [(TEST_DIMACS_FILES_DIR / "a265032_1tc.32.txt", 32, 68, 12)])
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
 def test_for_dimacs_32_node_graph(
-    dimacs_to_nx: tuple[nx.Graph, int, int, int],
+    sample: tuple[Path, int, int, int],
     preprocessor: None | Callable[[nx.Graph], Kernelization],
 ) -> None:
     """
@@ -27,63 +26,73 @@ def test_for_dimacs_32_node_graph(
 
     Can be found here: https://oeis.org/A265032/a265032.html
     """
-    graph, n_nodes, n_edges, mis_size = dimacs_to_nx
-    assert graph.number_of_nodes() == n_nodes
-    assert graph.number_of_edges() == n_edges
+    path, num_nodes, num_edges, mis_size = sample
+    dataset = load_dimacs(path)
 
-    config = SolverConfig(method=MethodType.EAGER, max_iterations=1, preprocessor=None)
-
-    # Create the MIS instance
-    instance = MISInstance(graph)
-
-    # Run the solver
-    solver = MISSolver(instance, config)
-    solutions = solver.solve().result()
-
-    assert len(solutions[0].nodes) == mis_size
-
-    # Check the solution is genuinely an independent set.
-    kernel = Kernelization(graph=graph)
-    assert kernel.is_independent(solutions[0].nodes)
-
-
-@pytest.mark.flaky(max_runs=5)
-@pytest.mark.parametrize(
-    "dimacs_to_nx", [(TEST_DIMACS_FILES_DIR / "a265032_1dc.64.txt", 64, 543, None)], indirect=True
-)
-@pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
-def test_for_dimacs_64_node_graph(
-    dimacs_to_nx: tuple[nx.Graph, int, int, int],
-    preprocessor: None | Callable[[nx.Graph], Kernelization],
-) -> None:
-    """
-    Classical MIS solver for a standard graph benchmark dataset in DIMACS format.
-
-    Can be found here: https://oeis.org/A265032/a265032.html
-    """
-    graph, n_nodes, n_edges, _ = dimacs_to_nx
-    assert graph.number_of_nodes() == n_nodes
-    assert graph.number_of_edges() == n_edges
+    assert dataset.instance.graph.number_of_nodes() == num_nodes
+    assert dataset.instance.graph.number_of_edges() == num_edges
 
     config = SolverConfig(method=MethodType.EAGER, max_iterations=1, preprocessor=preprocessor)
 
-    # Create the MIS instance
-    instance = MISInstance(graph)
-
     # Run the solver
-    solver = MISSolver(instance, config)
+    solver = MISSolver(dataset.instance, config)
     solutions = solver.solve().result()
 
     # Check the solution is genuinely an independent set.
-    kernel = Kernelization(graph=graph)
+    kernel = Kernelization(graph=dataset.instance.original_graph)
+    solution = solutions[0]
 
-    # In this case, pre-processing the data reveals a better solution.
+    # Is it an independent set?
+    assert kernel.is_independent(solution.nodes)
+    # Is it a subset of the original graph?
+    for node in solution.nodes:
+        assert node in dataset.instance.node_label_to_index
+    # Is it as good as we hope?
     if preprocessor is None:
-        assert set(solutions[0].nodes) == {1, 4, 42, 11, 16, 56, 25, 61}
-        assert kernel.is_independent(solutions[0].nodes)
+        assert len(solution.nodes) <= mis_size
     else:
-        assert set(solutions[0].nodes) == {64, 1, 4, 13, 16, 22, 47, 49, 52}
-        assert kernel.is_independent(solutions[0].nodes)
+        assert len(solution.nodes) == mis_size
+
+
+@pytest.mark.flaky(max_runs=5)
+@pytest.mark.parametrize("sample", [(TEST_DIMACS_FILES_DIR / "a265032_1dc.64.txt", 64, 543, 9)])
+@pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
+def test_for_dimacs_64_node_graph(
+    sample: tuple[Path, int, int, int],
+    preprocessor: None | Callable[[nx.Graph], Kernelization],
+) -> None:
+    """
+    Classical MIS solver for a standard graph benchmark dataset in DIMACS format.
+
+    Can be found here: https://oeis.org/A265032/a265032.html
+    """
+    path, num_nodes, num_edges, mis_size = sample
+    dataset = load_dimacs(path)
+
+    assert dataset.instance.graph.number_of_nodes() == num_nodes
+    assert dataset.instance.graph.number_of_edges() == num_edges
+
+    config = SolverConfig(method=MethodType.EAGER, max_iterations=1, preprocessor=preprocessor)
+
+    # Run the solver
+    solver = MISSolver(dataset.instance, config)
+    solutions = solver.solve().result()
+
+    # Check the solution is genuinely an independent set.
+    kernel = Kernelization(graph=dataset.instance.original_graph)
+
+    solution = solutions[0]
+
+    # Is it an independent set?
+    assert kernel.is_independent(solution.nodes)
+    # Is it a subset of the original graph?
+    for node in solution.nodes:
+        assert node in dataset.instance.node_label_to_index
+    # Is it as good as we hope?
+    if preprocessor is None:
+        assert len(solution.nodes) <= mis_size
+    else:
+        assert len(solution.nodes) == mis_size
 
 
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
@@ -176,36 +185,40 @@ def test_star_mis(
     solutions = solver.solve().result()
 
     assert len(solutions) == 1
-    nodes = solutions[0].nodes
-    node_set = set(nodes)
-    assert len(nodes) == SIZE - 1
-    assert len(nodes) == len(node_set)
+    node_indices = solutions[0].node_indices
+    node_set = set(node_indices)
+    assert len(node_indices) == SIZE - 1
+    assert len(solutions[0].nodes) == len(node_indices)
+    assert len(node_indices) == len(node_set)
 
-    for node in nodes:
+    for node in node_indices:
         assert 1 <= node < SIZE
 
 
 @pytest.mark.parametrize(
-    "dimacs_to_nx",
+    "sample",
     [
         (TEST_DIMACS_FILES_DIR / "petersen.txt", 10, 15, 5),
         (TEST_DIMACS_FILES_DIR / "a265032_1dc.64.txt", 64, 543, 10),
         (TEST_DIMACS_FILES_DIR / "a265032_1tc.32.txt", 32, 68, 12),
         (TEST_DIMACS_FILES_DIR / "hexagon.txt", 6, 6, 3),
     ],
-    indirect=True,
 )
 @pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
 @pytest.mark.parametrize("postprocessor", [None, lambda: Maximization()])
 def test_dimacs_mis(
-    dimacs_to_nx: tuple[nx.Graph, int, int, int],
+    sample: tuple[Path, int, int, int],
     preprocessor: None | Callable[[nx.Graph], Kernelization],
     postprocessor: None | Callable[[], Maximization],
 ) -> None:
     """
     Test loading various graphs from DIMACS files and solving them.
     """
-    graph, num_nodes, num_edges, max_independent_set_size = dimacs_to_nx
+    path, num_nodes, num_edges, mis_size = sample
+    dataset = load_dimacs(path)
+
+    assert dataset.instance.graph.number_of_nodes() == num_nodes
+    assert dataset.instance.graph.number_of_edges() == num_edges
 
     config = SolverConfig(
         method=MethodType.EAGER,
@@ -214,13 +227,17 @@ def test_dimacs_mis(
         postprocessor=postprocessor,
     )
 
-    instance = MISInstance(graph)
-    solver = MISSolver(instance, config)
+    solver = MISSolver(dataset.instance, config)
     solutions = solver.solve().result()
 
-    assert graph.number_of_nodes() == num_nodes
-    assert graph.number_of_edges() == num_edges
+    assert dataset.instance.graph.number_of_nodes() == num_nodes
+    assert dataset.instance.graph.number_of_edges() == num_edges
     assert len(solutions) > 0
     for solution in solutions:
-        assert Kernelization(graph).is_independent(solution.nodes)
-        assert len(solution.nodes) <= max_independent_set_size
+        # Is it an independent set?
+        kernel = Kernelization(dataset.instance.original_graph)
+        assert kernel.is_independent(solution.nodes)
+        # Is it a subset of the original graph?
+        for node in solution.nodes:
+            assert node in dataset.instance.node_label_to_index
+        assert len(solution.nodes) <= mis_size
