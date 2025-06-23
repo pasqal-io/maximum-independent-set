@@ -5,7 +5,6 @@ from dataclasses import dataclass, field
 import networkx
 import matplotlib.pyplot as plt
 from mis.shared.error import GraphError
-from mis.shared.graphs import calculate_weight
 
 
 class BackendType(str, Enum):
@@ -107,14 +106,14 @@ class MISSolution:
     original: networkx.Graph
     nodes: list[int]
     frequency: float
-    weight: float = field(init=False)
+    size: float = field(init=False)
 
     def __post_init__(self) -> None:
         # Consistency check: nodes from the list must be distinct.
         assert len(self.nodes) == len(set(self.nodes)), "All the nodes in %s should be distinct" % (
             self.nodes,
         )
-        self.weight = calculate_weight(self.original, self.nodes)
+        self.size = len(self.nodes)
 
     def draw(self, node_size: int = 600, highlight_color: str = "red") -> None:
         """
