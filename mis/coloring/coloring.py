@@ -1,11 +1,11 @@
 from copy import deepcopy
+from typing import Optional
 from mis import MISSolver
 from mis.data.dataloader import DataLoader
 from mis.pipeline.basesolver import BaseSolver
 from mis.pipeline.config import SolverConfig
 import matplotlib.pyplot as plt
 
-from mis.pipeline.execution import Execution
 from mis.shared.types import MISSolution
 
 
@@ -46,8 +46,8 @@ class GraphColoringSolver(BaseSolver):
         self.solver_config = config
 
     def solve(
-        self, antennas: set[int] = None, is_second_coloring: bool = False
-    ) -> Execution[list[MISSolution]]:
+        self, antennas: Optional[set[int]] = None, is_second_coloring: bool = False
+    ) -> list[MISSolution]:
         """
         Solve the graph coloring problem by finding a maximum independent set
         for the given antenna range and coloring the antennas accordingly.
@@ -74,14 +74,14 @@ class GraphColoringSolver(BaseSolver):
                 self.loader.build_mis_instance_from_coordinates(self.antenna_range, antennas),
                 self.solver_config,
             )
-            solutions = solver.solve().result()
+            solutions = solver.solve()
             res.append(solutions[0])
             for antenna in solutions[0].nodes:
                 self.colors[antenna] = self.colors_count
             antennas = antennas - set(solutions[0].nodes)
             self.colors_count += 1
 
-        return Execution.success(res)
+        return res
 
     # split antennas into independent sets based on a thrshold of degree of the node
     def split_antennas_by_degree(self, threshold: int) -> list[set[int]]:
