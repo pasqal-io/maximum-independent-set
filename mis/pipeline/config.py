@@ -54,7 +54,7 @@ class GreedyConfig:
 
     default_solving_threshold: int = 2
     """
-    classical_solving_threshold (int): Size threshold (number of nodes) for using MIS solving
+    default_solving_threshold (int): Size threshold (number of nodes) for using MIS solving
     when greedy method is used.
 
     If a subgraph has a number of nodes less than or equal to this value, it will be solved
