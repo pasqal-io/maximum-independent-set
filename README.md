@@ -67,7 +67,7 @@ config = SolverConfig(backend=BackendConfig())
 solver = MISSolver(instance, config)
 
 # Solve the MIS problem.
-results = solver.solve().result()
+results = solver.solve()
 
 # Show the results.
 print("MIS solutions:", results)
