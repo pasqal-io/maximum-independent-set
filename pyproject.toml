@@ -105,13 +105,14 @@ dependencies = [
   "mkdocs-exclude",
   "mkapi",
   "markdown-exec",
+  "pymdown-extensions",
   "mike",
 ]
 
 [tool.hatch.envs.docs.scripts]
-build = "cp examples/*.ipynb docs; mkdir -p docs/datasets/dimacs; cp examples/datasets/dimacs/* docs/datasets/dimacs; mkdocs build --clean --strict {args}"
-serve = "mkdocs serve --dev-addr localhost:8000"
-test = "mkdocs build --clean --strict"
+build = "cp examples/*.ipynb docs; mkdir -p docs/datasets/dimacs docs/datasets/coloring; cp examples/datasets/dimacs/* docs/datasets/dimacs; cp examples/datasets/coloring/* docs/datasets/coloring; mkdocs build --clean --strict {args}"
+serve = "cp examples/*.ipynb docs; mkdir -p docs/datasets/dimacs docs/datasets/coloring; cp examples/datasets/dimacs/* docs/datasets/dimacs; cp examples/datasets/coloring/* docs/datasets/coloring; mkdocs serve --dev-addr localhost:8000"
+test = "cp examples/*.ipynb docs; mkdir -p docs/datasets/dimacs docs/datasets/coloring; cp examples/datasets/dimacs/* docs/datasets/dimacs; cp examples/datasets/coloring/* docs/datasets/coloring; mkdocs build --clean --strict"
 
 [[tool.hatch.envs.test.matrix]]
 python = ["310", "311", "312"]

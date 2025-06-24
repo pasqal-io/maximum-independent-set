@@ -52,9 +52,9 @@ class GreedyConfig:
     Configuration for greedy solving strategies.
     """
 
-    exact_solving_threshold: int = 2
+    default_solving_threshold: int = 2
     """
-    exact_solving_threshold (int): Size threshold (number of nodes) for using MIS solving
+    default_solving_threshold (int): Size threshold (number of nodes) for using MIS solving
     when greedy method is used.
 
     If a subgraph has a number of nodes less than or equal to this value, it will be solved
