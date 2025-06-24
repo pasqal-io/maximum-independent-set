@@ -6,7 +6,7 @@ This library lets users treat the solver as a **black box**: feed in a graph, ge
 
 Users setting their first steps into quantum computing will learn how to implement the core algorithm in a few simple steps and run it using the Pasqal Neutral Atom QPU. More experienced users will find this library to provide the right environment to explore new ideas - both in terms of methodologies and data domain - while always interacting with a simple and intuitive QPU interface.
 
-For a more extensive overview of interesting classes of preblems for which a quantum MIS solution is a good fit, the reader is invited to peruse[^1].
+For a more extensive overview of interesting classes of problems a quantum MIS solution is a good fit for, the reader is invited to peruse[^1].
 
 
 ## Getting in touch
