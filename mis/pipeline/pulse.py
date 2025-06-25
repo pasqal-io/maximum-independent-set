@@ -4,15 +4,15 @@ from dataclasses import dataclass
 from abc import ABC, abstractmethod
 
 from networkx.classes.reportviews import DegreeView
-from pulser import InterpolatedWaveform, Pulse as PulserPulse
+from pulser import InterpolatedWaveform, Pulse, Register
 
+from qoolqit._solvers.backends import BaseBackend
+from mis.shared.types import MISInstance
 from mis.pipeline.config import SolverConfig
 
 import numpy as np
 import networkx as nx
 from scipy.spatial.distance import euclidean
-
-from .targets import Pulse, Register
 
 
 @dataclass
@@ -31,7 +31,9 @@ class BasePulseShaper(ABC):
     If unspecified, use the maximal duration for the device."""
 
     @abstractmethod
-    def generate(self, config: SolverConfig, register: Register) -> Pulse:
+    def generate(
+        self, config: SolverConfig, register: Register, backend: BaseBackend, instance: MISInstance
+    ) -> Pulse:
         """
         Generate a pulse based on the problem and the provided register.
 
@@ -45,33 +47,26 @@ class BasePulseShaper(ABC):
         pass
 
 
-@dataclass
-class _Bounds:
-    maximum_amplitude: float
-    final_detuning: float
-
-
 class DefaultPulseShaper(BasePulseShaper):
     """
     A simple pulse shaper.
     """
 
-    def generate(self, config: SolverConfig, register: Register) -> Pulse:
+    def generate(
+        self, config: SolverConfig, register: Register, backend: BaseBackend, instance: MISInstance
+    ) -> Pulse:
         """
         Return a simple constant waveform pulse
         """
 
-        device = config.device
-        assert device is not None
+        device = backend.device()
+        graph = instance.graph  # Guaranteed to be consecutive integers starting from 0.
 
         # Cache mapping node value -> node index.
-        index_by_node = {node: i for (i, node) in enumerate(register.graph.nodes)}
-
-        graph = register.graph
-        pos = register.register.sorted_coords
+        pos = register.sorted_coords
 
         def calculate_edge_interaction(edge: tuple[int, int]) -> float:
-            pos_a, pos_b = pos[index_by_node[edge[0]]], pos[index_by_node[edge[1]]]
+            pos_a, pos_b = pos[edge[0]], pos[edge[1]]
             return float(device.interaction_coeff / (euclidean(pos_a, pos_b) ** 6))
 
         # Interaction strength for connected nodes.
@@ -97,7 +92,7 @@ class DefaultPulseShaper(BasePulseShaper):
         # FIXME: Why 0.8?
 
         # Compute min/max degrees
-        degree = register.graph.degree
+        degree = graph.degree
         assert isinstance(degree, DegreeView)
         d_min = None
         d_max = None
@@ -125,9 +120,9 @@ class DefaultPulseShaper(BasePulseShaper):
             duration_us, [1e-9, maximum_amplitude, 1e-9]
         )  # FIXME: This should be 0, investigate why it's 1e-9
         detuning = InterpolatedWaveform(duration_us, [-final_detuning, 0, final_detuning])
-        rydberg_pulse = PulserPulse(amplitude, detuning, 0)
+        rydberg_pulse = Pulse(amplitude, detuning, 0)
         # Pulser overrides PulserPulse.__new__ with an exotic type, so we need
         # to help mypy.
-        assert isinstance(rydberg_pulse, PulserPulse)
+        assert isinstance(rydberg_pulse, Pulse)
 
-        return Pulse(pulse=rydberg_pulse)
+        return rydberg_pulse

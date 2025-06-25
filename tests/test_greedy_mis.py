@@ -2,7 +2,7 @@ import pytest
 import networkx as nx
 from typing import Callable
 
-from mis.pipeline.backends import QutipBackend
+from mis import BackendConfig
 from mis.solver.solver import MISInstance, MISSolver
 from mis.pipeline.config import SolverConfig, GreedyConfig
 from mis.pipeline.kernelization import Kernelization
@@ -16,13 +16,11 @@ def test_greedy_mis_basic(simple_graph: nx.Graph, use_quantum: bool) -> None:
     """
     Test Greedy MIS solver in both classical and quantum modes with default settings.
     """
-    backend = QutipBackend() if use_quantum else None
-    config = SolverConfig(
-        method=MethodType.GREEDY, use_quantum=use_quantum, backend=backend, greedy=GreedyConfig()
-    )
+    backend = BackendConfig() if use_quantum else None
+    config = SolverConfig(method=MethodType.GREEDY, backend=backend, greedy=GreedyConfig())
     instance = MISInstance(simple_graph)
     solver = MISSolver(instance, config)
-    solutions = solver.solve().result()
+    solutions = solver.solve()
 
     assert len(solutions) > 0
     assert all(isinstance(sol.nodes, list) for sol in solutions)
@@ -53,11 +51,10 @@ def test_greedy_solver_with_pre_post(
             for i, node in enumerate(simple_graph.nodes):
                 simple_graph.nodes[node]["pos"] = (i * 1.0, 0.0)
 
-    backend = QutipBackend() if use_quantum else None
+    backend = BackendConfig() if use_quantum else None
 
     config = SolverConfig(
         method=MethodType.GREEDY,
-        use_quantum=use_quantum,
         backend=backend,
         preprocessor=preprocessor,
         postprocessor=postprocessor,
@@ -66,7 +63,7 @@ def test_greedy_solver_with_pre_post(
 
     instance = MISInstance(simple_graph)
     solver = MISSolver(instance, config)
-    solutions = solver.solve().result()
+    solutions = solver.solve()
 
     assert len(solutions) > 0
     for solution in solutions:
@@ -80,16 +77,15 @@ def test_greedy_mis_long(complex_graph: nx.Graph, use_quantum: bool) -> None:
     """
     Test Greedy MIS solver in both classical and quantum modes with default settings.
     """
-    backend = QutipBackend() if use_quantum else None
+    backend = BackendConfig() if use_quantum else None
     config = SolverConfig(
         method=MethodType.GREEDY,
-        use_quantum=use_quantum,
         backend=backend,
         greedy=GreedyConfig(default_solving_threshold=10),
     )
     instance = MISInstance(complex_graph)
     solver = MISSolver(instance, config)
-    solutions = solver.solve().result()
+    solutions = solver.solve()
 
     assert len(solutions) > 0
     assert all(isinstance(sol.nodes, list) for sol in solutions)
