@@ -1,20 +1,46 @@
 from __future__ import annotations
+from abc import ABC, abstractmethod
+from .types import Objective
 
 import networkx as nx
 
 
-def calculate_weight(graph: nx.Graph, nodes: list[int]) -> float:
-    """
-    Calculates the total weight of a set of nodes in a given MISInstance
+class BaseCostPicker(ABC):
+    @abstractmethod
+    @classmethod
+    def from_node(cls, node: dict[str, float]) -> float:
+        ...
 
-    Args:
-        graph: The graph to check.
-        nodes: List of node indices.
+    @abstractmethod
+    @classmethod
+    def from_subgraph(cls, graph: nx.Graph, nodes: list[int]) -> float:
+        ...
 
-    Returns:
-        Total weight as a float.
-    """
-    return float(sum(graph.nodes[n].get("weight", 1.0) for n in nodes))
+    @classmethod
+    def for_objective(cls, objective: Objective) -> type[BaseCostPicker]:
+        if objective == Objective.MAXIMIZE_SIZE:
+            return UnweightedPicker
+        elif objective == Objective.MAXIMIZE_WEIGHT:
+            return WeightPicker
+
+
+class WeightPicker(BaseCostPicker):
+    @classmethod
+    def from_node(cls, node: dict[str, float]) -> float:
+        return node.get("weight", 1.0)
+
+    @classmethod
+    def from_subgraph(cls, graph: nx.Graph, nodes: list[int]) -> float:
+        return float(sum(cls.from_node(graph.nodes[n]) for n in nodes))
+
+class UnweightedPicker(BaseCostPicker):
+    @classmethod
+    def from_node(cls, node: dict[str, float]) -> float:
+        return 1.0
+
+    @classmethod
+    def from_subgraph(cls, graph: nx.Graph, nodes: list[int]) -> float:
+        return float(len(nodes))
 
 
 def is_independent(graph: nx.Graph, nodes: list[int]) -> bool:

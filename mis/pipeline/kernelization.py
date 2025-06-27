@@ -1,23 +1,27 @@
 import abc
+import typing
 
 import networkx as nx
 from networkx.classes.reportviews import DegreeView
 from mis.pipeline.preprocessor import BasePreprocessor
 from mis.shared.graphs import is_independent
 
+if typing.TYPE_CHECKING:
+    from mis import SolverConfig
 
 class BaseKernelization(BasePreprocessor, abc.ABC):
     """
     Shared base class for kernelization.
     """
 
-    def __init__(self, graph: nx.Graph) -> None:
+    def __init__(self, config: SolverConfig, graph: nx.Graph) -> None:
         # The latest version of the graph.
         # We rewrite it progressively to decrease the number of
         # nodes and edges.
         self.kernel: nx.Graph = graph.copy()
         self.initial_number_of_nodes = self.kernel.number_of_nodes()
         self.rule_application_sequence: list[BaseRebuilder] = []
+        self.config = config
 
         # An index used to generate new node numbers.
         self._new_node_gen_counter: int = 1
