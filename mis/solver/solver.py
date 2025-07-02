@@ -134,7 +134,6 @@ class MISSolverQuantum(BaseSolver):
         Returns:
             Register: Atom layout suitable for quantum hardware.
         """
-        assert self.backend is not None
         config: SolverConfig = self.config
         if self._preprocessed_instance is not None:
             instance = self._preprocessed_instance
@@ -157,7 +156,6 @@ class MISSolverQuantum(BaseSolver):
         Returns:
             Pulse: Pulse schedule for quantum execution.
         """
-        assert self.backend is not None
         self._pulse = self._shaper.generate(
             config=self.config, register=embedding, backend=self.backend, instance=self.instance
         )
@@ -237,7 +235,6 @@ class MISSolverQuantum(BaseSolver):
         Returns:
             Result: The solution from execution.
         """
-        assert self.backend is not None
         program = QuantumProgram(register=register, pulse=pulse, device=self.backend.device())
         counts = self.backend.run(program=program, runs=self.config.runs).counts
         assert isinstance(counts, Counter)  # Not sure why mypy expects that `counts` is `Any`.
@@ -276,6 +273,7 @@ class GreedyMISSolver(BaseSolver):
             # Classical mode
             self.backend = None
         else:
+            # Quantum mode
             self.backend = _extract_backend(config)
         self.solver_factory = solver_factory
         self.layout = self._build_layout()
@@ -291,6 +289,7 @@ class GreedyMISSolver(BaseSolver):
             Layout: The constructed layout.
         """
         if self.backend is None:
+            # A default layout for the classical solver.
             return Layout(data=self.instance, rydberg_blockade=1.0)
         return Layout.from_device(data=self.instance, device=self.backend.device())
 
