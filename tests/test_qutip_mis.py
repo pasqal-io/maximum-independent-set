@@ -3,7 +3,7 @@ import networkx as nx
 import pytest
 
 # Define classical solver configuration
-from mis.pipeline.backends import QutipBackend
+from mis import BackendConfig
 from mis.solver.solver import MISInstance, MISSolver
 from mis.pipeline.config import SolverConfig
 from mis.pipeline.kernelization import Kernelization
@@ -24,7 +24,7 @@ def test_empty_qtip_mis(
     config = SolverConfig(
         method=MethodType.EAGER,
         max_iterations=1,
-        backend=QutipBackend(),
+        backend=BackendConfig(),
         preprocessor=preprocessor,
         postprocessor=postprocessor,
     )
@@ -34,7 +34,7 @@ def test_empty_qtip_mis(
 
     # Run the solver
     solver = MISSolver(instance, config)
-    solutions = solver.solve().result()
+    solutions = solver.solve()
 
     assert len(solutions) == 0
 
@@ -56,7 +56,7 @@ def test_disconnected_qtip_mis(
     config = SolverConfig(
         method=MethodType.EAGER,
         max_iterations=1,
-        backend=QutipBackend(),
+        backend=BackendConfig(),
         preprocessor=preprocessor,
         postprocessor=postprocessor,
     )
@@ -66,7 +66,7 @@ def test_disconnected_qtip_mis(
 
     # Run the solver
     solver = MISSolver(instance, config)
-    solutions = solver.solve().result()
+    solutions = solver.solve()
 
     # Check that at least one of the solutions makes sense.
     found = False
@@ -98,7 +98,7 @@ def test_star_qtip_mis(
     config = SolverConfig(
         method=MethodType.EAGER,
         max_iterations=1,
-        backend=QutipBackend(),
+        backend=BackendConfig(),
         preprocessor=preprocessor,
         postprocessor=postprocessor,
     )
@@ -108,7 +108,7 @@ def test_star_qtip_mis(
 
     # Run the solver
     solver = MISSolver(instance, config)
-    solutions = solver.solve().result()
+    solutions = solver.solve()
 
     # Check that at least one of the solutions makes sense.
     found = False

@@ -11,15 +11,21 @@ import networkx as nx
 from pulser.devices import Device
 
 if TYPE_CHECKING:
-    from mis.pipeline.backends import BaseBackend
     from mis.pipeline.embedder import BaseEmbedder
     from mis.pipeline.pulse import BasePulseShaper
     from mis.pipeline.postprocessor import BasePostprocessor
     from mis.pipeline.preprocessor import BasePreprocessor
 from mis.shared.types import MethodType
 
+from qoolqit._solvers import BackendType  # noqa: F401 # imported for re-export
+from qoolqit._solvers.backends import BaseBackend, BackendConfig
+
 # Modules to be automatically added to the MISSolver namespace
-__all__ = ["SolverConfig"]  # type: ignore
+__all__ = [
+    "BackendConfig",
+    "BackendType",
+    "SolverConfig",
+]
 
 
 def default_preprocessor() -> Callable[[nx.Graph], BasePreprocessor]:
@@ -81,15 +87,7 @@ class SolverConfig:
     Configuration class for setting up solver parameters.
     """
 
-    use_quantum: bool = False
-    """
-    use_quantum (bool): Whether to use quantum hardware or simulation for solving.
-
-    If True, a quantum backend, device, embedder, and pulse shaper will be used to embed and
-    solve the MIS problem. If False, classical logic and heuristics are used entirely.
-    """
-
-    backend: BaseBackend | None = None
+    backend: BaseBackend | BackendConfig | None = None
     """
     backend (optional): Backend configuration to use. If `None`,
     use a non-quantum heuristic solver.
@@ -172,4 +170,12 @@ class SolverConfig:
     """
     If specified, use this for solving the GreedyMIS.
     Needs to be specified when method is GreedyMIS
+    """
+
+    runs: int = 500
+    """
+    When using a quantum backend, how many times we repeat each quantum run.
+    Since quantum executions are non-deterministic, higher numbers increases
+    the reliability of the result, but also the duration until the results are
+    available.
     """

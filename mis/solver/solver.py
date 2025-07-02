@@ -3,17 +3,28 @@ from typing import Counter, Callable
 import networkx as nx
 import copy
 
+from pulser import Pulse, Register
+from qoolqit._solvers.backends import QuantumProgram, get_backend, BackendConfig, BaseBackend
 from mis.shared.types import MISInstance, MISSolution, MethodType
 from mis.pipeline.basesolver import BaseSolver
-from mis.pipeline.execution import Execution
 from mis.pipeline.fixtures import Fixtures
 from mis.pipeline.embedder import DefaultEmbedder
-from mis.pipeline.pulse import BasePulseShaper, DefaultPulseShaper
-from mis.pipeline.targets import Pulse, Register
+from mis.pipeline.pulse import DefaultPulseShaper
 from mis.pipeline.config import SolverConfig
 from mis.solver.greedymapping import GreedyMapping
 from mis.pipeline.layout import Layout
-from mis.shared.graphs import remove_neighborhood, calculate_weight
+from mis.shared.graphs import calculate_weight, remove_neighborhood
+
+
+def _extract_backend(config: SolverConfig) -> BaseBackend:
+    if config.backend is None:
+        raise ValueError("Invalid config.backend: expecting a backend to run in quantum mode")
+    elif isinstance(config.backend, BaseBackend):
+        return config.backend
+    elif isinstance(config.backend, BackendConfig):
+        return get_backend(config.backend)
+    else:
+        raise ValueError("Invalid config.backend")
 
 
 class MISSolver:
@@ -27,33 +38,20 @@ class MISSolver:
             config = SolverConfig()
         self._solver: BaseSolver
         self.instance = instance
-        self.config = self._process_config(config)
+        self.config = config
 
-        if config.use_quantum:
-            if config.method == MethodType.GREEDY:
-                self._solver = GreedyMISSolver(instance, config, MISSolverQuantum)
-            else:
-                self._solver = MISSolverQuantum(instance, config)
+        if config.backend is None:
+            solver_factory: type[BaseSolver] = MISSolverClassical
         else:
-            if config.method == MethodType.GREEDY:
-                self._solver = GreedyMISSolver(instance, config, MISSolverClassical)
-            else:
-                self._solver = MISSolverClassical(instance, config)
+            solver_factory = MISSolverQuantum
+        if config.method == MethodType.GREEDY:
+            self._solver = GreedyMISSolver(instance, config, solver_factory)
+        else:
+            self._solver = solver_factory(instance, config)
 
-    def _process_config(self, config: SolverConfig) -> SolverConfig:
-        if config.use_quantum:
-            assert config.backend is not None
-            if config.embedder is None:  # FIXME: That's a side-effect on config
-                config.embedder = DefaultEmbedder()
-            if config.pulse_shaper is None:
-                config.pulse_shaper = DefaultPulseShaper()
-            if config.device is None:
-                config.device = config.backend.device()
-        return config
-
-    def solve(self) -> Execution[list[MISSolution]]:
+    def solve(self) -> list[MISSolution]:
         if len(self.instance.graph.nodes) == 0:
-            return Execution.success([])
+            return []
         return self._solver.solve()
 
 
@@ -68,15 +66,19 @@ class MISSolverClassical(BaseSolver):
 
     def __init__(self, instance: MISInstance, config: SolverConfig):
         super().__init__(instance, config)
+        if config.backend is not None:
+            raise ValueError(
+                "MISSolverClassical may not be used in non-quantum mode (e.g. if backend=None)"
+            )
         self.fixtures = Fixtures(instance, self.config)
 
-    def solve(self) -> Execution[list[MISSolution]]:
+    def solve(self) -> list[MISSolution]:
         """
         Solve the MIS problem and return a single optimal solution.
         """
 
         if not self.instance.graph.nodes:
-            return Execution.success([])
+            return []
 
         preprocessed_instance = self.fixtures.preprocess()
         if len(preprocessed_instance.graph) == 0:
@@ -95,7 +97,7 @@ class MISSolverClassical(BaseSolver):
         solutions = [self.fixtures.rebuild(sol) for sol in solutions]
         solutions.sort(key=lambda sol: sol.frequency, reverse=True)
 
-        return Execution.success(solutions[: self.config.max_number_of_solutions])
+        return solutions[: self.config.max_number_of_solutions]
 
 
 class MISSolverQuantum(BaseSolver):
@@ -114,14 +116,16 @@ class MISSolverQuantum(BaseSolver):
                 device.
         """
         super().__init__(instance, config)
-
         self.fixtures = Fixtures(instance, self.config)
+        self.backend = _extract_backend(config)
         self._register: Register | None = None
         self._pulse: Pulse | None = None
         self._solution: MISSolution | None = None
         self._preprocessed_instance: MISInstance | None = None
-
-        # FIXME: Normalize embedder.
+        self._embedder = config.embedder if config.embedder is not None else DefaultEmbedder()
+        self._shaper = (
+            config.pulse_shaper if config.pulse_shaper is not None else DefaultPulseShaper()
+        )
 
     def embedding(self) -> Register:
         """
@@ -131,15 +135,14 @@ class MISSolverQuantum(BaseSolver):
             Register: Atom layout suitable for quantum hardware.
         """
         config: SolverConfig = self.config
-        embedder = config.embedder
-        assert embedder is not None
         if self._preprocessed_instance is not None:
             instance = self._preprocessed_instance
         else:
             instance = self.instance
-        self._register = embedder.embed(
+        self._register = self._embedder.embed(
             instance=instance,
             config=config,
+            backend=self.backend,
         )
         return self._register
 
@@ -153,12 +156,9 @@ class MISSolverQuantum(BaseSolver):
         Returns:
             Pulse: Pulse schedule for quantum execution.
         """
-        # FIXME: mypy seems to have an issue here, need to investigate.
-        config: SolverConfig = self.config
-        shaper = config.pulse_shaper
-        assert shaper is not None
-        assert isinstance(shaper, BasePulseShaper)
-        self._pulse = shaper.generate(config=self.config, register=embedding)
+        self._pulse = self._shaper.generate(
+            config=self.config, register=embedding, backend=self.backend, instance=self.instance
+        )
         return self._pulse
 
     def _bitstring_to_nodes(self, bitstring: str) -> list[int]:
@@ -207,7 +207,7 @@ class MISSolverQuantum(BaseSolver):
         rebuilt.sort(key=lambda sol: sol.frequency, reverse=True)
         return rebuilt[: self.config.max_number_of_solutions]
 
-    def solve(self) -> Execution[list[MISSolution]]:
+    def solve(self) -> list[MISSolution]:
         """
         Execute the full quantum pipeline: preprocess, embed, pulse, execute,
             postprocess.
@@ -218,13 +218,13 @@ class MISSolverQuantum(BaseSolver):
         self._preprocessed_instance = self.fixtures.preprocess()
         if len(self._preprocessed_instance.graph) == 0:
             # Edge case: we cannot process an empty register.
-            return Execution.success(self._process(Counter()))
+            return self._process(Counter())
         embedding = self.embedding()
         pulse = self.pulse(embedding)
         execution_result = self.execute(pulse, embedding)
-        return execution_result.map(self._process)
+        return self._process(execution_result)
 
-    def execute(self, pulse: Pulse, embedding: Register) -> Execution[Counter[str]]:
+    def execute(self, pulse: Pulse, register: Register) -> Counter[str]:
         """
         Execute the pulse schedule on the backend and retrieve the solution.
 
@@ -235,7 +235,10 @@ class MISSolverQuantum(BaseSolver):
         Returns:
             Result: The solution from execution.
         """
-        return self.executor.submit_job(pulse, embedding)
+        program = QuantumProgram(register=register, pulse=pulse, device=self.backend.device())
+        counts = self.backend.run(program=program, runs=self.config.runs).counts
+        assert isinstance(counts, Counter)  # Not sure why mypy expects that `counts` is `Any`.
+        return counts
 
 
 class GreedyMISSolver(BaseSolver):
@@ -266,28 +269,31 @@ class GreedyMISSolver(BaseSolver):
                 The solver factory (used for solving subproblems recursively).
         """
         super().__init__(instance, config)
-
+        if config.backend is None:
+            # Classical mode
+            self.backend = None
+        else:
+            # Quantum mode
+            self.backend = _extract_backend(config)
         self.solver_factory = solver_factory
         self.layout = self._build_layout()
 
     def _build_layout(self) -> Layout:
         """
         Constructs the Layout object based on config:
-        - Uses device information if use_quantum is True.
-        - If use_quantum is False, uses default distance 1.0 for layout generation.
+
+        - If this GreedyMISSolver is configured for quantum, uses the device information.
+        - Otherwise, use a default distance 1.0 for layout generation.
 
         Returns:
             Layout: The constructed layout.
         """
-        if self.config.use_quantum:
-            if self.config.device is not None:
-                return Layout.from_device(data=self.instance, device=self.config.device)
-            else:
-                raise ValueError("When use_quantum = True, a backend must be provided in config.")
-        elif not self.config.use_quantum:
-            return Layout(data=self.instance, rydberg_blockade=1.0)  # type: ignore[union-attr]
+        if self.backend is None:
+            # A default layout for the classical solver.
+            return Layout(data=self.instance, rydberg_blockade=1.0)
+        return Layout.from_device(data=self.instance, device=self.backend.device())
 
-    def solve(self) -> Execution[list[MISSolution]]:
+    def solve(self) -> list[MISSolution]:
         """
                 Entry point for solving the full MISInstance using recursive greedy decomposition.
                 Greedy MIS Solver (recursive MIS via subgraph decomposition)
@@ -318,7 +324,7 @@ class GreedyMISSolver(BaseSolver):
         """
         return self._solve_recursive(self.instance)
 
-    def _solve_recursive(self, instance: MISInstance) -> Execution[list[MISSolution]]:
+    def _solve_recursive(self, instance: MISInstance) -> list[MISSolution]:
         """
         Recursively solves an MISInstance:
         - Uses exact backtracking for small subgraphs.
@@ -348,7 +354,7 @@ class GreedyMISSolver(BaseSolver):
             # this forces the computation to be in sync.
             # TODO: Align with async SDK - when it is available in the future.
             # results in a solution in forms of layout nodes
-            results = solver.solve().result()
+            results = solver.solve()
 
             # inverse mappings from from layout nodes - to - graph nodes
             inv_map = {v: k for k, v in mapping.items()}
@@ -362,8 +368,7 @@ class GreedyMISSolver(BaseSolver):
             for current_mis in current_mis_bag:
                 reduced_graph = remove_neighborhood(graph, current_mis)
                 remainder_instance = MISInstance(reduced_graph)
-                remainder_exec = self._solve_recursive(remainder_instance)
-                remainder_solutions = remainder_exec.result()
+                remainder_solutions = self._solve_recursive(remainder_instance)
 
                 for rem_sol in remainder_solutions:
                     combined_nodes = current_mis + rem_sol.nodes
@@ -375,8 +380,8 @@ class GreedyMISSolver(BaseSolver):
                         )
 
         if best_solution is None:
-            return Execution.success([MISSolution(instance=instance, nodes=[], frequency=0)])
-        return Execution.success([best_solution])
+            return [MISSolution(instance=instance, nodes=[], frequency=0)]
+        return [best_solution]
 
     def _generate_subgraphs(self, graph: nx.Graph) -> list[dict[int, int]]:
         """

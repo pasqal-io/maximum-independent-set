@@ -8,10 +8,7 @@ new solvers.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-
 from mis.pipeline.config import SolverConfig
-
-from .executor import Executor, Execution
 from mis.shared.types import MISInstance, MISSolution
 
 
@@ -36,10 +33,9 @@ class BaseSolver(ABC):
         """
         self.instance: MISInstance = instance
         self.config: SolverConfig = config
-        self.executor: Executor = Executor(config=self.config)
 
     @abstractmethod
-    def solve(self) -> Execution[list[MISSolution]]:
+    def solve(self) -> list[MISSolution]:
         """
         Solve the given MISinstance.
 

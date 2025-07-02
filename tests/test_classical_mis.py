@@ -36,7 +36,7 @@ def test_for_dimacs_32_node_graph(
 
     # Run the solver
     solver = MISSolver(dataset.instance, config)
-    solutions = solver.solve().result()
+    solutions = solver.solve()
 
     # Check the solution is genuinely an independent set.
     kernel = Kernelization(graph=dataset.instance.original_graph)
@@ -76,7 +76,7 @@ def test_for_dimacs_64_node_graph(
 
     # Run the solver
     solver = MISSolver(dataset.instance, config)
-    solutions = solver.solve().result()
+    solutions = solver.solve()
 
     # Check the solution is genuinely an independent set.
     kernel = Kernelization(graph=dataset.instance.original_graph)
@@ -117,7 +117,7 @@ def test_empty_mis(
 
     # Run the solver
     solver = MISSolver(instance, config)
-    solutions = solver.solve().result()
+    solutions = solver.solve()
 
     assert len(solutions) == 0
 
@@ -148,7 +148,7 @@ def test_disconnected_mis(
 
     # Run the solver
     solver = MISSolver(instance, config)
-    solutions = solver.solve().result()
+    solutions = solver.solve()
 
     assert len(solutions) == 1
     assert len(solutions[0].nodes) == SIZE
@@ -182,7 +182,7 @@ def test_star_mis(
 
     # Run the solver
     solver = MISSolver(instance, config)
-    solutions = solver.solve().result()
+    solutions = solver.solve()
 
     assert len(solutions) == 1
     node_indices = solutions[0].node_indices
@@ -228,7 +228,7 @@ def test_dimacs_mis(
     )
 
     solver = MISSolver(dataset.instance, config)
-    solutions = solver.solve().result()
+    solutions = solver.solve()
 
     assert dataset.instance.graph.number_of_nodes() == num_nodes
     assert dataset.instance.graph.number_of_edges() == num_edges
