@@ -8,9 +8,6 @@ new solvers.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-
-from qoolqit._solvers.backends import get_backend, BackendConfig, BaseBackend
-
 from mis.pipeline.config import SolverConfig
 from mis.shared.types import MISInstance, MISSolution
 
@@ -36,14 +33,6 @@ class BaseSolver(ABC):
         """
         self.instance: MISInstance = instance
         self.config: SolverConfig = config
-        if config.backend is None:
-            self.backend = None
-        elif isinstance(config.backend, BaseBackend):
-            self.backend = config.backend
-        elif isinstance(config.backend, BackendConfig):
-            self.backend = get_backend(config.backend)
-        else:
-            raise ValueError("Invalid config.backend")
 
     @abstractmethod
     def solve(self) -> list[MISSolution]:

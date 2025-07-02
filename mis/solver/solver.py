@@ -4,7 +4,7 @@ import networkx as nx
 import copy
 
 from pulser import Pulse, Register
-from qoolqit._solvers.backends import QuantumProgram
+from qoolqit._solvers.backends import QuantumProgram, get_backend, BackendConfig, BaseBackend
 from mis.shared.types import MISInstance, MISSolution, MethodType
 from mis.pipeline.basesolver import BaseSolver
 from mis.pipeline.fixtures import Fixtures
@@ -14,6 +14,17 @@ from mis.pipeline.config import SolverConfig
 from mis.solver.greedymapping import GreedyMapping
 from mis.pipeline.layout import Layout
 from mis.shared.graphs import calculate_weight, remove_neighborhood
+
+
+def _extract_backend(config: SolverConfig) -> BaseBackend:
+    if config.backend is None:
+        raise ValueError("Invalid config.backend: expecting a backend to run in quantum mode")
+    elif isinstance(config.backend, BaseBackend):
+        return config.backend
+    elif isinstance(config.backend, BackendConfig):
+        return get_backend(config.backend)
+    else:
+        raise ValueError("Invalid config.backend")
 
 
 class MISSolver:
@@ -55,7 +66,10 @@ class MISSolverClassical(BaseSolver):
 
     def __init__(self, instance: MISInstance, config: SolverConfig):
         super().__init__(instance, config)
-        assert self.backend is None
+        if config.backend is not None:
+            raise ValueError(
+                "MISSolverClassical may not be used in non-quantum mode (e.g. if backend=None)"
+            )
         self.fixtures = Fixtures(instance, self.config)
 
     def solve(self) -> list[MISSolution]:
@@ -102,8 +116,8 @@ class MISSolverQuantum(BaseSolver):
                 device.
         """
         super().__init__(instance, config)
-        assert self.backend is not None
         self.fixtures = Fixtures(instance, self.config)
+        self.backend = _extract_backend(config)
         self._register: Register | None = None
         self._pulse: Pulse | None = None
         self._solution: MISSolution | None = None
@@ -258,7 +272,11 @@ class GreedyMISSolver(BaseSolver):
                 The solver factory (used for solving subproblems recursively).
         """
         super().__init__(instance, config)
-
+        if config.backend is None:
+            # Classical mode
+            self.backend = None
+        else:
+            self.backend = _extract_backend(config)
         self.solver_factory = solver_factory
         self.layout = self._build_layout()
 
