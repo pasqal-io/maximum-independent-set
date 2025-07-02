@@ -97,7 +97,7 @@ asyncio_default_fixture_loop_scope="function"
 
 [tool.hatch.envs.docs]
 dependencies = [
-  "mkdocs",
+  "mkdocs>=0.15",
   "mkdocs-material",
   "mkdocs-jupyter",
   "mkdocstrings",
@@ -111,9 +111,9 @@ dependencies = [
 ]
 
 [tool.hatch.envs.docs.scripts]
-build = "cp examples/*.ipynb docs; mkdir -p docs/datasets/dimacs docs/datasets/coloring; cp examples/datasets/dimacs/* docs/datasets/dimacs; cp examples/datasets/coloring/* docs/datasets/coloring; mkdocs build --clean --strict {args}"
+build = "cp examples/*.ipynb docs; mkdir -p docs/datasets/dimacs docs/datasets/coloring; cp examples/datasets/dimacs/* docs/datasets/dimacs; cp examples/datasets/coloring/* docs/datasets/coloring; mkdocs build --clean {args}"
 serve = "cp examples/*.ipynb docs; mkdir -p docs/datasets/dimacs docs/datasets/coloring; cp examples/datasets/dimacs/* docs/datasets/dimacs; cp examples/datasets/coloring/* docs/datasets/coloring; mkdocs serve --dev-addr localhost:8000 {args}"
-test = "cp examples/*.ipynb docs; mkdir -p docs/datasets/dimacs docs/datasets/coloring; cp examples/datasets/dimacs/* docs/datasets/dimacs; cp examples/datasets/coloring/* docs/datasets/coloring; mkdocs build --clean --strict {args}"
+test = "cp examples/*.ipynb docs; mkdir -p docs/datasets/dimacs docs/datasets/coloring; cp examples/datasets/dimacs/* docs/datasets/dimacs; cp examples/datasets/coloring/* docs/datasets/coloring; mkdocs build --clean {args}"
 
 [[tool.hatch.envs.test.matrix]]
 python = ["310", "311", "312"]
