@@ -99,7 +99,9 @@ class MISSolverClassical(BaseSolver):
         solutions = self.fixtures.postprocess([partial_solution])
         solutions = [self.fixtures.rebuild(sol) for sol in solutions]
         solutions.sort(key=lambda sol: sol.frequency, reverse=True)
-        logger.info(f"Number of MIS solutions found classically: {len(solutions)}. Returning up to {self.config.max_number_of_solutions} solutions.")
+        logger.info(
+            f"Number of MIS solutions found classically: {len(solutions)}. Returning up to {self.config.max_number_of_solutions} solutions."
+        )
         return solutions[: self.config.max_number_of_solutions]
 
 
@@ -226,7 +228,9 @@ class MISSolverQuantum(BaseSolver):
         pulse = self.pulse(embedding)
         execution_result = self.execute(pulse, embedding)
         solutions = self._process(execution_result)
-        logger.info(f"Number of MIS solutions found quantumly: {len(solutions)}. Returning up to {self.config.max_number_of_solutions} solutions.")
+        logger.info(
+            f"Number of MIS solutions found quantumly: {len(solutions)}. Returning up to {self.config.max_number_of_solutions} solutions."
+        )
         return solutions[: self.config.max_number_of_solutions]
 
     def execute(self, pulse: Pulse, register: Register) -> Counter[str]:
