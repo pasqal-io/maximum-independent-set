@@ -81,7 +81,7 @@ class MISSolverClassical(BaseSolver):
         """
 
         if not self.instance.graph.nodes:
-            return []
+           return []
 
         preprocessed_instance = self.fixtures.preprocess()
         if len(preprocessed_instance.graph) == 0:
