@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Counter, Callable
 import networkx as nx
 import copy
+import logging
 
 from pulser import Pulse, Register
 from qoolqit._solvers.backends import QuantumProgram, get_backend, BackendConfig, BaseBackend
@@ -14,6 +15,8 @@ from mis.pipeline.config import SolverConfig
 from mis.solver.greedymapping import GreedyMapping
 from mis.pipeline.layout import Layout
 from mis.shared.graphs import calculate_weight, remove_neighborhood
+
+logger = logging.getLogger(__name__)
 
 
 def _extract_backend(config: SolverConfig) -> BaseBackend:
@@ -93,6 +96,7 @@ class MISSolverClassical(BaseSolver):
                 nodes=list(mis),
             )
 
+        logger.info(f"Number of MIS solutions found classically: {partial_solution.size}.")
         solutions = self.fixtures.postprocess([partial_solution])
         solutions = [self.fixtures.rebuild(sol) for sol in solutions]
         solutions.sort(key=lambda sol: sol.frequency, reverse=True)
