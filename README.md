@@ -15,6 +15,8 @@ This library lets users treat the solver as a **black box**: feed in a graph of 
 
 Users setting their first steps into quantum computing will learn how to implement the core algorithm in a few simple steps and run it using the Pasqal Neutral Atom QPU. More experienced users will find this library to provide the right environment to explore new ideas - both in terms of methodologies and data domain - while always interacting with a simple and intuitive QPU interface.
 
+This library is actively used to solve real-world projects. We have applied it to optimize the layout and costs of [5G network deployments](https://www.pasqal.com/blog/reducing-the-costs-of-deploying-a-5g-network-with-a-hybrid-classical-quantum-approach/), [schedule satellite missions with Thales](https://www.pasqal.com/success-story/thales/), and [improve charging network planning for electric vehicles with EDF](https://www.pasqal.com/success-story/edf/). These case studies highlight how quantum-based MIS solutions can tackle complex challenges across telecom, aerospace and energy sectors.
+
 ## Installation
 
 ### Using `hatch`, `uv` or any pyproject-compatible Python manager
