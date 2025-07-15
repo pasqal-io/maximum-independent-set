@@ -44,7 +44,7 @@ class MISInstance:
         nodes: list[int] | None = None,
         node_size: int = 600,
         highlight_color: str = "darkgreen",
-        font_family: str = "Century Gothic",
+        font_family: str = "serif",
     ) -> None:
         """
         Draw instance graph with highlighted nodes.
@@ -143,7 +143,7 @@ class MISSolution:
         self,
         node_size: int = 600,
         highlight_color: str = "darkgreen",
-        font_family: str = "Century Gothic",
+        font_family: str = "serif",
     ) -> None:
         """
         Draw instance graph with solution nodes highlighted.
