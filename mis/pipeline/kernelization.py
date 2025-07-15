@@ -7,7 +7,7 @@ from typing import Any, cast
 import networkx as nx
 from networkx.classes.reportviews import DegreeView
 from mis.pipeline.preprocessor import BasePreprocessor
-from mis.shared.graphs import is_independent, BaseCostPicker, ClosedNeighborhood, closed_neighborhood
+from mis.shared.graphs import is_independent, BaseCostPicker, closed_neighborhood
 from mis.shared.types import Objective
 
 if typing.TYPE_CHECKING:
@@ -23,6 +23,22 @@ class _Twin:
     node: int
     category: _TwinCategory
     neighbours: list[int]
+
+class Kernelization(BasePreprocessor):
+    def __init__(self, config: SolverConfig, graph: nx.Graph) -> None:
+        if config.objective == Objective.MAXIMIZE_SIZE:
+            self._kernelizer = UnweightedKernelization(config, graph)
+        elif config.objective == Objective.MAXIMIZE_WEIGHT:
+            self._kernelizer = WeightedKernelization(config, graph)
+        else:
+            raise ValueError(f"invalid objective {config.objective}")
+
+    def preprocess(self) -> nx.Graph:
+        return self._kernelizer.preprocess()
+
+    def rebuild(self, partial_solution: set[int]) -> set[int]:
+        return self._kernelizer.rebuild(partial_solution)
+
 
 class BaseKernelization(BasePreprocessor, abc.ABC):
     """
@@ -90,7 +106,11 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         return True
 
     @abc.abstractmethod
-    def is_maximum(self, node: int, clique: list[int]) -> bool:
+    def is_maximum(self, node: int, neighbours: list[int]) -> bool:
+        """
+        Determine whether any neighbour of a node has a weight strictly
+        greater than that node. 
+        """
         ...
 
     def is_isolated_and_maximum(self, node: int) -> bool:
@@ -120,16 +140,15 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         # self-loop.
         while (kernel_size_start := self.kernel.number_of_nodes()) > 0:
             self.search_rule_neighborhood_removal()
-            self.search_rule_isolated_node_removal()
+            self.search_rule_isolated_node_removal() # TODO: In the original, the weighted kernelizer has essentially two copies of this rule, once with weight and once without. Double-check.
             self.search_rule_twin_reduction()
             self.search_rule_node_fold()
             self.search_rule_unconfined_and_diamond()
-
-            self.search_rule_isolated_weight_transfer()
-            self.search_rule_weighted_domination() #TODO
+            self.search_rule_domination()
 
             kernel_size_end: int = self.kernel.number_of_nodes()
-            if kernel_size_start - kernel_size_end == 0:
+            assert kernel_size_end <= kernel_size_start # Just in case.
+            if kernel_size_start == kernel_size_end:
                 # We didn't find any rule to apply, time to stop.
                 break
         return self.kernel
@@ -141,8 +160,17 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
 
     # -----------------isolated_node_removal---------------------------
     @abc.abstractmethod
-    def apply_rule_isolated_node_removal(self, isolated: int) -> None:
+    def get_nodes_with_strictly_higher_weight(self, node: int, neighborhood: list[int]) -> list[int]:
         ...
+
+    def apply_rule_isolated_node_removal(self, isolated: int) -> None:
+        neighborhood = list(self.kernel.neighbors(isolated))
+        higher = self.get_nodes_with_strictly_higher_weight(isolated, neighborhood)
+        rule_app = RebuilderIsolatedNodeRemoval(isolated, higher)
+        self.rule_application_sequence.append(rule_app)
+        self.kernel.remove_nodes_from(neighborhood)
+        self.kernel.remove_node(isolated)
+
 
     def search_rule_isolated_node_removal(self) -> None:
         """
@@ -331,6 +359,12 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
     def search_rule_unconfined_and_diamond(self) -> None:
         ...
 
+    # -----------------domination---------------------------
+    @abc.abstractmethod
+    def search_rule_domination(self) -> None:
+        ...
+
+
 class UnweightedKernelization(BaseKernelization):
     def add_node(self, weight: float) -> int:
         assert weight == 1.0
@@ -339,9 +373,18 @@ class UnweightedKernelization(BaseKernelization):
         self.kernel.add_node(node)
         return node
 
-    def is_maximum(self, node: int, clique: list[int]) -> bool:
+    def is_maximum(self, node: int, neighbours: list[int]) -> bool:
+        """
+        Since all nodes have the same weight, no node has a strictly higher weight.        
+        """
         return True
 
+    # -----------------isolated node removal--------------------
+    def get_nodes_with_strictly_higher_weight(self, node: int, neighborhood: list[int]) -> list[int]:
+        """
+        Since all nodes have the same weight, no node has a strictly higher weight.
+        """
+        return []
 
     # -----------------neighborhood removal---------------------
 
@@ -434,6 +477,10 @@ class UnweightedKernelization(BaseKernelization):
                 # and |N(u)\N[S]| is minimized
                 go_to_next_loop = self.unconfined_loop(v, S, neighbors_S)
 
+    # -----------------domination---------------------------
+    def search_rule_domination(self) -> None:
+        # Since all weights are identical, there can be no domination.
+        return None
 
 class WeightedKernelization(BaseKernelization):
     """
@@ -454,14 +501,24 @@ class WeightedKernelization(BaseKernelization):
         self.cost_picker.set_node_weight(self.kernel.nodes[node], weight)
         return node
 
-    def is_maximum(self, node: int, clique: list[int]) -> bool:
+    def is_maximum(self, node: int, neighbours: list[int]) -> bool:
         # Note: Un unweighted mode, no node in the neighborhood can have a weight
         # strictly greater than `node`, so we skip this check entirely.
         max: float = self.cost_picker.node_weight(self.kernel.nodes[node])
-        for v in clique:
+        for v in neighbours:
             if v != node and self.cost_picker.node_weight(self.kernel.nodes[v]) > max:
                 return False
         return True
+
+    # -----------------isolated node removal--------------------
+    def get_nodes_with_strictly_higher_weight(self, node: int, neighborhood: list[int]) -> list[int]:
+        pivot = self.cost_picker.node_weight(self.kernel.nodes[node])
+        result = []
+        for n in neighborhood:
+            if self.cost_picker.node_weight(self.kernel.nodes[n]) > pivot:
+                result.append(pivot)
+        return result
+
 
     # -----------------unconfined reduction---------------------------
 
@@ -501,15 +558,6 @@ class WeightedKernelization(BaseKernelization):
             neighborhood_weight_sum = self.neighborhood_weight(node)
             if node_weight >= neighborhood_weight_sum:
                 self.apply_rule_neighborhood_removal(node)
-
-    # -----------------isolated_node_removal---------------------------
-    def apply_rule_isolated_node_removal(self, isolated: int) -> None:
-        rule_app = RebuilderIsolatedNodeRemoval(isolated)
-        self.rule_application_sequence.append(rule_app)
-        neighborhood = list(self.kernel.neighbors(isolated))
-        self.kernel.remove_nodes_from(neighborhood)
-        self.kernel.remove_node(isolated)
-
 
     def get_lower_higher_weights(self, isolated: int, neighborhood: list[int]) -> tuple[list[int], list[int]]:
         isolated_weight: float = self.cost_picker.node_weight(self.kernel.nodes[isolated])
@@ -566,26 +614,32 @@ class WeightedKernelization(BaseKernelization):
             return _TwinCategory.CannotRemove
 
 
-    # -----------------isolated_weight_transfer---------------------------
+     # -----------------domination---------------------------
 
+    def find_dominated(self) -> int | None:
+        # FIXME: As it stands, this code will always return `None`.
+        for u in self.kernel.nodes():
+            neighbours_u = set(self.kernel.neighbors(u))
+            for v in neighbours_u:
+                assert u != v, "At this stage, the graph shouldn't contain any self-loop"
+                neighbours_v = set(self.kernel.neighbors(v))
+                if neighbours_u >= neighbours_v:
+                    w_u = self.cost_picker.node_weight(self.kernel.nodes[u])
+                    w_v = self.cost_picker.node_weight(self.kernel.nodes[v])
+                    if w_u <= w_v:
+                        return u
+        return None
     
-    def apply_rule_isolated_weight_transfer(self, isolated: int) -> None:
-        isolated_weight: float = self.cost_picker.node_weight(self.kernel.nodes[isolated])
-        neighborhood: list[int] = list(self.kernel.neighbors(isolated))
-        lower, higher = self.get_lower_higher_weights(isolated, neighborhood)
-        rule_app: ra.Rule_application_isolated_weight_transfer = ra.Rule_application_isolated_weight_transfer(isolated, higher)
+    def apply_rule_domination(self, u: int) -> None:
+        rule_app: ra.Rule_application_weighted_domination = ra.Rule_application_weighted_domination()
         self.rule_application_sequence.append(rule_app)
-        for h in higher:
-            self.cost_picker.node_delta(self.kernel.nodes[h], -isolated_weight)
-        self.kernel.remove_nodes_from(lower)
-        self.kernel.remove_node(isolated)
+        self.kernel.remove_node(u)
 
-    def search_rule_isolated_weight_transfer(self):
-        for node in list(self.kernel.nodes()):
-            if not self.kernel.has_node(node):
-                continue
-            if self.is_isolated(node):
-                self.apply_rule_isolated_weight_transfer(node)
+
+    def search_rule_domination(self) -> None:
+        while (u := self.find_dominated()) is not None:
+            self.apply_rule_domination(u)
+            
 
 
 class BaseRebuilder(abc.ABC):
@@ -612,11 +666,13 @@ class BaseRebuilder(abc.ABC):
 
 
 class RebuilderIsolatedNodeRemoval(BaseRebuilder):
-    def __init__(self, isolated: int):
+    def __init__(self, isolated: int, higher: list[int]):
         self.isolated = isolated
+        self.higher = higher
 
     def rebuild(self, partial_solution: set[int]) -> None:
-        partial_solution.add(self.isolated)
+        if len(partial_solution & set(self.higher)) == 0:
+            partial_solution.add(self.isolated)
 
 
 class RebuilderNodeFolding(BaseRebuilder):
