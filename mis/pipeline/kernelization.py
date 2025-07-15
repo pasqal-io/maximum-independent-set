@@ -1,13 +1,28 @@
 import abc
+from dataclasses import dataclass
+from enum import Enum
 import typing
+from typing import Any, cast
 
 import networkx as nx
 from networkx.classes.reportviews import DegreeView
 from mis.pipeline.preprocessor import BasePreprocessor
-from mis.shared.graphs import is_independent
+from mis.shared.graphs import is_independent, BaseCostPicker, ClosedNeighborhood, closed_neighborhood
+from mis.shared.types import Objective
 
 if typing.TYPE_CHECKING:
     from mis import SolverConfig
+
+class _TwinCategory(Enum, str):
+    Dependency = "DEPENDENCY"
+    Independent = "INDEPENDENT"
+    CannotRemove = "CANNOT-REMOVE"
+
+@dataclass
+class _Twin:
+    node: int
+    category: _TwinCategory
+    neighbours: list[int]
 
 class BaseKernelization(BasePreprocessor, abc.ABC):
     """
@@ -15,6 +30,8 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
     """
 
     def __init__(self, config: SolverConfig, graph: nx.Graph) -> None:
+        self.cost_picker = BaseCostPicker.for_objective(config.objective)
+
         # The latest version of the graph.
         # We rewrite it progressively to decrease the number of
         # nodes and edges.
@@ -22,6 +39,7 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         self.initial_number_of_nodes = self.kernel.number_of_nodes()
         self.rule_application_sequence: list[BaseRebuilder] = []
         self.config = config
+        self.is_weighted_mode = config.objective == Objective.MAXIMIZE_WEIGHT
 
         # An index used to generate new node numbers.
         self._new_node_gen_counter: int = 1
@@ -35,19 +53,6 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
             if self.kernel.has_edge(node, node):
                 self.kernel.remove_node(node)
 
-    @abc.abstractmethod
-    def preprocess(self) -> nx.Graph:
-        # Invariant: from this point, `self.kernel` does not contain any
-        # self-loop.
-        ...
-
-    """
-    Apply all the rules, in every possible order, until the graph cannot
-    be reduced further.
-
-    This method is left abstract as the list of rules may differ for
-    various kinds of graphs (e.g. unweighted vs. weighted).
-    """
 
     def rebuild(self, partial_solution: set[int]) -> set[int]:
         """
@@ -84,62 +89,60 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
                     return False
         return True
 
-    def is_isolated(self, node: int) -> bool:
+    @abc.abstractmethod
+    def is_maximum(self, node: int, clique: list[int]) -> bool:
+        ...
+
+    def is_isolated_and_maximum(self, node: int) -> bool:
         """
-        Determine whether a node is isolated, i.e. this node + its neighbours
-        represent a clique.
+        Determine whether a node is isolated and maximum, i.e.
+        1. this node + its neighbours represent a clique; AND
+        2. no node in the neighborhood has a weight strictly greater than `node`.
         """
-        closed_neighborhood: list[int] = list(self.kernel.neighbors(node))
-        closed_neighborhood.append(node)
-        if self.is_subclique(nodes=closed_neighborhood):
-            return True
-        return False
+        neighborhood = closed_neighborhood(self.kernel, node)
+        if not self.is_subclique(nodes=neighborhood):
+            return False
+        return self.is_maximum(node, neighborhood)
 
-    def _add_node(self) -> int:
+    @abc.abstractmethod
+    def add_node(self, weight: float) -> int:
         """
-        Add a new node with a unique index.
+        Add a new node with a unique index and weight.
         """
-        node = self._new_node_gen_counter
-        self._new_node_gen_counter += 1
-        self.kernel.add_node(node)
-        return node
-
-
-class Kernelization(BaseKernelization):
-    """
-    Apply well-known transformations to the graph to reduce its size without
-    compromising the result.
-
-    This algorithm is adapted from e.g.:
-    https://schulzchristian.github.io/thesis/masterarbeit_demian_hespe.pdf
-
-    Unless you are experimenting with your own preprocessors, you should
-    probably use Kernelization in your pipeline.
-    """
+        ...
 
     def preprocess(self) -> nx.Graph:
         """
         Apply all rules, exhaustively, until the graph cannot be reduced
         further, storing the rules for rebuilding after the fact.
         """
+        # Invariant: from this point, `self.kernel` does not contain any
+        # self-loop.
         while (kernel_size_start := self.kernel.number_of_nodes()) > 0:
+            self.search_rule_neighborhood_removal()
             self.search_rule_isolated_node_removal()
             self.search_rule_twin_reduction()
             self.search_rule_node_fold()
             self.search_rule_unconfined_and_diamond()
+
+            self.search_rule_isolated_weight_transfer()
+            self.search_rule_weighted_domination() #TODO
+
             kernel_size_end: int = self.kernel.number_of_nodes()
             if kernel_size_start - kernel_size_end == 0:
                 # We didn't find any rule to apply, time to stop.
                 break
         return self.kernel
 
+    # -----------------neighborhood_removal---------------------------
+    @abc.abstractmethod
+    def search_rule_neighborhood_removal(self) -> None:
+        ...
+
     # -----------------isolated_node_removal---------------------------
+    @abc.abstractmethod
     def apply_rule_isolated_node_removal(self, isolated: int) -> None:
-        rule_app = RebuilderIsolatedNodeRemoval(isolated)
-        self.rule_application_sequence.append(rule_app)
-        neighborhood = list(self.kernel.neighbors(isolated))
-        self.kernel.remove_nodes_from(neighborhood)
-        self.kernel.remove_node(isolated)
+        ...
 
     def search_rule_isolated_node_removal(self) -> None:
         """
@@ -154,10 +157,12 @@ class Kernelization(BaseKernelization):
                 # been invalidated but our operation caused the node to
                 # disappear from `self.kernel`.
                 continue
-            if self.is_isolated(node):
+
+            if self.is_isolated_and_maximum(node):
                 self.apply_rule_isolated_node_removal(node)
 
-    # -----------------unweighted_node_folding---------------------------
+
+    # -----------------node_fold---------------------------
 
     def _fold_three(self, v: int, u: int, x: int, v_prime: int) -> None:
         """
@@ -168,9 +173,9 @@ class Kernelization(BaseKernelization):
             self.kernel.add_edge(v_prime, node)
         self.kernel.remove_nodes_from([v, u, x])
 
-    def apply_rule_node_fold(self, v: int, u: int, x: int) -> None:
-        v_prime = self._add_node()
-        rule_app = RebuilderNodeFolding(v, u, x, v_prime)
+    def apply_rule_node_fold(self, v: Any, w_v: float, u: Any, w_u: float, x: Any, w_x: float) -> None:
+        v_prime = self.add_node(w_u + w_x - w_v)
+        rule_app = RebuilderNodeFolding(v, u, x, v_prime) # FIXME: Adapt?
         self.rule_application_sequence.append(rule_app)
         self._fold_three(v, u, x, v_prime)
 
@@ -195,7 +200,170 @@ class Kernelization(BaseKernelization):
                 if self.kernel.degree(v) == 2:
                     [u, x] = self.kernel.neighbors(v)
                     if not self.kernel.has_edge(u, x):
-                        self.apply_rule_node_fold(v, u, x)
+                        w_u = self.cost_picker.node_weight(u)
+                        w_v = self.cost_picker.node_weight(v)
+                        w_x = self.cost_picker.node_weight(x)
+                        if w_v >= w_u + w_x:
+                            # Always false in unweighted mode.
+                            # Cannot fold.
+                            continue
+                        if w_v < w_u:
+                            # Always false in unweighted mode.
+                            # Cannot fold.
+                            continue
+                        if w_v < w_x:
+                            # Always false in unweighted mode.
+                            # Cannot fold.
+                            continue
+                        self.apply_rule_node_fold(
+                            v=v, w_v=w_v,
+                            u=u, w_u=w_u,
+                            x=x, w_x=w_x)
+
+    # -----------------twin reduction---------------------------
+    @abc.abstractmethod
+    def is_node_twinnable(self, v: int) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def twin_category(self, u: int, v: int, neighbours: list[int]) -> _TwinCategory:
+        """
+        Arguments:
+            - u, v: two distinct nodes with the same set of neighbours
+            - neighbours: the neighbours of u
+        """
+        ...
+
+    def find_twin(self, v: int) -> _Twin | None:
+        """
+        Find a twin of a node, i.e. another node with the same
+        neighbours.
+        """
+        if not self.is_node_twinnable(v):
+            return None
+        neighbors_v: set[int] = set(self.kernel.neighbors(v)) # FIXME: We could factorize this.
+
+        for u in self.kernel.nodes():
+            # Note: It might be sufficient to walk through
+            # the neighbours of neighbours of neighbours of v.
+            # Unclear whether this would be faster.
+            if u == v:
+                continue
+            if not self.kernel.has_node(u):
+                # FIXME: Can this happen?
+                continue
+            if not self.kernel.has_node(v):
+                # FIXME: Can this happen?
+                continue
+            neighbors_u: set[int] = set(self.kernel.neighbors(u))
+            if neighbors_u == neighbors_v:
+                # Note: Since there are no self-loops, we can deduce
+                # that U and V are also not neighbours.
+                category= self.twin_category(u, v, list(neighbors_u))
+                if category == _TwinCategory.CannotRemove:
+                    continue
+                return _Twin(
+                    node=int(u),
+                    neighbours=list(neighbors_u),
+                    category=category)
+        return None
+
+    def fold_twin(self, v_prime: int, u: int, v: int, u_neighbours: list[int]) -> None:
+        neighborhood_u_neighbours: list[int] = list(
+            set().union(*[set(self.kernel.neighbors(node)) for node in u_neighbours])
+        )
+        for neigh in neighborhood_u_neighbours:
+            self.kernel.add_edge(v_prime, neigh)
+        self.kernel.remove_nodes_from([u, v])
+        self.kernel.remove_nodes_from(u_neighbours)
+
+    def apply_rule_twin_has_dependency(self, v: int, u: int, neighbors_u: list[int]) -> None:
+        rule_app = RebuilderTwinHasDependency(v, u)
+        self.rule_application_sequence.append(rule_app)
+        self.kernel.remove_nodes_from(neighbors_u)
+        self.kernel.remove_nodes_from([u, v])
+
+    def apply_rule_twin_independent(self, u: int, v: int, neighbours: list[int]) -> None:
+        """
+        Arguments:
+            - u, v: two distinct nodes with the same set of neighbours
+            - neighbours: the neighbours of u (which are also the neighbours of v)
+        """
+        w_u = self.cost_picker.node_weight(self.kernel.nodes[u])
+        w_v = self.cost_picker.node_weight(self.kernel.nodes[v])
+        w_u_neighbours_sum = self.cost_picker.subgraph_weight(self.kernel, neighbours)
+        v_prime = self.add_node(w_u_neighbours_sum - (w_u + w_v))
+        rule_app_B = RebuilderTwinIndependent(v, u, neighbours, v_prime)
+        self.rule_application_sequence.append(rule_app_B)
+        self.fold_twin(v_prime, u, v, neighbours)
+
+    def search_rule_twin_reduction(self) -> None:
+        """
+        If a node has exactly 3 neighbours and a twin (another
+        node with the exact same neighbours), we can merge the
+        5 nodes.
+        """
+        if self.kernel.number_of_nodes() == 0:
+            return
+        assert isinstance(self.kernel.degree, DegreeView)
+        for v in list(self.kernel.nodes()):
+            # Since we're modifying `self.kernel` while iterating, we're
+            # calling `list()` to make sure that we still have some kind
+            # of valid iterator.
+            if not self.kernel.has_node(v):
+                continue
+            twin: _Twin | None = self.find_twin(v)
+            if twin is None:
+                continue
+            u = twin.node
+            category = self.twin_category(u, v, twin.neighbours)
+            if category == _TwinCategory.Independent:
+                self.apply_rule_twin_independent(u, v, twin.neighbours)
+            elif category == _TwinCategory.Dependency:
+                self.apply_rule_twin_has_dependency(u, v, twin.neighbours)
+            else:
+                # We cannot remove this twin.
+                pass
+
+    # -----------------unconfined reduction---------------------------
+
+    @abc.abstractmethod
+    def search_rule_unconfined_and_diamond(self) -> None:
+        ...
+
+class UnweightedKernelization(BaseKernelization):
+    def add_node(self, weight: float) -> int:
+        assert weight == 1.0
+        node = self._new_node_gen_counter
+        self._new_node_gen_counter += 1
+        self.kernel.add_node(node)
+        return node
+
+    def is_maximum(self, node: int, clique: list[int]) -> bool:
+        return True
+
+
+    # -----------------neighborhood removal---------------------
+
+    def search_rule_neighborhood_removal(self) -> None:
+        # This rule is a noop in unweighted mode.
+        return
+
+    # -----------------twin reduction---------------------------
+
+    def is_node_twinnable(self, v: int) -> bool:
+        # In the current implementation, we only support twins with a degree of 3,
+        # as in the paper we draw inspiration from.
+        #
+        # It _feels_ like this is an arbitrary restriction that could be removed in
+        # a future version. To be confirmed.
+        return cast(DegreeView, self.kernel.degree)(v) == 3
+
+    def twin_category(self, u: int, v: int, neighbours: list[int]) -> _TwinCategory:
+        if self.is_independent(neighbours):
+            return _TwinCategory.Independent
+        else:
+            return _TwinCategory.Dependency
 
     # -----------------unconfined reduction---------------------------
     def aux_search_confinement(
@@ -266,7 +434,105 @@ class Kernelization(BaseKernelization):
                 # and |N(u)\N[S]| is minimized
                 go_to_next_loop = self.unconfined_loop(v, S, neighbors_S)
 
+
+class WeightedKernelization(BaseKernelization):
+    """
+    Apply well-known transformations to the graph to reduce its size without
+    compromising the result.
+
+    This algorithm is adapted from e.g.:
+    https://schulzchristian.github.io/thesis/masterarbeit_demian_hespe.pdf
+
+    Unless you are experimenting with your own preprocessors, you should
+    probably use Kernelization in your pipeline.
+    """
+
+    def add_node(self, weight: float) -> int:
+        node = self._new_node_gen_counter
+        self._new_node_gen_counter += 1
+        self.kernel.add_node(node)
+        self.cost_picker.set_node_weight(self.kernel.nodes[node], weight)
+        return node
+
+    def is_maximum(self, node: int, clique: list[int]) -> bool:
+        # Note: Un unweighted mode, no node in the neighborhood can have a weight
+        # strictly greater than `node`, so we skip this check entirely.
+        max: float = self.cost_picker.node_weight(self.kernel.nodes[node])
+        for v in clique:
+            if v != node and self.cost_picker.node_weight(self.kernel.nodes[v]) > max:
+                return False
+        return True
+
+    # -----------------unconfined reduction---------------------------
+
+    @abc.abstractmethod
+    def search_rule_unconfined_and_diamond(self) -> None:
+        # This rule doesn't apply in weighted mode.
+        return None
+
+    # -----------------neighborhood_removal---------------------------
+    def neighborhood_weight(self, node: int) -> float:
+        return self.cost_picker.subgraph_weight(self.kernel, list(self.kernel.neighbors(node)))
+
+    def apply_rule_neighborhood_removal(self, node: int):
+        rule_app = RebuilderNeighborhoodRemoval(node)
+        self.rule_application_sequence.append(rule_app)
+        self.kernel.remove_nodes_from(self.kernel.neighbors(node))
+        self.kernel.remove_node(node)
+
+    def search_rule_neighborhood_removal(self) -> None:
+        """
+        Weighted: If a node has a greater weight than all its neighbours together,
+        remove the node (it will be part of the WMIS) and all its neighbours (they
+        won't).
+        Unweighted: Noop.
+        """
+
+        for node in list(self.kernel.nodes()):
+            # Since we're modifying `self.kernel` while iterating, we're
+            # calling `list()` to make sure that we still have some kind
+            # of valid iterator.
+            if not self.kernel.has_node(node):
+                # This might be possible if our iterator has not
+                # been invalidated but our operation caused the node to
+                # disappear from `self.kernel`.
+                continue
+            node_weight: float = self.kernel.nodes[node]["weight"]
+            neighborhood_weight_sum = self.neighborhood_weight(node)
+            if node_weight >= neighborhood_weight_sum:
+                self.apply_rule_neighborhood_removal(node)
+
+    # -----------------isolated_node_removal---------------------------
+    def apply_rule_isolated_node_removal(self, isolated: int) -> None:
+        rule_app = RebuilderIsolatedNodeRemoval(isolated)
+        self.rule_application_sequence.append(rule_app)
+        neighborhood = list(self.kernel.neighbors(isolated))
+        self.kernel.remove_nodes_from(neighborhood)
+        self.kernel.remove_node(isolated)
+
+
+    def get_lower_higher_weights(self, isolated: int, neighborhood: list[int]) -> tuple[list[int], list[int]]:
+        isolated_weight: float = self.cost_picker.node_weight(self.kernel.nodes[isolated])
+        lower: list[int] = []
+        higher: list[int] = []
+        for node in neighborhood:
+            if node == isolated:
+                continue
+            if self.cost_picker.node_weight(self.kernel.nodes[node]) <= isolated_weight:
+                lower.append(node)
+            else:
+                higher.append(node)
+        return lower, higher
+
+
+
+
+
+
     # -----------------twin reduction---------------------------
+    def is_node_twinnable(self, v: int) -> bool:
+        return True
+
     def fold_twin(self, u: int, v: int, v_prime: int, neighbors_u: list[int]) -> None:
         w_0: int = neighbors_u[0]
         w_1: int = neighbors_u[1]
@@ -279,70 +545,47 @@ class Kernelization(BaseKernelization):
             self.kernel.add_edge(node, v_prime)
         self.kernel.remove_nodes_from([u, v, w_0, w_1, w_2])
 
-    def find_twin(self, v: int) -> int | None:
-        """
-        Find a twin of a node, i.e. another node with the same
-        neighbours.
-        """
-        neighbors_v: set[int] = set(self.kernel.neighbors(v))
-        for u in list(self.kernel.nodes()):
-            # Note: It might be sufficient to walk through
-            # the neighbours of neighbours of neighbours of v.
-            # Unclear whether this would be faster.
-            if u == v:
-                continue
-            if not self.kernel.has_node(u):
-                # FIXME: Can this happen?
-                continue
-            if not self.kernel.has_node(v):
-                # FIXME: Can this happen?
-                continue
-            neighbors_u: set[int] = set(self.kernel.neighbors(u))
-            if neighbors_u == neighbors_v:
-                # Note: Since there are no self-loops, we can deduce
-                # that U and V are also not neighbours.
-                return int(u)
-        return None
-
     def apply_rule_twin_independent(self, v: int, u: int, neighbors_u: list[int]) -> None:
-        v_prime = self._add_node()
+        v_prime = self.add_node()
         rule_app = RebuilderTwinIndependent(
             v, u, neighbors_u[0], neighbors_u[1], neighbors_u[2], v_prime
         )
         self.rule_application_sequence.append(rule_app)
         self.fold_twin(u, v, v_prime, neighbors_u)
 
-    def apply_rule_twin_has_dependency(self, v: int, u: int, neighbors_u: list[int]) -> None:
-        rule_app = RebuilderTwinHasDependency(v, u)
-        self.rule_application_sequence.append(rule_app)
-        self.kernel.remove_nodes_from(neighbors_u)
-        self.kernel.remove_nodes_from([u, v])
+    def twin_category(self, u: int, v: int, neighbours: list[int]) -> _TwinCategory:
+        w_u: float = self.cost_picker.node_weight(self.kernel.nodes[u])
+        w_v: float = self.cost_picker.node_weight(self.kernel.nodes[v])
+        w_neighbours: list[float] = [self.cost_picker.node_weight(self.kernel.nodes[node]) for node in neighbours]
+        w_neighbours_sum: float = sum(w_neighbours)
+        if w_u + w_v >= w_neighbours_sum:
+            return _TwinCategory.Dependency
+        if w_u + w_v > w_neighbours_sum - min(w_neighbours):
+            return _TwinCategory.Independent
+        else:
+            return _TwinCategory.CannotRemove
 
-    def search_rule_twin_reduction(self) -> None:
-        """
-        If a node has exactly 3 neighbours and a twin (another
-        node with the exact same neighbours), we can merge the
-        5 nodes.
-        """
-        if self.kernel.number_of_nodes() == 0:
-            return
-        assert isinstance(self.kernel.degree, DegreeView)
-        for v in list(self.kernel.nodes()):
-            # Since we're modifying `self.kernel` while iterating, we're
-            # calling `list()` to make sure that we still have some kind
-            # of valid iterator.
-            if not self.kernel.has_node(v):
+
+    # -----------------isolated_weight_transfer---------------------------
+
+    
+    def apply_rule_isolated_weight_transfer(self, isolated: int) -> None:
+        isolated_weight: float = self.cost_picker.node_weight(self.kernel.nodes[isolated])
+        neighborhood: list[int] = list(self.kernel.neighbors(isolated))
+        lower, higher = self.get_lower_higher_weights(isolated, neighborhood)
+        rule_app: ra.Rule_application_isolated_weight_transfer = ra.Rule_application_isolated_weight_transfer(isolated, higher)
+        self.rule_application_sequence.append(rule_app)
+        for h in higher:
+            self.cost_picker.node_delta(self.kernel.nodes[h], -isolated_weight)
+        self.kernel.remove_nodes_from(lower)
+        self.kernel.remove_node(isolated)
+
+    def search_rule_isolated_weight_transfer(self):
+        for node in list(self.kernel.nodes()):
+            if not self.kernel.has_node(node):
                 continue
-            if self.kernel.degree(v) != 3:
-                continue
-            u: int | None = self.find_twin(v)
-            if u is None:
-                continue
-            neighbors_u: list[int] = list(self.kernel.neighbors(u))
-            if self.is_independent(neighbors_u):
-                self.apply_rule_twin_independent(v, u, neighbors_u)
-            else:
-                self.apply_rule_twin_has_dependency(v, u, neighbors_u)
+            if self.is_isolated(node):
+                self.apply_rule_isolated_weight_transfer(node)
 
 
 class BaseRebuilder(abc.ABC):
@@ -398,21 +641,18 @@ class RebuilderUnconfined(BaseRebuilder):
 
 
 class RebuilderTwinIndependent(BaseRebuilder):
-    def __init__(self, v: int, u: int, w_0: int, w_1: int, w_2: int, v_prime: int):
+    def __init__(self, v: int, u: int, neighbours: list[int], v_prime: int):
         """
         Invariants:
-         - U has exactly 3 neighbours W0, W1, W2;
          - V has exactly the same neighbours as U;
          - there is no self-loop around U or V (hence U and V are not
             neighbours);
-         - there is no edge between W1, W2, W3;
-         - V' is the node obtained by merging U, V, W1, W2, W3.
+         - there is no edge between any of the neighbours;
+         - V' is the node obtained by merging U, V and the neighbours.
         """
         self.v: int = v
         self.u: int = u
-        self.w_0: int = w_0
-        self.w_1: int = w_1
-        self.w_2: int = w_2
+        self.neighbours = neighbours
         self.v_prime: int = v_prime
 
     def rebuild(self, partial_solution: set[int]) -> None:
@@ -420,11 +660,9 @@ class RebuilderTwinIndependent(BaseRebuilder):
             # Since V' is part of the solution, none of its
             # neighbours is part of the solution. Consequently,
             # either U and V can be added to grow the solution
-            # or W0, W1, W2 can be added to grow the solution,
+            # or neighbours can be added to grow the solution,
             # without affecting the rest of the system.
-            partial_solution.add(self.w_0)
-            partial_solution.add(self.w_1)
-            partial_solution.add(self.w_2)
+            partial_solution.update(self.neighbours)
             partial_solution.remove(self.v_prime)
         else:
             # The only neighbours of U and V are represented

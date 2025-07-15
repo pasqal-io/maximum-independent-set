@@ -1,5 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from re import L
 from .types import Objective
 
 import networkx as nx
@@ -8,40 +10,110 @@ import networkx as nx
 class BaseCostPicker(ABC):
     @abstractmethod
     @classmethod
-    def from_node(cls, node: dict[str, float]) -> float:
+    def node_weight(cls, node: dict[str, float]) -> float:
+        """
+        Get the weight of a node.
+
+        For a weighted cost picker, this returns attribute `weight` of the node,
+        or 1. if the node doesn't specify a `weight`.
+
+        For an unweighted cost picker, this always returns 1.
+        """
         ...
 
     @abstractmethod
     @classmethod
-    def from_subgraph(cls, graph: nx.Graph, nodes: list[int]) -> float:
+    def set_node_weight(cls, node: dict[str, float], weight: float):
+        """
+        Set the weight of a node.
+
+        For a weighted cost picker, this returns attribute `weight` of the node,
+        or 1. if the node doesn't specify a `weight`.
+
+        For an unweighted cost picker, raise an error.
+        """
+        ...
+
+    @abstractmethod
+    @classmethod
+    def node_delta(cls, node: dict[str, float], delta: float) -> float:
+        """
+        Apply a delta to the weight of a node.
+
+        Raises an error in an unweighted cost picker.
+        """
+        ...
+
+    @abstractmethod
+    @classmethod
+    def subgraph_weight(cls, graph: nx.Graph, nodes: list[int]) -> float:
+        """
+        Get the weight of a subraph.
+
+        See `node_weight` for the definition of weight.
+
+        For an unweighted cost picker, this always returns `len(nodes)`.
+        """
         ...
 
     @classmethod
     def for_objective(cls, objective: Objective) -> type[BaseCostPicker]:
+        """
+        Pick a cost picker for an objective.
+        """
         if objective == Objective.MAXIMIZE_SIZE:
             return UnweightedPicker
         elif objective == Objective.MAXIMIZE_WEIGHT:
-            return WeightPicker
+            return WeightedPicker
 
 
-class WeightPicker(BaseCostPicker):
+class WeightedPicker(BaseCostPicker):
     @classmethod
-    def from_node(cls, node: dict[str, float]) -> float:
+    def node_weight(cls, node: dict[str, float]) -> float:
         return node.get("weight", 1.0)
 
     @classmethod
-    def from_subgraph(cls, graph: nx.Graph, nodes: list[int]) -> float:
-        return float(sum(cls.from_node(graph.nodes[n]) for n in nodes))
+    def subgraph_weight(cls, graph: nx.Graph, nodes: list[int]) -> float:
+        return float(sum(cls.node_weight(graph.nodes[n]) for n in nodes))
 
 class UnweightedPicker(BaseCostPicker):
     @classmethod
-    def from_node(cls, node: dict[str, float]) -> float:
+    def node_weight(cls, node: dict[str, float]) -> float:
         return 1.0
 
     @classmethod
-    def from_subgraph(cls, graph: nx.Graph, nodes: list[int]) -> float:
+    def node_delta(cls, node: dict[str, float], delta: float) -> float:
+        raise NotImplementedError("UnweightedPicker does not support operation `node_delta`")
+
+    @classmethod
+    def set_node_weight(cls, node: dict[str, float], weight: float):
+        raise NotImplementedError("UnweightedPicker does not support operation `set_node_weight`")
+
+    @classmethod
+    def subgraph_weight(cls, graph: nx.Graph, nodes: list[int]) -> float:
         return float(len(nodes))
 
+@dataclass
+class ClosedNeighborhood:
+    original_node: int
+    graph: nx.Graph
+    nodes: list[int]
+
+    def is_isolated(self) -> bool:
+        for i, u in enumerate(self.nodes):
+            for v in self.nodes[i + 1:]:
+                if self.graph.has_edge(u, v):
+                    return False
+        return True
+
+
+def closed_neighborhood(graph: nx.Graph, node: int) -> list[int]:
+    """
+    Return the list of closed neighbours of a node.
+    """
+    neighbours = list(graph.neighbors(node))
+    neighbours.append(node)
+    return neighbours
 
 def is_independent(graph: nx.Graph, nodes: list[int]) -> bool:
     """
