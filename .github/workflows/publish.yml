@@ -70,8 +70,8 @@ jobs:
         - name: Copy notebooks and test files to build docs
           run: |
             cp examples/*.ipynb docs/
-            mkdir -p docs/datasets/dimacs
-            cp examples/datasets/dimacs/* docs/datasets/dimacs
+            mkdir -p docs/datasets/
+            cp examples/datasets/ docs/datasets/
         - name: Deploy docs
           run: |
             git config user.name "GitHub Actions"
