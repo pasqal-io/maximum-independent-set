@@ -71,7 +71,7 @@ jobs:
           run: |
             cp examples/*.ipynb docs/
             mkdir -p docs/datasets/
-            cp examples/datasets/ docs/datasets/
+            cp -r examples/datasets/ docs/datasets/
         - name: Deploy docs
           run: |
             git config user.name "GitHub Actions"
