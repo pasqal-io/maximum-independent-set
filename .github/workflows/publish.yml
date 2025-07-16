@@ -70,8 +70,7 @@ jobs:
         - name: Copy notebooks and test files to build docs
           run: |
             cp examples/*.ipynb docs/
-            mkdir -p docs/datasets/
-            cp -r examples/datasets/ docs/datasets/
+            cp -r examples/datasets/ docs/
         - name: Deploy docs
           run: |
             git config user.name "GitHub Actions"
