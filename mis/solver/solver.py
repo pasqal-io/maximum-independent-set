@@ -100,7 +100,7 @@ class MISSolverClassical(BaseSolver):
         solutions = [self.fixtures.rebuild(sol) for sol in solutions]
         solutions.sort(key=lambda sol: sol.frequency, reverse=True)
         logger.info(
-            f"Number of MIS solutions found classically: {len(solutions)}. Returning up to {self.config.max_number_of_solutions} solutions."
+            f"Number of MIS solutions found with classical solver: {len(solutions)}. Returning up to {self.config.max_number_of_solutions} solutions."
         )
         return solutions[: self.config.max_number_of_solutions]
 
