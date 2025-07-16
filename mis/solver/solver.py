@@ -229,7 +229,7 @@ class MISSolverQuantum(BaseSolver):
         execution_result = self.execute(pulse, embedding)
         solutions = self._process(execution_result)
         logger.info(
-            f"Number of MIS solutions found quantumly: {len(solutions)}. Returning up to {self.config.max_number_of_solutions} solutions."
+            f"Number of MIS solutions found with quantum solver: {len(solutions)}. Returning up to {self.config.max_number_of_solutions} solutions."
         )
         return solutions[: self.config.max_number_of_solutions]
 
