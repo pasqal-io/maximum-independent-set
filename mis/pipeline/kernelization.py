@@ -45,6 +45,12 @@ class Kernelization(BasePreprocessor):
     def rebuild(self, partial_solution: set[int]) -> set[int]:
         return self._kernelizer.rebuild(partial_solution)
 
+    def is_independent(self, nodes: list[int]) -> bool:
+        """
+        Determine if a set of nodes represents an independent set within a given graph.
+
+        """
+        return self._kernelizer.is_independent(nodes)
 
 class BaseKernelization(BasePreprocessor, abc.ABC):
     """
@@ -113,6 +119,9 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
 
     def node_weight(self, node: int) -> float:
         return self.cost_picker.node_weight(self.kernel, node)
+
+    def subgraph_weight(self, nodes: list[int]) -> float:
+        return self.cost_picker.subgraph_weight(self.kernel, nodes)
 
     @abc.abstractmethod
     def is_maximum(self, node: int, neighbours: list[int]) -> bool:
@@ -312,9 +321,9 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
             - u, v: two distinct nodes with the same set of neighbours
             - neighbours: the neighbours of u (which are also the neighbours of v)
         """
-        w_u = self.node_weight(self.kernel.nodes[u])
-        w_v = self.node_weight(self.kernel.nodes[v])
-        w_u_neighbours_sum = self.cost_picker.subgraph_weight(self.kernel, neighbours)
+        w_u = self.node_weight(u)
+        w_v = self.node_weight(v)
+        w_u_neighbours_sum = self.subgraph_weight(neighbours)
         v_prime = self.add_node(w_u_neighbours_sum - (w_u + w_v))
         rule_app_B = RebuilderTwinIndependent(v, u, neighbours, v_prime)
         self.rule_application_sequence.append(rule_app_B)
@@ -494,18 +503,18 @@ class WeightedKernelization(BaseKernelization):
         return node
 
     def is_maximum(self, node: int, neighbours: list[int]) -> bool:
-        max: float = self.node_weight(self.kernel.nodes[node])
+        max: float = self.node_weight(node)
         for v in neighbours:
-            if v != node and self.node_weight(self.kernel.nodes[v]) > max:
+            if v != node and self.node_weight(v) > max:
                 return False
         return True
 
     # -----------------isolated node removal--------------------
     def get_nodes_with_strictly_higher_weight(self, node: int, neighborhood: list[int]) -> list[int]:
-        pivot = self.node_weight(self.kernel.nodes[node])
+        pivot = self.node_weight(node)
         result = []
         for n in neighborhood:
-            if self.node_weight(self.kernel.nodes[n]) > pivot:
+            if self.node_weight(n) > pivot:
                 result.append(pivot)
         return result
 
@@ -518,12 +527,12 @@ class WeightedKernelization(BaseKernelization):
 
     # -----------------neighborhood_removal---------------------------
     def neighborhood_weight(self, node: int) -> float:
-        return self.cost_picker.subgraph_weight(self.kernel, list(self.kernel.neighbors(node)))
+        return self.subgraph_weight(list(self.kernel.neighbors(node)))
 
     def apply_rule_neighborhood_removal(self, node: int):
         rule_app = RebuilderNeighborhoodRemoval(node)
         self.rule_application_sequence.append(rule_app)
-        self.kernel.remove_nodes_from(self.kernel.neighbors(node))
+        self.kernel.remove_nodes_from(list(self.kernel.neighbors(node)))
         self.kernel.remove_node(node)
 
     def search_rule_neighborhood_removal(self) -> None:
@@ -543,19 +552,19 @@ class WeightedKernelization(BaseKernelization):
                 # been invalidated but our operation caused the node to
                 # disappear from `self.kernel`.
                 continue
-            node_weight: float = self.kernel.nodes[node]["weight"]
+            node_weight: float = self.node_weight(node)
             neighborhood_weight_sum = self.neighborhood_weight(node)
             if node_weight >= neighborhood_weight_sum:
                 self.apply_rule_neighborhood_removal(node)
 
     def get_lower_higher_weights(self, isolated: int, neighborhood: list[int]) -> tuple[list[int], list[int]]:
-        isolated_weight: float = self.node_weight(self.kernel.nodes[isolated])
+        isolated_weight: float = self.node_weight(isolated)
         lower: list[int] = []
         higher: list[int] = []
         for node in neighborhood:
             if node == isolated:
                 continue
-            if self.node_weight(self.kernel.nodes[node]) <= isolated_weight:
+            if self.node_weight(node) <= isolated_weight:
                 lower.append(node)
             else:
                 higher.append(node)
@@ -570,9 +579,9 @@ class WeightedKernelization(BaseKernelization):
 
 
     def twin_category(self, u: int, v: int, neighbours: list[int]) -> _TwinCategory:
-        w_u: float = self.node_weight(self.kernel.nodes[u])
-        w_v: float = self.node_weight(self.kernel.nodes[v])
-        w_neighbours: list[float] = [self.node_weight(self.kernel.nodes[node]) for node in neighbours]
+        w_u: float = self.node_weight(u)
+        w_v: float = self.node_weight(v)
+        w_neighbours: list[float] = [self.node_weight(node) for node in neighbours]
         w_neighbours_sum: float = sum(w_neighbours)
         if w_u + w_v >= w_neighbours_sum:
             # U and V are always part of the solution and the neighbours are never part of the solution.
