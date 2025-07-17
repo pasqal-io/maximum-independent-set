@@ -1,16 +1,21 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from re import L
 from .types import Objective
 
 import networkx as nx
 
 
-class BaseCostPicker(ABC):
-    @abstractmethod
+class BaseWeightPicker(ABC):
+    """
+    Utility class to pick the weight of a node.
+
+    Unweighted implementations optimize the methods into trivial
+    operations.
+    """
+
     @classmethod
-    def node_weight(cls, node: dict[str, float]) -> float:
+    @abstractmethod
+    def node_weight(cls, graph: nx.Graph, node: int) -> float:
         """
         Get the weight of a node.
 
@@ -21,9 +26,9 @@ class BaseCostPicker(ABC):
         """
         ...
 
-    @abstractmethod
     @classmethod
-    def set_node_weight(cls, node: dict[str, float], weight: float):
+    @abstractmethod
+    def set_node_weight(cls, graph: nx.Graph, node: int, weight: float):
         """
         Set the weight of a node.
 
@@ -34,9 +39,9 @@ class BaseCostPicker(ABC):
         """
         ...
 
-    @abstractmethod
     @classmethod
-    def node_delta(cls, node: dict[str, float], delta: float) -> float:
+    @abstractmethod
+    def node_delta(cls, graph: nx.Graph, node: int, delta: float) -> float:
         """
         Apply a delta to the weight of a node.
 
@@ -44,8 +49,8 @@ class BaseCostPicker(ABC):
         """
         ...
 
-    @abstractmethod
     @classmethod
+    @abstractmethod
     def subgraph_weight(cls, graph: nx.Graph, nodes: list[int]) -> float:
         """
         Get the weight of a subraph.
@@ -57,7 +62,7 @@ class BaseCostPicker(ABC):
         ...
 
     @classmethod
-    def for_objective(cls, objective: Objective) -> type[BaseCostPicker]:
+    def for_objective(cls, objective: Objective) -> type[BaseWeightPicker]:
         """
         Pick a cost picker for an objective.
         """
@@ -66,45 +71,27 @@ class BaseCostPicker(ABC):
         elif objective == Objective.MAXIMIZE_WEIGHT:
             return WeightedPicker
 
-
-class WeightedPicker(BaseCostPicker):
+class WeightedPicker(BaseWeightPicker):
     @classmethod
-    def node_weight(cls, node: dict[str, float]) -> float:
-        return node.get("weight", 1.0)
+    def node_weight(cls, graph: nx.Graph, node: int) -> float:
+        return graph.nodes[node].get("weight", 1.0)
 
     @classmethod
     def subgraph_weight(cls, graph: nx.Graph, nodes: list[int]) -> float:
-        return float(sum(cls.node_weight(graph.nodes[n]) for n in nodes))
+        return float(sum(cls.node_weight(graph, n) for n in nodes))
 
-class UnweightedPicker(BaseCostPicker):
+class UnweightedPicker(BaseWeightPicker):
     @classmethod
-    def node_weight(cls, node: dict[str, float]) -> float:
+    def node_weight(cls, graph: nx.Graph, node: int) -> float:
         return 1.0
 
     @classmethod
-    def node_delta(cls, node: dict[str, float], delta: float) -> float:
-        raise NotImplementedError("UnweightedPicker does not support operation `node_delta`")
-
-    @classmethod
-    def set_node_weight(cls, node: dict[str, float], weight: float):
+    def set_node_weight(cls, graph: nx.Graph, node: int, weight: float):
         raise NotImplementedError("UnweightedPicker does not support operation `set_node_weight`")
 
     @classmethod
     def subgraph_weight(cls, graph: nx.Graph, nodes: list[int]) -> float:
         return float(len(nodes))
-
-@dataclass
-class ClosedNeighborhood:
-    original_node: int
-    graph: nx.Graph
-    nodes: list[int]
-
-    def is_isolated(self) -> bool:
-        for i, u in enumerate(self.nodes):
-            for v in self.nodes[i + 1:]:
-                if self.graph.has_edge(u, v):
-                    return False
-        return True
 
 
 def closed_neighborhood(graph: nx.Graph, node: int) -> list[int]:

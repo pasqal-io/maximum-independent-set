@@ -13,7 +13,7 @@ from mis.pipeline.targets import Pulse, Register
 from mis.pipeline.config import SolverConfig
 from mis.solver.greedymapping import GreedyMapping
 from mis.pipeline.layout import Layout
-from mis.shared.graphs import remove_neighborhood, BaseCostPicker
+from mis.shared.graphs import remove_neighborhood, BaseWeightPicker
 
 
 class MISSolver:
@@ -269,7 +269,7 @@ class GreedyMISSolver(BaseSolver):
 
         self.solver_factory = solver_factory
         self.layout = self._build_layout()
-        self.picker = BaseCostPicker.for_objective(config.objective)
+        self.weight_picker = BaseWeightPicker.for_objective(config.objective)
 
     def _build_layout(self) -> Layout:
         """
@@ -368,7 +368,7 @@ class GreedyMISSolver(BaseSolver):
                 for rem_sol in remainder_solutions:
                     combined_nodes = current_mis + rem_sol.nodes
                     if (best_solution is None) or (
-                        self.picker.subgraph_weight(self.instance.graph, combined_nodes) > best_solution.weight
+                        self.weight_picker.subgraph_weight(self.instance.graph, combined_nodes) > best_solution.weight
                     ):
                         best_solution = MISSolution(
                             instance=instance, nodes=combined_nodes, frequency=1.0
@@ -417,7 +417,7 @@ class GreedyMISSolver(BaseSolver):
         """
         G = nx.Graph()
         for logical, physical in mapping.items():
-            weight = self.picker.node_weight(graph.nodes[logical])
+            weight = self.weight_picker.node_weight(graph, logical)
             pos = self.layout.graph.nodes[physical].get("pos", (0, 0))
             G.add_node(physical, weight=weight, pos=pos)
 

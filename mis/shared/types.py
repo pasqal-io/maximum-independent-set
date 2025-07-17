@@ -4,7 +4,6 @@ from enum import Enum
 from typing import Any
 import networkx
 import matplotlib.pyplot as plt
-from mis.shared.graphs import WeightPicker
 
 
 class BackendType(str, Enum):
@@ -162,7 +161,8 @@ class MISSolution:
 
         # Note: As of this writing, self.weight is still considered a work in progress, so we
         # leave it out of the documentation.
-        self.weight = WeightPicker.from_subgraph(instance.graph, nodes)
+        from mis.shared.graphs import BaseWeightPicker # Avoid cycles.
+        self.weight = BaseWeightPicker.for_objective(Objective.MAXIMIZE_WEIGHT).subgraph_weight(instance.graph, nodes)
 
     def draw(
         self,
