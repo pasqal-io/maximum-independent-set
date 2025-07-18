@@ -7,15 +7,20 @@ from mis import BackendConfig
 from mis.solver.solver import MISInstance, MISSolver
 from mis.pipeline.config import SolverConfig
 from mis.pipeline.kernelization import Kernelization
+from mis.pipeline.preprocessor import BasePreprocessor
 from mis.pipeline.maximization import Maximization
-from mis.shared.types import MethodType
+from mis.shared.types import MethodType, Objective
 
 
-@pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
-@pytest.mark.parametrize("postprocessor", [None, lambda: Maximization()])
+@pytest.mark.parametrize("postprocessor", argvalues=[None, lambda config: Maximization(config)])
+@pytest.mark.parametrize("preprocessor", [None, lambda config, graph: Kernelization(config, graph)])
+@pytest.mark.parametrize(
+    "objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT]
+)
 def test_empty_qtip_mis(
-    preprocessor: None | Callable[[nx.Graph], Kernelization],
-    postprocessor: None | Callable[[], Maximization],
+    preprocessor: None | Callable[[SolverConfig, nx.Graph], BasePreprocessor],
+    postprocessor: None | Callable[[SolverConfig], Maximization],
+    objective: Objective,
 ) -> None:
     """
     Classical MIS solver should work on an empty graph.
@@ -27,6 +32,7 @@ def test_empty_qtip_mis(
         backend=BackendConfig(),
         preprocessor=preprocessor,
         postprocessor=postprocessor,
+        objective=objective,
     )
 
     # Create the MIS instance
@@ -39,11 +45,15 @@ def test_empty_qtip_mis(
     assert len(solutions) == 0
 
 
-@pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
-@pytest.mark.parametrize("postprocessor", [None, lambda: Maximization()])
+@pytest.mark.parametrize("postprocessor", argvalues=[None, lambda config: Maximization(config)])
+@pytest.mark.parametrize("preprocessor", [None, lambda config, graph: Kernelization(config, graph)])
+@pytest.mark.parametrize(
+    "objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT]
+)
 def test_disconnected_qtip_mis(
-    preprocessor: None | Callable[[nx.Graph], Kernelization],
-    postprocessor: None | Callable[[], Maximization],
+    preprocessor: None | Callable[[SolverConfig, nx.Graph], BasePreprocessor],
+    postprocessor: None | Callable[[SolverConfig], Maximization],
+    objective: Objective,
 ) -> None:
     """
     Classical MIS solver should work on a graph without any edge.
@@ -59,6 +69,7 @@ def test_disconnected_qtip_mis(
         backend=BackendConfig(),
         preprocessor=preprocessor,
         postprocessor=postprocessor,
+        objective=objective,
     )
 
     # Create the MIS instance
@@ -79,11 +90,15 @@ def test_disconnected_qtip_mis(
     assert found
 
 
-@pytest.mark.parametrize("preprocessor", [(None), (lambda graph: Kernelization(graph))])
-@pytest.mark.parametrize("postprocessor", [None, lambda: Maximization()])
+@pytest.mark.parametrize("postprocessor", argvalues=[None, lambda config: Maximization(config)])
+@pytest.mark.parametrize("preprocessor", [None, lambda config, graph: Kernelization(config, graph)])
+@pytest.mark.parametrize(
+    "objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT]
+)
 def test_star_qtip_mis(
-    preprocessor: None | Callable[[nx.Graph], Kernelization],
-    postprocessor: None | Callable[[], Maximization],
+    preprocessor: None | Callable[[SolverConfig, nx.Graph], BasePreprocessor],
+    postprocessor: None | Callable[[SolverConfig], Maximization],
+    objective: Objective,
 ) -> None:
     """
     Classical MIS solver should work on a star-shaped graph.
@@ -101,6 +116,7 @@ def test_star_qtip_mis(
         backend=BackendConfig(),
         preprocessor=preprocessor,
         postprocessor=postprocessor,
+        objective=objective,
     )
 
     # Create the MIS instance

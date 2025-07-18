@@ -10,16 +10,21 @@ from mis.pipeline.config import SolverConfig
 from mis.shared.types import MethodType
 from mis.pipeline.kernelization import Kernelization
 from mis.pipeline.maximization import Maximization
+from mis.shared.types import Objective
 
 TEST_DIMACS_FILES_DIR = Path.cwd() / "tests/test_files/dimacs"
 
 
 @pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize("sample", [(TEST_DIMACS_FILES_DIR / "a265032_1tc.32.txt", 32, 68, 12)])
-@pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
+@pytest.mark.parametrize("preprocessor", [None, lambda config, graph: Kernelization(config, graph)])
+@pytest.mark.parametrize(
+    "objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT]
+)
 def test_for_dimacs_32_node_graph(
     sample: tuple[Path, int, int, int],
-    preprocessor: None | Callable[[nx.Graph], Kernelization],
+    preprocessor: None | Callable[[SolverConfig, nx.Graph], Kernelization],
+    objective: Objective,
 ) -> None:
     """
     Classical MIS solver for a standard graph benchmark dataset in DIMACS format.
@@ -32,14 +37,16 @@ def test_for_dimacs_32_node_graph(
     assert dataset.instance.graph.number_of_nodes() == num_nodes
     assert dataset.instance.graph.number_of_edges() == num_edges
 
-    config = SolverConfig(method=MethodType.EAGER, max_iterations=1, preprocessor=preprocessor)
+    config = SolverConfig(
+        method=MethodType.EAGER, max_iterations=1, preprocessor=preprocessor, objective=objective
+    )
 
     # Run the solver
     solver = MISSolver(dataset.instance, config)
     solutions = solver.solve()
 
     # Check the solution is genuinely an independent set.
-    kernel = Kernelization(graph=dataset.instance.original_graph)
+    kernel = Kernelization(config, graph=dataset.instance.original_graph)
     solution = solutions[0]
 
     # Is it an independent set?
@@ -56,10 +63,14 @@ def test_for_dimacs_32_node_graph(
 
 @pytest.mark.flaky(max_runs=5)
 @pytest.mark.parametrize("sample", [(TEST_DIMACS_FILES_DIR / "a265032_1dc.64.txt", 64, 543, 9)])
-@pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
+@pytest.mark.parametrize("preprocessor", [None, lambda config, graph: Kernelization(config, graph)])
+@pytest.mark.parametrize(
+    "objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT]
+)
 def test_for_dimacs_64_node_graph(
     sample: tuple[Path, int, int, int],
-    preprocessor: None | Callable[[nx.Graph], Kernelization],
+    preprocessor: None | Callable[[SolverConfig, nx.Graph], Kernelization],
+    objective: Objective,
 ) -> None:
     """
     Classical MIS solver for a standard graph benchmark dataset in DIMACS format.
@@ -72,14 +83,16 @@ def test_for_dimacs_64_node_graph(
     assert dataset.instance.graph.number_of_nodes() == num_nodes
     assert dataset.instance.graph.number_of_edges() == num_edges
 
-    config = SolverConfig(method=MethodType.EAGER, max_iterations=1, preprocessor=preprocessor)
+    config = SolverConfig(
+        method=MethodType.EAGER, max_iterations=1, preprocessor=preprocessor, objective=objective
+    )
 
     # Run the solver
     solver = MISSolver(dataset.instance, config)
     solutions = solver.solve()
 
     # Check the solution is genuinely an independent set.
-    kernel = Kernelization(graph=dataset.instance.original_graph)
+    kernel = Kernelization(config, graph=dataset.instance.original_graph)
 
     solution = solutions[0]
 
@@ -89,17 +102,23 @@ def test_for_dimacs_64_node_graph(
     for node in solution.nodes:
         assert node in dataset.instance.node_label_to_index
     # Is it as good as we hope?
-    if preprocessor is None:
+    if preprocessor is None or objective == Objective.MAXIMIZE_WEIGHT:
+        # Note: As of this writing, the result we achieve with wMIS is not as good
+        # as the result we achieve with regular MIS. See issue #104.
         assert len(solution.nodes) <= mis_size
     else:
         assert len(solution.nodes) == mis_size
 
 
-@pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
-@pytest.mark.parametrize("postprocessor", [None, lambda: Maximization()])
+@pytest.mark.parametrize("postprocessor", argvalues=[None, lambda config: Maximization(config)])
+@pytest.mark.parametrize("preprocessor", [None, lambda config, graph: Kernelization(config, graph)])
+@pytest.mark.parametrize(
+    "objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT]
+)
 def test_empty_mis(
-    preprocessor: None | Callable[[nx.Graph], Kernelization],
-    postprocessor: None | Callable[[], Maximization],
+    preprocessor: None | Callable[[SolverConfig, nx.Graph], Kernelization],
+    postprocessor: None | Callable[[SolverConfig], Maximization],
+    objective: Objective,
 ) -> None:
     """
     Classical MIS solver should work with an empty graph.
@@ -110,6 +129,7 @@ def test_empty_mis(
         max_iterations=1,
         preprocessor=preprocessor,
         postprocessor=postprocessor,
+        objective=objective,
     )
 
     # Create the MIS instance
@@ -122,11 +142,15 @@ def test_empty_mis(
     assert len(solutions) == 0
 
 
-@pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
-@pytest.mark.parametrize("postprocessor", [None, lambda: Maximization()])
+@pytest.mark.parametrize("postprocessor", [None, lambda config: Maximization(config)])
+@pytest.mark.parametrize("preprocessor", [None, lambda config, graph: Kernelization(config, graph)])
+@pytest.mark.parametrize(
+    "objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT]
+)
 def test_disconnected_mis(
-    preprocessor: None | Callable[[nx.Graph], Kernelization],
-    postprocessor: None | Callable[[], Maximization],
+    preprocessor: None | Callable[[SolverConfig, nx.Graph], Kernelization],
+    postprocessor: None | Callable[[SolverConfig], Maximization],
+    objective: Objective,
 ) -> None:
     """
     Classical MIS solver should work with a graph without any edge.
@@ -141,6 +165,7 @@ def test_disconnected_mis(
         max_iterations=1,
         preprocessor=preprocessor,
         postprocessor=postprocessor,
+        objective=objective,
     )
 
     # Create the MIS instance
@@ -154,11 +179,15 @@ def test_disconnected_mis(
     assert len(solutions[0].nodes) == SIZE
 
 
-@pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
-@pytest.mark.parametrize("postprocessor", [None, lambda: Maximization()])
+@pytest.mark.parametrize("postprocessor", [None, lambda config: Maximization(config)])
+@pytest.mark.parametrize("preprocessor", [None, lambda config, graph: Kernelization(config, graph)])
+@pytest.mark.parametrize(
+    "objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT]
+)
 def test_star_mis(
-    preprocessor: None | Callable[[nx.Graph], Kernelization],
-    postprocessor: None | Callable[[], Maximization],
+    preprocessor: None | Callable[[SolverConfig, nx.Graph], Kernelization],
+    postprocessor: None | Callable[[SolverConfig], Maximization],
+    objective: Objective,
 ) -> None:
     """
     Classical MIS solver should work with a star-shaped graph.
@@ -175,6 +204,7 @@ def test_star_mis(
         max_iterations=1,
         preprocessor=preprocessor,
         postprocessor=postprocessor,
+        objective=objective,
     )
 
     # Create the MIS instance
@@ -204,12 +234,16 @@ def test_star_mis(
         (TEST_DIMACS_FILES_DIR / "hexagon.txt", 6, 6, 3),
     ],
 )
-@pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
-@pytest.mark.parametrize("postprocessor", [None, lambda: Maximization()])
+@pytest.mark.parametrize("postprocessor", [None, lambda config: Maximization(config)])
+@pytest.mark.parametrize("preprocessor", [None, lambda config, graph: Kernelization(config, graph)])
+@pytest.mark.parametrize(
+    "objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT]
+)
 def test_dimacs_mis(
     sample: tuple[Path, int, int, int],
-    preprocessor: None | Callable[[nx.Graph], Kernelization],
-    postprocessor: None | Callable[[], Maximization],
+    preprocessor: None | Callable[[SolverConfig, nx.Graph], Kernelization],
+    postprocessor: None | Callable[[SolverConfig], Maximization],
+    objective: Objective,
 ) -> None:
     """
     Test loading various graphs from DIMACS files and solving them.
@@ -225,6 +259,7 @@ def test_dimacs_mis(
         max_iterations=1,
         preprocessor=preprocessor,
         postprocessor=postprocessor,
+        objective=objective,
     )
 
     solver = MISSolver(dataset.instance, config)
@@ -235,7 +270,7 @@ def test_dimacs_mis(
     assert len(solutions) > 0
     for solution in solutions:
         # Is it an independent set?
-        kernel = Kernelization(dataset.instance.original_graph)
+        kernel = Kernelization(config, dataset.instance.original_graph)
         assert kernel.is_independent(solution.nodes)
         # Is it a subset of the original graph?
         for node in solution.nodes:

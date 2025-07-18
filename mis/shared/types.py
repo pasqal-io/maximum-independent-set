@@ -4,12 +4,27 @@ from enum import Enum
 from typing import Any
 import networkx
 import matplotlib.pyplot as plt
-from mis.shared.graphs import calculate_weight
 
 
 class MethodType(str, Enum):
     EAGER = "eager"
     GREEDY = "greedy"
+
+
+class Objective(str, Enum):
+    """
+    The objective of the solver.
+    """
+
+    MAXIMIZE_SIZE = "size"
+    """
+    Maximize the size of the independent set (in number of nodes).
+    """
+
+    MAXIMIZE_WEIGHT = "weight"
+    """
+    Maximize the weight of the independent set (using the `weight` property).
+    """
 
 
 class MISInstance:
@@ -137,7 +152,11 @@ class MISSolution:
 
         # Note: As of this writing, self.weight is still considered a work in progress, so we
         # leave it out of the documentation.
-        self.weight = calculate_weight(instance.graph, nodes)
+        from mis.shared.graphs import BaseWeightPicker  # Avoid cycles.
+
+        self.weight = BaseWeightPicker.for_objective(Objective.MAXIMIZE_WEIGHT).subgraph_weight(
+            instance.graph, nodes
+        )
 
     def draw(
         self,
