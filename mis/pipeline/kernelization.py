@@ -1,6 +1,7 @@
 import abc
 from dataclasses import dataclass
 from enum import Enum
+import logging
 import typing
 from typing import Any
 
@@ -13,7 +14,14 @@ from mis.shared.types import Objective
 if typing.TYPE_CHECKING:
     from mis.pipeline.config import SolverConfig
 
+logger = logging.getLogger(__name__)
+
+
 class _TwinCategory(str, Enum):
+    """
+    A category of twins, used in twin reduction.
+    """
+
     InSolution = "IN-SOLUTION"
     """
     The twin nodes are necessarily part of the solution.
@@ -24,16 +32,26 @@ class _TwinCategory(str, Enum):
     The rule does not work for these twin nodes.
     """
 
+
+@dataclass
+class _ConfinementAux:
+    node: int
+    set_diff: set[int]
+
+
 @dataclass
 class _Twin:
     node: int
     category: _TwinCategory
     neighbours: list[int]
 
+
 class Kernelization(BasePreprocessor):
     def __init__(self, config: "SolverConfig", graph: nx.Graph) -> None:
         if config.objective == Objective.MAXIMIZE_SIZE:
-            self._kernelizer = UnweightedKernelization(config, graph)
+            self._kernelizer: UnweightedKernelization | WeightedKernelization = (
+                UnweightedKernelization(config, graph)
+            )
         elif config.objective == Objective.MAXIMIZE_WEIGHT:
             self._kernelizer = WeightedKernelization(config, graph)
         else:
@@ -51,6 +69,7 @@ class Kernelization(BasePreprocessor):
 
         """
         return self._kernelizer.is_independent(nodes)
+
 
 class BaseKernelization(BasePreprocessor, abc.ABC):
     """
@@ -80,7 +99,6 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         for node in list(self.kernel.nodes()):
             if self.kernel.has_edge(node, node):
                 self.kernel.remove_node(node)
-
 
     def rebuild(self, partial_solution: set[int]) -> set[int]:
         """
@@ -127,7 +145,7 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
     def is_maximum(self, node: int, neighbours: list[int]) -> bool:
         """
         Determine whether any neighbour of a node has a weight strictly
-        greater than that node. 
+        greater than that node.
         """
         ...
 
@@ -157,37 +175,42 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         # Invariant: from this point, `self.kernel` does not contain any
         # self-loop.
         while (kernel_size_start := self.kernel.number_of_nodes()) > 0:
+            logger.info("preprocessing - current kernel size is %s", kernel_size_start)
             self.search_rule_neighborhood_removal()
-            self.search_rule_isolated_node_removal() # TODO: In the original, the weighted kernelizer has essentially two copies of this rule, once with weight and once without. Double-check.
+            self.search_rule_isolated_node_removal()  # TODO: In the original, the weighted kernelizer has essentially two copies of this rule, once with weight and once without. Double-check.
             self.search_rule_twin_reduction()
             self.search_rule_node_fold()
             self.search_rule_unconfined_and_diamond()
 
             kernel_size_end: int = self.kernel.number_of_nodes()
-            assert kernel_size_end <= kernel_size_start # Just in case.
+            assert kernel_size_end <= kernel_size_start  # Just in case.
             if kernel_size_start == kernel_size_end:
                 # We didn't find any rule to apply, time to stop.
+                logger.info("preprocessing - ran out of rules")
                 break
         return self.kernel
 
+    def add_rebuilder(self, rebuilder: "BaseRebuilder") -> None:
+        logger.debug("adding rebuilder %s", rebuilder)
+        self.rule_application_sequence.append(rebuilder)
+
     # -----------------neighborhood_removal---------------------------
     @abc.abstractmethod
-    def search_rule_neighborhood_removal(self) -> None:
-        ...
+    def search_rule_neighborhood_removal(self) -> None: ...
 
     # -----------------isolated_node_removal---------------------------
     @abc.abstractmethod
-    def get_nodes_with_strictly_higher_weight(self, node: int, neighborhood: list[int]) -> list[int]:
-        ...
+    def get_nodes_with_strictly_higher_weight(
+        self, node: int, neighborhood: list[int]
+    ) -> list[int]: ...
 
     def apply_rule_isolated_node_removal(self, isolated: int) -> None:
         neighborhood = list(self.kernel.neighbors(isolated))
         higher = self.get_nodes_with_strictly_higher_weight(isolated, neighborhood)
         rule_app = RebuilderIsolatedNodeRemoval(isolated, higher)
-        self.rule_application_sequence.append(rule_app)
+        self.add_rebuilder(rule_app)
         self.kernel.remove_nodes_from(neighborhood)
         self.kernel.remove_node(isolated)
-
 
     def search_rule_isolated_node_removal(self) -> None:
         """
@@ -206,7 +229,6 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
             if self.is_isolated_and_maximum(node):
                 self.apply_rule_isolated_node_removal(node)
 
-
     # -----------------node_fold---------------------------
 
     def fold_three(self, v: int, u: int, x: int, v_prime: int) -> None:
@@ -218,10 +240,12 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
             self.kernel.add_edge(v_prime, node)
         self.kernel.remove_nodes_from([v, u, x])
 
-    def apply_rule_node_fold(self, v: Any, w_v: float, u: Any, w_u: float, x: Any, w_x: float) -> None:
+    def apply_rule_node_fold(
+        self, v: Any, w_v: float, u: Any, w_u: float, x: Any, w_x: float
+    ) -> None:
         v_prime = self.add_node(w_u + w_x - w_v)
-        rule_app = RebuilderNodeFolding(v, u, x, v_prime) # FIXME: Adapt?
-        self.rule_application_sequence.append(rule_app)
+        rule_app = RebuilderNodeFolding(v, u, x, v_prime)  # FIXME: Adapt?
+        self.add_rebuilder(rule_app)
         self.fold_three(v, u, x, v_prime)
 
     def search_rule_node_fold(self) -> None:
@@ -261,10 +285,7 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
                 # Always false in unweighted mode.
                 # Cannot fold.
                 continue
-            self.apply_rule_node_fold(
-                v=v, w_v=w_v,
-                u=u, w_u=w_u,
-                x=x, w_x=w_x)
+            self.apply_rule_node_fold(v=v, w_v=w_v, u=u, w_u=w_u, x=x, w_x=w_x)
 
     # -----------------twin reduction---------------------------
 
@@ -282,7 +303,7 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         Find a twin of a node, i.e. another node with the same
         neighbours.
         """
-        neighbors_v: set[int] = set(self.kernel.neighbors(v)) # FIXME: We could factorize this.
+        neighbors_v: set[int] = set(self.kernel.neighbors(v))  # FIXME: We could factorize this.
 
         for u in self.kernel.nodes():
             if u == v:
@@ -292,13 +313,10 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
                 # Note: Since there are no self-loops, we can deduce
                 # that U and V are also not neighbours.
                 list_neighbours_u = list(neighbors_u)
-                category= self.twin_category(u, v, list_neighbours_u)
+                category = self.twin_category(u, v, list_neighbours_u)
                 if category == _TwinCategory.CannotRemove:
                     continue
-                return _Twin(
-                    node=int(u),
-                    neighbours=list_neighbours_u,
-                    category=category)
+                return _Twin(node=int(u), neighbours=list_neighbours_u, category=category)
         return None
 
     def fold_twin(self, u: int, v: int, v_prime: int, u_neighbours: list[int]) -> None:
@@ -312,7 +330,7 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
 
     def apply_rule_twins_in_solution(self, v: int, u: int, neighbors_u: list[int]) -> None:
         rule_app = RebuilderTwinAlwaysInSolution(v, u)
-        self.rule_application_sequence.append(rule_app)
+        self.add_rebuilder(rule_app)
         self.kernel.remove_nodes_from(neighbors_u)
         self.kernel.remove_nodes_from([u, v])
 
@@ -327,7 +345,7 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         w_neighbours = self.subgraph_weight(neighbours)
         v_prime = self.add_node(w_neighbours - (w_u + w_v))
         rule_app_B = RebuilderTwinIndependent(v, u, neighbours, v_prime)
-        self.rule_application_sequence.append(rule_app_B)
+        self.add_rebuilder(rule_app_B)
         self.fold_twin(u=u, v=v, v_prime=v_prime, u_neighbours=neighbours)
 
     def search_rule_twin_reduction(self) -> None:
@@ -361,11 +379,21 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
     # -----------------unconfined reduction---------------------------
 
     @abc.abstractmethod
-    def search_rule_unconfined_and_diamond(self) -> None:
-        ...
+    def search_rule_unconfined_and_diamond(self) -> None: ...
 
 
 class UnweightedKernelization(BaseKernelization):
+    """
+    Apply well-known transformations to the graph to reduce its size without
+    compromising the result.
+
+    This algorithm is adapted from e.g.:
+    https://schulzchristian.github.io/thesis/masterarbeit_demian_hespe.pdf
+
+    Unless you are experimenting with your own preprocessors, you should
+    probably use `Kernelization` in your pipeline.
+    """
+
     def add_node(self, weight: float) -> int:
         assert weight == 1.0
         node = self._new_node_gen_counter
@@ -375,12 +403,14 @@ class UnweightedKernelization(BaseKernelization):
 
     def is_maximum(self, node: int, neighbours: list[int]) -> bool:
         """
-        Since all nodes have the same weight, no node has a strictly higher weight.        
+        Since all nodes have the same weight, no node has a strictly higher weight.
         """
         return True
 
     # -----------------isolated node removal--------------------
-    def get_nodes_with_strictly_higher_weight(self, node: int, neighborhood: list[int]) -> list[int]:
+    def get_nodes_with_strictly_higher_weight(
+        self, node: int, neighborhood: list[int]
+    ) -> list[int]:
         """
         Since all nodes have the same weight, no node has a strictly higher weight.
         """
@@ -415,57 +445,80 @@ class UnweightedKernelization(BaseKernelization):
         return _TwinCategory.InSolution
 
     # -----------------unconfined reduction---------------------------
-    def aux_search_confinement(
-        self, neighbors_S: set[int], S: set[int]
-    ) -> tuple[int, int, set[int]]:
-        min: int = -1
-        min_value: int = self.initial_number_of_nodes + 2
-        min_set_diff: set[int] = set()
+    def aux_search_confinement(self, neighbors_S: set[int], S: set[int]) -> _ConfinementAux | None:
+        """
+        Attempt to find a neighbour U of S such that:
+        - there is exactly one node in S that is a neighbour of U;
+        - the number of neighbours of U that are not neighbours of S is minimized.
+        """
+
+        # Best node found so far.
+        best_node: int | None = None
+
+        # The number of neighbours we're attempting to minimize.
+        best_set_diff_len: int | None = None
+
+        # The best `neighbours(U) \ (neighbours(S) union {S})` we've found so far.
+        best_set_diff: set[int] = set()
+
         for u in neighbors_S:
             neighbors_u: set[int] = set(self.kernel.neighbors(u))
             inter: set[int] = neighbors_u & S
-            if len(inter) == 1:
-                if len(neighbors_u - neighbors_S - S) < min_value:
-                    min = u
-                    min_set_diff = neighbors_u - neighbors_S - S
-                    min_value = len(min_set_diff)
-        return min, min_value, min_set_diff
+            if len(inter) != 1:
+                continue
+            candidate_set_diff = neighbors_u - neighbors_S - S
+            candidate_set_diff_len = len(neighbors_u - neighbors_S - S)
+            if best_set_diff_len is None or candidate_set_diff_len < best_set_diff_len:
+                best_node = u
+                best_set_diff = candidate_set_diff
+                best_set_diff_len = candidate_set_diff_len
+        if best_node is None:
+            return None
+        assert best_set_diff_len is not None
+        return _ConfinementAux(node=best_node, set_diff=best_set_diff)
 
     def apply_rule_unconfined(self, v: int) -> None:
         rule_app = RebuilderUnconfined()
-        self.rule_application_sequence.append(rule_app)
+        self.add_rebuilder(rule_app)
         self.kernel.remove_node(v)
 
     def unconfined_loop(self, v: int, S: set[int], neighbors_S: set[int]) -> bool:
-        min: int = 0
-        min_value: int = 0
-        min_set_diff: set[int] = set()
-        min, min_value, min_set_diff = self.aux_search_confinement(neighbors_S, S)
-        next_loop: bool = False
-        # If there is no such node, then v is confined.
-        if min == -1:
-            pass
-            """
-            if self.find_diamond_reduction(neighbors_S, S):
-                self.apply_rule_diamond(v)
-            """
-        # If N(u)\N[S] = ∅, then v is unconfined.
-        if min_value == 0:
+        """
+        Starting from a node V, attempt to determine whether it is unconfined.
+
+        Arguments:
+            v The node we're examining.
+            S (inout) A set we're building to help determine whether v is unconfined.
+                Should initially be {v}, grown during each iteration.
+            neighbours_S (inout) The set of neighbours of all elements of S
+
+        Returns False if the work is over (we couldn't find any matching value).
+        """
+        confinement = self.aux_search_confinement(neighbors_S, S)
+        # If there is no such node, then v is confined and we can't do anything with it.
+        if confinement is None:
+            return False
+        diff_size = len(confinement.set_diff)
+        # If N(u)\N[S] = ∅, then v is unconfined, we can simply remove it.
+        if diff_size == 0:
             self.apply_rule_unconfined(v)
+            return False
         # If N (u)\ N [S] is a single node w,
         # then add w to S and repeat the algorithm.
-        elif min_value == 1:
-            w = list(min_set_diff)[0]
+        elif diff_size == 1:
+            w = next(iter(confinement.set_diff))  # We've just checked that this set has size 1.
             S.add(w)
             neighbors_S |= set(self.kernel.neighbors(w))
             neighbors_S -= {w}
-            next_loop = True
+            return True
         # Otherwise, v is confined.
-        else:
-            pass
-        return next_loop
+        return False
 
     def search_rule_unconfined_and_diamond(self) -> None:
+        """
+        Look for unconfined nodes, i.e. nodes for which we can prove easily
+        that they cannot be part of a solution.
+        """
         if self.kernel.number_of_nodes() == 0:
             return
         for v in list(self.kernel.nodes()):
@@ -484,16 +537,6 @@ class UnweightedKernelization(BaseKernelization):
 
 
 class WeightedKernelization(BaseKernelization):
-    """
-    Apply well-known transformations to the graph to reduce its size without
-    compromising the result.
-
-    This algorithm is adapted from e.g.:
-    https://schulzchristian.github.io/thesis/masterarbeit_demian_hespe.pdf
-
-    Unless you are experimenting with your own preprocessors, you should
-    probably use Kernelization in your pipeline.
-    """
 
     def add_node(self, weight: float) -> int:
         node = self._new_node_gen_counter
@@ -510,14 +553,15 @@ class WeightedKernelization(BaseKernelization):
         return True
 
     # -----------------isolated node removal--------------------
-    def get_nodes_with_strictly_higher_weight(self, node: int, neighborhood: list[int]) -> list[int]:
+    def get_nodes_with_strictly_higher_weight(
+        self, node: int, neighborhood: list[int]
+    ) -> list[int]:
         pivot = self.node_weight(node)
-        result = []
+        result: list[int] = []
         for n in neighborhood:
             if self.node_weight(n) > pivot:
-                result.append(pivot)
+                result.append(n)
         return result
-
 
     # -----------------unconfined reduction---------------------------
 
@@ -529,9 +573,9 @@ class WeightedKernelization(BaseKernelization):
     def neighborhood_weight(self, node: int) -> float:
         return self.subgraph_weight(list(self.kernel.neighbors(node)))
 
-    def apply_rule_neighborhood_removal(self, node: int):
+    def apply_rule_neighborhood_removal(self, node: int) -> None:
         rule_app = RebuilderNeighborhoodRemoval(node)
-        self.rule_application_sequence.append(rule_app)
+        self.add_rebuilder(rule_app)
         self.kernel.remove_nodes_from(list(self.kernel.neighbors(node)))
         self.kernel.remove_node(node)
 
@@ -557,7 +601,9 @@ class WeightedKernelization(BaseKernelization):
             if node_weight >= neighborhood_weight_sum:
                 self.apply_rule_neighborhood_removal(node)
 
-    def get_lower_higher_weights(self, isolated: int, neighborhood: list[int]) -> tuple[list[int], list[int]]:
+    def get_lower_higher_weights(
+        self, isolated: int, neighborhood: list[int]
+    ) -> tuple[list[int], list[int]]:
         isolated_weight: float = self.node_weight(isolated)
         lower: list[int] = []
         higher: list[int] = []
@@ -570,11 +616,6 @@ class WeightedKernelization(BaseKernelization):
                 higher.append(node)
         return lower, higher
 
-
-
-
-
-
     # -----------------twin reduction---------------------------
 
     def twin_category(self, u: int, v: int, neighbours: list[int]) -> _TwinCategory:
@@ -582,21 +623,15 @@ class WeightedKernelization(BaseKernelization):
         w_v: float = self.node_weight(v)
         w_neighbours: list[float] = [self.node_weight(node) for node in neighbours]
         w_neighbours_sum: float = sum(w_neighbours)
-        print(f"YORIC: Checking weighted twins {u} ({w_u}) {v} ({w_v}) neighbours (min {min(w_neighbours)}, sum {w_neighbours_sum})")
-        print(f"YORIC independent? {self.is_independent(neighbours)}")
         if w_u + w_v >= w_neighbours_sum:
             # U and V are always part of the solution and the neighbours are never part of the solution.
-            print(f"YORIC: Checking weighted twins {u} {v} => they're part of the solution")
             return _TwinCategory.InSolution
         if self.is_independent(neighbours) and (w_u + w_v >= w_neighbours_sum - min(w_neighbours)):
             # Either a subset of the neighbours is part of the solution or U and V are part of the solution.
-            print(f"YORIC: Checking weighted twins {u} {v} => they're independent")
             return _TwinCategory.Independent
         else:
             # We don't have a nice rule to handle this case.
-            print(f"YORIC: Checking weighted twins {u} {v} => cannot handle")
             return _TwinCategory.CannotRemove
-
 
 
 class BaseRebuilder(abc.ABC):
@@ -650,6 +685,10 @@ class RebuilderNodeFolding(BaseRebuilder):
 
 class RebuilderUnconfined(BaseRebuilder):
     def rebuild(self, partial_solution: set[int]) -> None:
+        """
+        By definition, unconfined nodes are never part of the solution,
+        so rebuilding is a noop.
+        """
         pass
 
 
@@ -703,9 +742,10 @@ class RebuilderTwinAlwaysInSolution(BaseRebuilder):
         partial_solution.add(self.u)
         partial_solution.add(self.v)
 
+
 class RebuilderNeighborhoodRemoval(BaseRebuilder):
     def __init__(self, dominant_vertex: int):
         self.dominant_vertex = dominant_vertex
-    
+
     def rebuild(self, partial_solution: set[int]) -> None:
         partial_solution.add(self.dominant_vertex)

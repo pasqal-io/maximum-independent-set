@@ -28,7 +28,7 @@ class BaseWeightPicker(ABC):
 
     @classmethod
     @abstractmethod
-    def set_node_weight(cls, graph: nx.Graph, node: int, weight: float):
+    def set_node_weight(cls, graph: nx.Graph, node: int, weight: float) -> None:
         """
         Set the weight of a node.
 
@@ -71,14 +71,18 @@ class BaseWeightPicker(ABC):
         elif objective == Objective.MAXIMIZE_WEIGHT:
             return WeightedPicker
 
+
 class WeightedPicker(BaseWeightPicker):
     @classmethod
     def node_weight(cls, graph: nx.Graph, node: int) -> float:
-        return graph.nodes[node].get("weight", 1.0)
+        result = graph.nodes[node].get("weight", 1.0)
+        assert isinstance(result, float)
+        return result
 
     @classmethod
     def subgraph_weight(cls, graph: nx.Graph, nodes: list[int]) -> float:
         return float(sum(cls.node_weight(graph, n) for n in nodes))
+
 
 class UnweightedPicker(BaseWeightPicker):
     @classmethod
@@ -86,7 +90,7 @@ class UnweightedPicker(BaseWeightPicker):
         return 1.0
 
     @classmethod
-    def set_node_weight(cls, graph: nx.Graph, node: int, weight: float):
+    def set_node_weight(cls, graph: nx.Graph, node: int, weight: float) -> None:
         raise NotImplementedError("UnweightedPicker does not support operation `set_node_weight`")
 
     @classmethod
@@ -101,6 +105,7 @@ def closed_neighborhood(graph: nx.Graph, node: int) -> list[int]:
     neighbours = list(graph.neighbors(node))
     neighbours.append(node)
     return neighbours
+
 
 def is_independent(graph: nx.Graph, nodes: list[int]) -> bool:
     """

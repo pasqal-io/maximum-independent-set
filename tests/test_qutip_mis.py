@@ -13,7 +13,9 @@ from mis.shared.types import MethodType, Objective
 
 @pytest.mark.parametrize("postprocessor", argvalues=[None, lambda config: Maximization(config)])
 @pytest.mark.parametrize("preprocessor", [None, lambda config, graph: Kernelization(config, graph)])
-@pytest.mark.parametrize("objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT])
+@pytest.mark.parametrize(
+    "objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT]
+)
 def test_empty_qtip_mis(
     preprocessor: None | Callable[[SolverConfig, nx.Graph], Kernelization],
     postprocessor: None | Callable[[SolverConfig], Maximization],
@@ -44,7 +46,9 @@ def test_empty_qtip_mis(
 
 @pytest.mark.parametrize("postprocessor", argvalues=[None, lambda config: Maximization(config)])
 @pytest.mark.parametrize("preprocessor", [None, lambda config, graph: Kernelization(config, graph)])
-@pytest.mark.parametrize("objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT])
+@pytest.mark.parametrize(
+    "objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT]
+)
 def test_disconnected_qtip_mis(
     preprocessor: None | Callable[[SolverConfig, nx.Graph], Kernelization],
     postprocessor: None | Callable[[SolverConfig], Maximization],
@@ -87,7 +91,9 @@ def test_disconnected_qtip_mis(
 
 @pytest.mark.parametrize("postprocessor", argvalues=[None, lambda config: Maximization(config)])
 @pytest.mark.parametrize("preprocessor", [None, lambda config, graph: Kernelization(config, graph)])
-@pytest.mark.parametrize("objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT])
+@pytest.mark.parametrize(
+    "objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT]
+)
 def test_star_qtip_mis(
     preprocessor: None | Callable[[SolverConfig, nx.Graph], Kernelization],
     postprocessor: None | Callable[[SolverConfig], Maximization],

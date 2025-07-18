@@ -368,7 +368,8 @@ class GreedyMISSolver(BaseSolver):
                 for rem_sol in remainder_solutions:
                     combined_nodes = current_mis + rem_sol.nodes
                     if (best_solution is None) or (
-                        self.weight_picker.subgraph_weight(self.instance.graph, combined_nodes) > best_solution.weight
+                        self.weight_picker.subgraph_weight(self.instance.graph, combined_nodes)
+                        > best_solution.weight
                     ):
                         best_solution = MISSolution(
                             instance=instance, nodes=combined_nodes, frequency=1.0

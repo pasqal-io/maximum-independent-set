@@ -20,6 +20,7 @@ class MethodType(str, Enum):
     EAGER = "eager"
     GREEDY = "greedy"
 
+
 class Objective(str, Enum):
     """
     The objective of the solver.
@@ -161,8 +162,11 @@ class MISSolution:
 
         # Note: As of this writing, self.weight is still considered a work in progress, so we
         # leave it out of the documentation.
-        from mis.shared.graphs import BaseWeightPicker # Avoid cycles.
-        self.weight = BaseWeightPicker.for_objective(Objective.MAXIMIZE_WEIGHT).subgraph_weight(instance.graph, nodes)
+        from mis.shared.graphs import BaseWeightPicker  # Avoid cycles.
+
+        self.weight = BaseWeightPicker.for_objective(Objective.MAXIMIZE_WEIGHT).subgraph_weight(
+            instance.graph, nodes
+        )
 
     def draw(
         self,
