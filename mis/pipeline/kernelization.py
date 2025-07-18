@@ -291,12 +291,13 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
             if neighbors_u == neighbors_v:
                 # Note: Since there are no self-loops, we can deduce
                 # that U and V are also not neighbours.
-                category= self.twin_category(u, v, list(neighbors_u))
+                list_neighbours_u = list(neighbors_u)
+                category= self.twin_category(u, v, list_neighbours_u)
                 if category == _TwinCategory.CannotRemove:
                     continue
                 return _Twin(
                     node=int(u),
-                    neighbours=list(neighbors_u),
+                    neighbours=list_neighbours_u,
                     category=category)
         return None
 
@@ -323,11 +324,11 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         """
         w_u = self.node_weight(u)
         w_v = self.node_weight(v)
-        w_u_neighbours_sum = self.subgraph_weight(neighbours)
-        v_prime = self.add_node(w_u_neighbours_sum - (w_u + w_v))
+        w_neighbours = self.subgraph_weight(neighbours)
+        v_prime = self.add_node(w_neighbours - (w_u + w_v))
         rule_app_B = RebuilderTwinIndependent(v, u, neighbours, v_prime)
         self.rule_application_sequence.append(rule_app_B)
-        self.fold_twin(v_prime, u, v, neighbours)
+        self.fold_twin(u=u, v=v, v_prime=v_prime, u_neighbours=neighbours)
 
     def search_rule_twin_reduction(self) -> None:
         """
@@ -350,7 +351,6 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
             u = twin.node
             category = self.twin_category(u, v, twin.neighbours)
             if category == _TwinCategory.Independent:
-                # FIXME: The definition is very different between MIS and wMIS.
                 self.apply_rule_twin_independent(u, v, twin.neighbours)
             elif category == _TwinCategory.InSolution:
                 self.apply_rule_twins_in_solution(u, v, twin.neighbours)
@@ -577,20 +577,24 @@ class WeightedKernelization(BaseKernelization):
 
     # -----------------twin reduction---------------------------
 
-
     def twin_category(self, u: int, v: int, neighbours: list[int]) -> _TwinCategory:
         w_u: float = self.node_weight(u)
         w_v: float = self.node_weight(v)
         w_neighbours: list[float] = [self.node_weight(node) for node in neighbours]
         w_neighbours_sum: float = sum(w_neighbours)
+        print(f"YORIC: Checking weighted twins {u} ({w_u}) {v} ({w_v}) neighbours (min {min(w_neighbours)}, sum {w_neighbours_sum})")
+        print(f"YORIC independent? {self.is_independent(neighbours)}")
         if w_u + w_v >= w_neighbours_sum:
             # U and V are always part of the solution and the neighbours are never part of the solution.
+            print(f"YORIC: Checking weighted twins {u} {v} => they're part of the solution")
             return _TwinCategory.InSolution
-        if self.is_independent(neighbours) and w_u + w_v > w_neighbours_sum - min(w_neighbours):
-            # Either a subset of the neighbours are part of the solution or U and V are part of the solution.
+        if self.is_independent(neighbours) and (w_u + w_v >= w_neighbours_sum - min(w_neighbours)):
+            # Either a subset of the neighbours is part of the solution or U and V are part of the solution.
+            print(f"YORIC: Checking weighted twins {u} {v} => they're independent")
             return _TwinCategory.Independent
         else:
             # We don't have a nice rule to handle this case.
+            print(f"YORIC: Checking weighted twins {u} {v} => cannot handle")
             return _TwinCategory.CannotRemove
 
 

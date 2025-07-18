@@ -168,12 +168,12 @@ def test_unconfined_loop() -> None:
     assert not test_instance_3.unconfined_loop(0, {0}, {1, 2, 3})
 
 
-@pytest.mark.parametrize("objective", [Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT])
-def test_search_rule_unconfined_and_diamond(objective: Objective) -> None:
-    test_instance = ker.Kernelization(SolverConfig(objective=objective), graph=K3_CLAW)._kernelizer
+def test_search_rule_unconfined_and_diamond() -> None:
+    # This operation exists only on unweighted kernelization.
+    objective = Objective.MAXIMIZE_SIZE
+    test_instance = ker.UnweightedKernelization(SolverConfig(objective=objective), graph=K3_CLAW)
     test_instance.search_rule_unconfined_and_diamond()
     assert set(test_instance.kernel) == {2, 4, 5}
-
 
 @pytest.mark.parametrize("objective", [Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT])
 def test_fold_twin_uw(objective: Objective) -> None:
@@ -188,7 +188,7 @@ def test_fold_twin_uw(objective: Objective) -> None:
 @pytest.mark.parametrize("objective", [Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT])
 def test_find_twin(objective: Objective) -> None:
     test_instance = ker.Kernelization(SolverConfig(objective=objective), graph=K23_CLAW_bis)._kernelizer
-    assert test_instance.find_twin(0) == 1
+    assert test_instance.find_twin(0) == "INDEPENDENT"
     test_instance2 = ker.Kernelization(SolverConfig(objective=objective), graph=K23_CLAW_twin_linked)._kernelizer
     assert test_instance2.find_twin(0) is None
 
