@@ -7,17 +7,29 @@ from mis.solver.solver import MISInstance, MISSolver
 from mis.pipeline.config import SolverConfig, GreedyConfig
 from mis.pipeline.kernelization import Kernelization
 from mis.pipeline.maximization import Maximization
-from mis.shared.types import MethodType
+from mis.shared.types import MethodType, Objective
 from mis.shared.graphs import is_independent
 
 
+@pytest.mark.parametrize(
+    "objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT]
+)
 @pytest.mark.parametrize("use_quantum", [False, True])
-def test_greedy_mis_basic(simple_graph: nx.Graph, use_quantum: bool) -> None:
+def test_greedy_mis_basic(
+    simple_graph: nx.Graph,
+    use_quantum: bool,
+    objective: Objective,
+) -> None:
     """
     Test Greedy MIS solver in both classical and quantum modes with default settings.
     """
     backend = BackendConfig() if use_quantum else None
-    config = SolverConfig(method=MethodType.GREEDY, backend=backend, greedy=GreedyConfig())
+    config = SolverConfig(
+        method=MethodType.GREEDY,
+        backend=backend,
+        objective=objective,
+        greedy=GreedyConfig(),
+    )
     instance = MISInstance(simple_graph)
     solver = MISSolver(instance, config)
     solutions = solver.solve()
@@ -27,12 +39,16 @@ def test_greedy_mis_basic(simple_graph: nx.Graph, use_quantum: bool) -> None:
     assert all(is_independent(instance.graph, sol.nodes) for sol in solutions)
 
 
-@pytest.mark.parametrize("preprocessor", [None, lambda graph: Kernelization(graph)])
-@pytest.mark.parametrize("postprocessor", [None, lambda: Maximization()])
+@pytest.mark.parametrize("preprocessor", [None, lambda config, graph: Kernelization(config, graph)])
+@pytest.mark.parametrize("postprocessor", argvalues=[None, lambda config: Maximization(config)])
+@pytest.mark.parametrize(
+    "objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT]
+)
 @pytest.mark.parametrize("use_quantum", [False, True])
 def test_greedy_solver_with_pre_post(
-    preprocessor: None | Callable[[nx.Graph], Kernelization],
-    postprocessor: None | Callable[[], Maximization],
+    preprocessor: None | Callable[[SolverConfig, nx.Graph], Kernelization],
+    postprocessor: None | Callable[[SolverConfig], Maximization],
+    objective: Objective,
     use_quantum: bool,
     simple_graph: nx.Graph,
 ) -> None:
@@ -58,6 +74,7 @@ def test_greedy_solver_with_pre_post(
         backend=backend,
         preprocessor=preprocessor,
         postprocessor=postprocessor,
+        objective=objective,
         greedy=GreedyConfig(),
     )
 
@@ -72,8 +89,11 @@ def test_greedy_solver_with_pre_post(
         assert is_independent(instance.graph, solution.nodes)
 
 
+@pytest.mark.parametrize(
+    "objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT]
+)
 @pytest.mark.parametrize("use_quantum", [False, True])
-def test_greedy_mis_long(complex_graph: nx.Graph, use_quantum: bool) -> None:
+def test_greedy_mis_long(complex_graph: nx.Graph, use_quantum: bool, objective: Objective) -> None:
     """
     Test Greedy MIS solver in both classical and quantum modes with default settings.
     """
@@ -81,6 +101,7 @@ def test_greedy_mis_long(complex_graph: nx.Graph, use_quantum: bool) -> None:
     config = SolverConfig(
         method=MethodType.GREEDY,
         backend=backend,
+        objective=objective,
         greedy=GreedyConfig(default_solving_threshold=10),
     )
     instance = MISInstance(complex_graph)

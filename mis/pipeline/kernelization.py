@@ -1,9 +1,32 @@
 import abc
+import typing
 
 import networkx as nx
 from networkx.classes.reportviews import DegreeView
 from mis.pipeline.preprocessor import BasePreprocessor
 from mis.shared.graphs import is_independent
+
+if typing.TYPE_CHECKING:
+    from mis.pipeline.config import SolverConfig
+
+
+class Kernelization(BasePreprocessor):
+    # As of this writing, this entire class is a placeholder for the day
+    # we implement weighted vs. unweighted kernelization.
+    def __init__(self, config: "SolverConfig", graph: nx.Graph) -> None:
+        # Placeholder.
+        # Future versions will gain the ability to pick between weighted and
+        # unweighted kernelization.
+        self._kernelizer = UnweightedKernelization(config, graph)
+
+    def preprocess(self) -> nx.Graph:
+        return self._kernelizer.preprocess()
+
+    def rebuild(self, partial_solution: set[int]) -> set[int]:
+        return self._kernelizer.rebuild(partial_solution)
+
+    def is_independent(self, nodes: list[int]) -> bool:
+        return self._kernelizer.is_independent(nodes)
 
 
 class BaseKernelization(BasePreprocessor, abc.ABC):
@@ -11,7 +34,7 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
     Shared base class for kernelization.
     """
 
-    def __init__(self, graph: nx.Graph) -> None:
+    def __init__(self, config: "SolverConfig", graph: nx.Graph) -> None:
         # The latest version of the graph.
         # We rewrite it progressively to decrease the number of
         # nodes and edges.
@@ -101,7 +124,7 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         return node
 
 
-class Kernelization(BaseKernelization):
+class UnweightedKernelization(BaseKernelization):
     """
     Apply well-known transformations to the graph to reduce its size without
     compromising the result.

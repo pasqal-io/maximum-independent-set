@@ -2,6 +2,7 @@ from __future__ import annotations
 import random
 
 import mis.pipeline.kernelization as ker
+from mis.pipeline.config import SolverConfig
 import networkx as nx
 
 
@@ -32,7 +33,7 @@ def test_is_subclique() -> None:
         out_of_clique = node
         graph.add_node(node)
 
-    test_instance = ker.Kernelization(graph)
+    test_instance = ker.UnweightedKernelization(SolverConfig(), graph)
     assert test_instance.is_subclique(clique)
     assert not test_instance.is_subclique([out_of_clique, *clique_set])
 
@@ -82,7 +83,7 @@ K3_CLAW.add_edges_from([(0, 1), (0, 2), (1, 2), (2, 3), (4, 3), (5, 3)])
 
 
 def test_apply_rule_isolated_node_removal() -> None:
-    test_instance = ker.Kernelization(graph_isolated)
+    test_instance = ker.UnweightedKernelization(SolverConfig(), graph_isolated)
     test_instance.apply_rule_isolated_node_removal(0)
     assert not all(test_instance.kernel.has_node(node) for node in [0, 1])
     assert all(test_instance.kernel.has_node(node) for node in [2, 3, 4, 5])
@@ -91,7 +92,7 @@ def test_apply_rule_isolated_node_removal() -> None:
 
 
 def test_search_rule_isolated_node_removal() -> None:
-    test_instance = ker.Kernelization(graph_isolated)
+    test_instance = ker.UnweightedKernelization(SolverConfig(), graph_isolated)
     test_instance.search_rule_isolated_node_removal()
     assert not all(test_instance.kernel.has_node(node) for node in [0, 1])
     assert all(test_instance.kernel.has_node(node) for node in [2, 3, 4, 5])
@@ -100,14 +101,14 @@ def test_search_rule_isolated_node_removal() -> None:
 
 
 def test_folding_uw() -> None:
-    test_instance = ker.Kernelization(graph_folding)
+    test_instance = ker.UnweightedKernelization(SolverConfig(), graph_folding)
     test_instance._fold_three(0, 1, 2, 9)
     assert not all(test_instance.kernel.has_node(node) for node in [0, 1, 2])
     assert all(test_instance.kernel.has_node(node) for node in [9, 3, 4, 5, 6, 7, 8])
 
 
 def test_apply_rule_node_fold_uw() -> None:
-    test_instance = ker.Kernelization(graph_folding)
+    test_instance = ker.UnweightedKernelization(SolverConfig(), graph_folding)
     test_instance.apply_rule_node_fold(0, 1, 2)
     assert not all(test_instance.kernel.has_node(node) for node in [0, 1, 2])
     assert all(test_instance.kernel.has_node(node) for node in [9, 3, 4, 5, 6, 7, 8])
@@ -118,7 +119,7 @@ def test_apply_rule_node_fold_uw() -> None:
 
 
 def test_rule_node_fold() -> None:
-    test_instance = ker.Kernelization(graph_folding)
+    test_instance = ker.UnweightedKernelization(SolverConfig(), graph_folding)
     test_instance.search_rule_node_fold()
     assert not all(test_instance.kernel.has_node(node) for node in [0, 1, 2])
     assert all(test_instance.kernel.has_node(node) for node in [9, 3, 4, 5, 6, 7, 8])
@@ -129,38 +130,38 @@ def test_rule_node_fold() -> None:
 
 
 def test_aux_search_confinement() -> None:
-    test_instance = ker.Kernelization(P_3)
+    test_instance = ker.UnweightedKernelization(SolverConfig(), P_3)
     assert test_instance.aux_search_confinement({1}, {0}) == (1, 1, {2})
     assert test_instance.aux_search_confinement({1}, {0, 2}) == (-1, 5, set())
     assert test_instance.aux_search_confinement({2}, {0, 1}) == (2, 0, set())
-    test_instance_2 = ker.Kernelization(CLAW)
+    test_instance_2 = ker.UnweightedKernelization(SolverConfig(), CLAW)
     assert test_instance_2.aux_search_confinement({1}, {0}) == (1, 2, {2, 3})
 
 
 def test_apply_rule_unconfined() -> None:
-    test_instance = ker.Kernelization(P_3)
+    test_instance = ker.UnweightedKernelization(SolverConfig(), P_3)
     test_instance.apply_rule_unconfined(2)
     assert set(test_instance.kernel.nodes) == {0, 1}
 
 
 def test_unconfined_loop() -> None:
-    test_instance = ker.Kernelization(P_3)
+    test_instance = ker.UnweightedKernelization(SolverConfig(), P_3)
     assert test_instance.unconfined_loop(0, {0}, {1})
     assert not test_instance.unconfined_loop(0, {0, 1}, {2})
-    test_instance_2 = ker.Kernelization(CLAW)
+    test_instance_2 = ker.UnweightedKernelization(SolverConfig(), CLAW)
     assert not test_instance_2.unconfined_loop(0, {0}, {1})
-    test_instance_3 = ker.Kernelization(K4)
+    test_instance_3 = ker.UnweightedKernelization(SolverConfig(), K4)
     assert not test_instance_3.unconfined_loop(0, {0}, {1, 2, 3})
 
 
 def test_search_rule_unconfined_and_diamond() -> None:
-    test_instance = ker.Kernelization(K3_CLAW)
+    test_instance = ker.UnweightedKernelization(SolverConfig(), K3_CLAW)
     test_instance.search_rule_unconfined_and_diamond()
     assert set(test_instance.kernel) == {2, 4, 5}
 
 
 def test_fold_twin_uw() -> None:
-    test_instance = ker.Kernelization(K23_CLAW_bis)
+    test_instance = ker.UnweightedKernelization(SolverConfig(), K23_CLAW_bis)
     test_instance.fold_twin(0, 1, 10, [2, 3, 4])
     assert not all(test_instance.kernel.has_node(node) for node in [0, 1, 2, 3, 4])
     assert all(test_instance.kernel.has_node(node) for node in [10, 5, 6])
@@ -169,14 +170,14 @@ def test_fold_twin_uw() -> None:
 
 
 def test_find_twin() -> None:
-    test_instance = ker.Kernelization(K23_CLAW_bis)
+    test_instance = ker.UnweightedKernelization(SolverConfig(), K23_CLAW_bis)
     assert test_instance.find_twin(0) == 1
-    test_instance2 = ker.Kernelization(K23_CLAW_twin_linked)
+    test_instance2 = ker.UnweightedKernelization(SolverConfig(), K23_CLAW_twin_linked)
     assert test_instance2.find_twin(0) is None
 
 
 def test_apply_rule_twin_ind() -> None:
-    test_instance = ker.Kernelization(K23_CLAW_bis)
+    test_instance = ker.UnweightedKernelization(SolverConfig(), K23_CLAW_bis)
     test_instance.apply_rule_twin_independent(0, 1, [2, 3, 4])
     assert set(test_instance.kernel.nodes()) == {5, 6, 7}
     mis_1 = test_instance.rebuild({7})
@@ -186,7 +187,7 @@ def test_apply_rule_twin_ind() -> None:
 
 
 def test_apply_rule_twin_not_ind() -> None:
-    test_instance = ker.Kernelization(K23_CLAW_N_linked)
+    test_instance = ker.UnweightedKernelization(SolverConfig(), K23_CLAW_N_linked)
     test_instance.apply_rule_twin_has_dependency(0, 1, [2, 3, 4])
     assert set(test_instance.kernel.nodes()) == {5, 6}
     mis_1 = test_instance.rebuild(set())
@@ -194,14 +195,14 @@ def test_apply_rule_twin_not_ind() -> None:
 
 
 def test_search_rule_twin_reduction() -> None:
-    test_instance = ker.Kernelization(K23_CLAW_bis)
+    test_instance = ker.UnweightedKernelization(SolverConfig(), K23_CLAW_bis)
     test_instance.search_rule_twin_reduction()
     assert set(test_instance.kernel.nodes()) == {5, 6, 7}
     mis_1 = test_instance.rebuild({7})
     assert mis_1 == {2, 3, 4}
     mis_2 = test_instance.rebuild(set())
     assert mis_2 == {0, 1}
-    test_instance_2 = ker.Kernelization(K23_CLAW_N_linked)
+    test_instance_2 = ker.UnweightedKernelization(SolverConfig(), K23_CLAW_N_linked)
     test_instance_2.apply_rule_twin_has_dependency(0, 1, [2, 3, 4])
     assert set(test_instance_2.kernel.nodes()) == {5, 6}
     mis_3 = test_instance_2.rebuild(set())
