@@ -102,9 +102,11 @@ class Maximization(BasePostprocessor):
             if self.objective == Objective.MAXIMIZE_WEIGHT:
                 if weight > best_weight:
                     best_pick = picked
-            else:
+            elif self.objective == Objective.MAXIMIZE_SIZE:
                 if len(picked) > len(best_pick):
                     best_pick = picked
+            else:
+                raise NotImplementedError(f"Objective {self.objective} not implemented")
         return MISSolution(
             instance=solution.instance,
             frequency=solution.frequency,

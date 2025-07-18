@@ -24,7 +24,7 @@ class BaseWeightPicker(ABC):
 
         For an unweighted cost picker, this always returns 1.
         """
-        ...
+        raise NotImplementedError
 
     @classmethod
     @abstractmethod
@@ -37,7 +37,7 @@ class BaseWeightPicker(ABC):
 
         For an unweighted cost picker, raise an error.
         """
-        ...
+        raise NotImplementedError
 
     @classmethod
     @abstractmethod
@@ -47,7 +47,7 @@ class BaseWeightPicker(ABC):
 
         Raises an error in an unweighted cost picker.
         """
-        ...
+        raise NotImplementedError
 
     @classmethod
     @abstractmethod
@@ -59,7 +59,7 @@ class BaseWeightPicker(ABC):
 
         For an unweighted cost picker, this always returns `len(nodes)`.
         """
-        ...
+        raise NotImplementedError
 
     @classmethod
     def for_objective(cls, objective: Objective) -> type[BaseWeightPicker]:
