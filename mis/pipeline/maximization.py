@@ -3,7 +3,7 @@ import networkx as nx
 import typing
 
 from mis.pipeline.postprocessor import BasePostprocessor
-from mis.shared.types import MISSolution, Objective
+from mis.shared.types import MISSolution, Weighting
 from mis.shared.graphs import BaseWeightPicker
 
 if typing.TYPE_CHECKING:
@@ -36,8 +36,8 @@ class Maximization(BasePostprocessor):
         self.frequency_threshold = frequency_threshold
         self.augment_rounds = augment_rounds
         self.seed = seed
-        self.objective = config.objective
-        self.picker = BaseWeightPicker.for_objective(self.objective)
+        self.picker = BaseWeightPicker.for_weighting(config.weighting)
+        self.weighting = config.weighting
 
     def postprocess(self, solution: MISSolution) -> MISSolution | None:
         """
@@ -99,14 +99,13 @@ class Maximization(BasePostprocessor):
 
             # Once we have picked as many nodes as possible, time to check whether
             # we have improved on the best solution.
-            if self.objective == Objective.MAXIMIZE_WEIGHT:
-                if weight > best_weight:
-                    best_pick = picked
-            elif self.objective == Objective.MAXIMIZE_SIZE:
-                if len(picked) > len(best_pick):
-                    best_pick = picked
-            else:
-                raise NotImplementedError(f"Objective {self.objective} not implemented")
+            match self.weighting:
+                case Weighting.WEIGHTED:
+                    if weight > best_weight:
+                        best_pick = picked
+                case Weighting.UNWEIGHTED:
+                    if len(picked) > len(best_pick):
+                        best_pick = picked
         return MISSolution(
             instance=solution.instance,
             frequency=solution.frequency,

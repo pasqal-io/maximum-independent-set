@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from mis.pipeline.pulse import BasePulseShaper
     from mis.pipeline.postprocessor import BasePostprocessor
     from mis.pipeline.preprocessor import BasePreprocessor
-from mis.shared.types import MethodType, Objective
+from mis.shared.types import MethodType, Weighting
 
 from qoolqit._solvers import BackendType  # noqa: F401 # imported for re-export
 from qoolqit._solvers.backends import BaseBackend, BackendConfig
@@ -93,12 +93,12 @@ class SolverConfig:
     use a non-quantum heuristic solver.
     """
 
-    objective: Objective = Objective.MAXIMIZE_SIZE
+    weighting: Weighting = Weighting.UNWEIGHTED
     """
-    The objective of the solver, i.e. maximizing the
-    size of the solution (by number of nodes) or maximizing
-    the total weight of the solution (the sum of weights of
-    individual nodes).
+    The weighting policy for this solver, i.e. should it attempt to
+    maximize size of the solution (by number of nodes, ignoring weights)
+    or maximizing the total weight of the solution (the sum of weights of
+    individual nodes, ignoring the number of nodes).
     """
 
     method: MethodType = MethodType.EAGER

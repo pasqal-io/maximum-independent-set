@@ -1,6 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from .types import Objective
+from .types import Weighting
 
 import networkx as nx
 
@@ -62,13 +62,13 @@ class BaseWeightPicker(ABC):
         raise NotImplementedError
 
     @classmethod
-    def for_objective(cls, objective: Objective) -> type[BaseWeightPicker]:
+    def for_weighting(cls, weighting: Weighting) -> type[BaseWeightPicker]:
         """
         Pick a cost picker for an objective.
         """
-        if objective == Objective.MAXIMIZE_SIZE:
+        if weighting == Weighting.UNWEIGHTED:
             return UnweightedPicker
-        elif objective == Objective.MAXIMIZE_WEIGHT:
+        elif weighting == Weighting.WEIGHTED:
             return WeightedPicker
 
 

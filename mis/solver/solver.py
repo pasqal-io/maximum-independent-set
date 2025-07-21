@@ -278,7 +278,7 @@ class GreedyMISSolver(BaseSolver):
         else:
             # Quantum mode
             self.backend = _extract_backend(config)
-        self.weight_picker = BaseWeightPicker.for_objective(config.objective)
+        self.weight_picker = BaseWeightPicker.for_weighting(config.weighting)
         self.solver_factory = solver_factory
         self.layout = self._build_layout()
 

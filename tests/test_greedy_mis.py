@@ -7,18 +7,16 @@ from mis.solver.solver import MISInstance, MISSolver
 from mis.pipeline.config import SolverConfig, GreedyConfig
 from mis.pipeline.kernelization import Kernelization
 from mis.pipeline.maximization import Maximization
-from mis.shared.types import MethodType, Objective
+from mis.shared.types import MethodType, Weighting
 from mis.shared.graphs import is_independent
 
 
-@pytest.mark.parametrize(
-    "objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT]
-)
+@pytest.mark.parametrize("weighting", argvalues=[Weighting.UNWEIGHTED, Weighting.WEIGHTED])
 @pytest.mark.parametrize("use_quantum", [False, True])
 def test_greedy_mis_basic(
     simple_graph: nx.Graph,
     use_quantum: bool,
-    objective: Objective,
+    weighting: Weighting,
 ) -> None:
     """
     Test Greedy MIS solver in both classical and quantum modes with default settings.
@@ -27,7 +25,7 @@ def test_greedy_mis_basic(
     config = SolverConfig(
         method=MethodType.GREEDY,
         backend=backend,
-        objective=objective,
+        weighting=weighting,
         greedy=GreedyConfig(),
     )
     instance = MISInstance(simple_graph)
@@ -41,14 +39,12 @@ def test_greedy_mis_basic(
 
 @pytest.mark.parametrize("preprocessor", [None, lambda config, graph: Kernelization(config, graph)])
 @pytest.mark.parametrize("postprocessor", argvalues=[None, lambda config: Maximization(config)])
-@pytest.mark.parametrize(
-    "objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT]
-)
+@pytest.mark.parametrize("weighting", argvalues=[Weighting.UNWEIGHTED, Weighting.WEIGHTED])
 @pytest.mark.parametrize("use_quantum", [False, True])
 def test_greedy_solver_with_pre_post(
     preprocessor: None | Callable[[SolverConfig, nx.Graph], Kernelization],
     postprocessor: None | Callable[[SolverConfig], Maximization],
-    objective: Objective,
+    weighting: Weighting,
     use_quantum: bool,
     simple_graph: nx.Graph,
 ) -> None:
@@ -74,7 +70,7 @@ def test_greedy_solver_with_pre_post(
         backend=backend,
         preprocessor=preprocessor,
         postprocessor=postprocessor,
-        objective=objective,
+        weighting=weighting,
         greedy=GreedyConfig(),
     )
 
@@ -89,11 +85,9 @@ def test_greedy_solver_with_pre_post(
         assert is_independent(instance.graph, solution.nodes)
 
 
-@pytest.mark.parametrize(
-    "objective", argvalues=[Objective.MAXIMIZE_SIZE, Objective.MAXIMIZE_WEIGHT]
-)
+@pytest.mark.parametrize("weighting", argvalues=[Weighting.UNWEIGHTED, Weighting.WEIGHTED])
 @pytest.mark.parametrize("use_quantum", [False, True])
-def test_greedy_mis_long(complex_graph: nx.Graph, use_quantum: bool, objective: Objective) -> None:
+def test_greedy_mis_long(complex_graph: nx.Graph, use_quantum: bool, weighting: Weighting) -> None:
     """
     Test Greedy MIS solver in both classical and quantum modes with default settings.
     """
@@ -101,7 +95,7 @@ def test_greedy_mis_long(complex_graph: nx.Graph, use_quantum: bool, objective: 
     config = SolverConfig(
         method=MethodType.GREEDY,
         backend=backend,
-        objective=objective,
+        weighting=weighting,
         greedy=GreedyConfig(default_solving_threshold=10),
     )
     instance = MISInstance(complex_graph)

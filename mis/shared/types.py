@@ -7,23 +7,53 @@ import matplotlib.pyplot as plt
 
 
 class MethodType(str, Enum):
+    """
+    The method used to extract the MIS.
+    """
+
     EAGER = "eager"
+    """
+    An eager solver that attempts to extract a MIS in a single
+    shot.
+    """
+
     GREEDY = "greedy"
-
-
-class Objective(str, Enum):
     """
-    The objective of the solver.
+    A greedy solver that decomposes the graph into smaller subgraphs
+    that can benefit from device-specific physical layouts.
     """
 
-    MAXIMIZE_SIZE = "size"
+
+class Weighting(str, Enum):
     """
-    Maximize the size of the independent set (in number of nodes).
+    The algorithm used by the solver.
     """
 
-    MAXIMIZE_WEIGHT = "weight"
+    UNWEIGHTED = "unweighted"
     """
-    Maximize the weight of the independent set (using the `weight` property).
+    Unweighted Maximum Independent Set
+
+    Ignore any weight attached to nodes and attempt to maximize the number
+    of nodes in the resulting independent set.
+
+    This algorithm imposes fewer restrictions on the underlying quantum
+    device than the weighted algorithm and may call upon faster and more
+    benefitial pre/post-processing heuristics.
+    """
+
+    WEIGHTED = "weighted"
+    """
+    Weighted Maximum Independent Set
+
+    Any node in the graph may have a property `weight` (float, defaulting to
+    `1.0`) specifying their weight. The algorithm attempts to maximize
+    the total weight in the resulting independent set.
+
+    This algorithm may not work on all quantum devices, as it relies upon
+    specific hardware capabilities. As of this writing, pre-processing and
+    post-processing heuristics are typically slower and less benefitial than
+    the unweighted heuristics, with the consequence that execution on a
+    device may require more qubits.
     """
 
 
@@ -154,7 +184,7 @@ class MISSolution:
         # leave it out of the documentation.
         from mis.shared.graphs import BaseWeightPicker  # Avoid cycles.
 
-        self.weight = BaseWeightPicker.for_objective(Objective.MAXIMIZE_WEIGHT).subgraph_weight(
+        self.weight = BaseWeightPicker.for_weighting(Weighting.WEIGHTED).subgraph_weight(
             instance.graph, nodes
         )
 
