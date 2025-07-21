@@ -4,16 +4,18 @@ import networkx as nx
 import copy
 
 from pulser import Pulse, Register
-from qoolqit._solvers.backends import QuantumProgram, get_backend, BackendConfig, BaseBackend
+from qoolqit._solvers.backends import BaseBackend, get_backend
+from qoolqit._solvers import QuantumProgram
+
 from mis.shared.types import MISInstance, MISSolution, MethodType
 from mis.pipeline.basesolver import BaseSolver
 from mis.pipeline.fixtures import Fixtures
 from mis.pipeline.embedder import DefaultEmbedder
 from mis.pipeline.pulse import DefaultPulseShaper
-from mis.pipeline.config import SolverConfig
+from mis.pipeline.config import BackendConfig, SolverConfig
 from mis.solver.greedymapping import GreedyMapping
 from mis.pipeline.layout import Layout
-from mis.shared.graphs import calculate_weight, remove_neighborhood
+from mis.shared.graphs import remove_neighborhood, BaseWeightPicker
 
 
 def _extract_backend(config: SolverConfig) -> BaseBackend:
@@ -116,6 +118,7 @@ class MISSolverQuantum(BaseSolver):
                 device.
         """
         super().__init__(instance, config)
+
         self.fixtures = Fixtures(instance, self.config)
         self.backend = _extract_backend(config)
         self._register: Register | None = None
@@ -275,6 +278,7 @@ class GreedyMISSolver(BaseSolver):
         else:
             # Quantum mode
             self.backend = _extract_backend(config)
+        self.weight_picker = BaseWeightPicker.for_weighting(config.weighting)
         self.solver_factory = solver_factory
         self.layout = self._build_layout()
 
@@ -373,7 +377,8 @@ class GreedyMISSolver(BaseSolver):
                 for rem_sol in remainder_solutions:
                     combined_nodes = current_mis + rem_sol.nodes
                     if (best_solution is None) or (
-                        calculate_weight(self.instance.graph, combined_nodes) > best_solution.weight
+                        self.weight_picker.subgraph_weight(self.instance.graph, combined_nodes)
+                        > best_solution.weight
                     ):
                         best_solution = MISSolution(
                             instance=instance, nodes=combined_nodes, frequency=1.0
@@ -422,7 +427,7 @@ class GreedyMISSolver(BaseSolver):
         """
         G = nx.Graph()
         for logical, physical in mapping.items():
-            weight = graph.nodes[logical].get("weight", 0.0)
+            weight = self.weight_picker.node_weight(graph, logical)
             pos = self.layout.graph.nodes[physical].get("pos", (0, 0))
             G.add_node(physical, weight=weight, pos=pos)
 

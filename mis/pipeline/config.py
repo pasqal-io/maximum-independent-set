@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from mis.pipeline.pulse import BasePulseShaper
     from mis.pipeline.postprocessor import BasePostprocessor
     from mis.pipeline.preprocessor import BasePreprocessor
-from mis.shared.types import MethodType
+from mis.shared.types import MethodType, Weighting
 
 from qoolqit._solvers import BackendType  # noqa: F401 # imported for re-export
 from qoolqit._solvers.backends import BaseBackend, BackendConfig
@@ -28,7 +28,7 @@ __all__ = [
 ]
 
 
-def default_preprocessor() -> Callable[[nx.Graph], BasePreprocessor]:
+def default_preprocessor() -> Callable[[SolverConfig, nx.Graph], BasePreprocessor]:
     """
     Instantiate the default preprocessor.
 
@@ -37,10 +37,10 @@ def default_preprocessor() -> Callable[[nx.Graph], BasePreprocessor]:
     # Avoid circular dependencies during load.
     from mis.pipeline.kernelization import Kernelization
 
-    return lambda graph: Kernelization(graph)
+    return lambda config, graph: Kernelization(config, graph)
 
 
-def default_postprocessor() -> BasePostprocessor:
+def default_postprocessor() -> Callable[[SolverConfig], BasePostprocessor]:
     """
     Instantiate the default postprocessor.
 
@@ -49,7 +49,7 @@ def default_postprocessor() -> BasePostprocessor:
     # Avoid circular dependencies during load.
     from mis.pipeline.maximization import Maximization
 
-    return Maximization()
+    return lambda config: Maximization(config)
 
 
 @dataclass
@@ -93,6 +93,14 @@ class SolverConfig:
     use a non-quantum heuristic solver.
     """
 
+    weighting: Weighting = Weighting.UNWEIGHTED
+    """
+    The weighting policy for this solver, i.e. should it attempt to
+    maximize size of the solution (by number of nodes, ignoring weights)
+    or maximizing the total weight of the solution (the sum of weights of
+    individual nodes, ignoring the number of nodes).
+    """
+
     method: MethodType = MethodType.EAGER
     """
     method: The method used to solve this instance of MIS.
@@ -133,7 +141,7 @@ class SolverConfig:
         Ignored for non-quantum backends.
     """
 
-    preprocessor: Callable[[nx.Graph], BasePreprocessor] | None = field(
+    preprocessor: Callable[[SolverConfig, nx.Graph], BasePreprocessor] | None = field(
         default_factory=default_preprocessor
     )
     """
@@ -156,7 +164,9 @@ class SolverConfig:
         preprocessors.
     """
 
-    postprocessor: Callable[[], BasePostprocessor] | None = default_postprocessor
+    postprocessor: Callable[[SolverConfig], BasePostprocessor] | None = field(
+        default_factory=default_postprocessor
+    )
     """
         A postprocessor used to sort out and improve results.
 

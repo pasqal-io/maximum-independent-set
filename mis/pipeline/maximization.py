@@ -1,8 +1,13 @@
 import random
 import networkx as nx
+import typing
 
 from mis.pipeline.postprocessor import BasePostprocessor
-from mis.shared.types import MISSolution
+from mis.shared.types import MISSolution, Weighting
+from mis.shared.graphs import BaseWeightPicker
+
+if typing.TYPE_CHECKING:
+    from mis import SolverConfig
 
 
 class Maximization(BasePostprocessor):
@@ -16,6 +21,7 @@ class Maximization(BasePostprocessor):
 
     def __init__(
         self,
+        config: "SolverConfig",
         frequency_threshold: float = 1e-7,
         augment_rounds: int = 10,
         seed: int = 0,
@@ -30,6 +36,8 @@ class Maximization(BasePostprocessor):
         self.frequency_threshold = frequency_threshold
         self.augment_rounds = augment_rounds
         self.seed = seed
+        self.picker = BaseWeightPicker.for_weighting(config.weighting)
+        self.weighting = config.weighting
 
     def postprocess(self, solution: MISSolution) -> MISSolution | None:
         """
@@ -70,6 +78,7 @@ class Maximization(BasePostprocessor):
 
         # The best solution so far.
         best_pick = solution.node_indices
+        best_weight = self.picker.subgraph_weight(solution.instance.graph, best_pick)
 
         rng = random.Random(self.seed)
         for _ in range(self.augment_rounds):
@@ -79,17 +88,24 @@ class Maximization(BasePostprocessor):
 
             # Attempt to grow the list of nodes in this order.
             picked = list(solution.node_indices)
+            weight = self.picker.subgraph_weight(solution.instance.graph, picked)
             for node in order:
                 maybe_picked = list(picked)  # Copy the list.
                 maybe_picked.append(node)
                 if self.is_independent_list(graph=solution.instance.graph, nodes=maybe_picked):
                     # Commit our pick.
                     picked = maybe_picked
+                    weight += self.picker.node_weight(solution.instance.graph, node)
 
             # Once we have picked as many nodes as possible, time to check whether
             # we have improved on the best solution.
-            if len(picked) > len(best_pick):
-                best_pick = picked
+            match self.weighting:
+                case Weighting.WEIGHTED:
+                    if weight > best_weight:
+                        best_pick = picked
+                case Weighting.UNWEIGHTED:
+                    if len(picked) > len(best_pick):
+                        best_pick = picked
         return MISSolution(
             instance=solution.instance,
             frequency=solution.frequency,
