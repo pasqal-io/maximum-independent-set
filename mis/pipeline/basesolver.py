@@ -31,13 +31,18 @@ class BaseSolver(ABC):
             instance (MISInstance): The MISproblem to solve.
             config (SolverConfig): Configuration settings for the solver.
         """
-        self.instance: MISInstance = instance
+        self.original_instance: MISInstance = instance
         self.config: SolverConfig = config
 
     @abstractmethod
     def solve(self) -> list[MISSolution]:
         """
         Solve the given MISinstance.
+
+        Arguments:
+            instance: if None (default), use the original instance passed during
+            initialization. Otherwise, pass a custom instance. Used e.g. for
+            preprocessing.
 
         Returns:
             A list of solutions, ranked from best (lowest energy) to worst

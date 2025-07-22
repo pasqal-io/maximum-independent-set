@@ -79,7 +79,7 @@ class MISSolverClassical(BaseSolver):
         Solve the MIS problem and return a single optimal solution.
         """
 
-        if not self.instance.graph.nodes:
+        if not self.original_instance.graph.nodes:
             return []
 
         preprocessed_instance = self.fixtures.preprocess()
@@ -121,48 +121,11 @@ class MISSolverQuantum(BaseSolver):
 
         self.fixtures = Fixtures(instance, self.config)
         self.backend = _extract_backend(config)
-        self._register: Register | None = None
-        self._pulse: Pulse | None = None
         self._solution: MISSolution | None = None
-        self._preprocessed_instance: MISInstance | None = None
         self._embedder = config.embedder if config.embedder is not None else DefaultEmbedder()
         self._shaper = (
             config.pulse_shaper if config.pulse_shaper is not None else DefaultPulseShaper()
         )
-
-    def embedding(self) -> Register:
-        """
-        Generate a physical embedding (register) for the MISvariables.
-
-        Returns:
-            Register: Atom layout suitable for quantum hardware.
-        """
-        config: SolverConfig = self.config
-        if self._preprocessed_instance is not None:
-            instance = self._preprocessed_instance
-        else:
-            instance = self.instance
-        self._register = self._embedder.embed(
-            instance=instance,
-            config=config,
-            backend=self.backend,
-        )
-        return self._register
-
-    def pulse(self, embedding: Register) -> Pulse:
-        """
-        Generate the pulse sequence based on the given embedding.
-
-        Args:
-            embedding (Register): The embedded register layout.
-
-        Returns:
-            Pulse: Pulse schedule for quantum execution.
-        """
-        self._pulse = self._shaper.generate(
-            config=self.config, register=embedding, backend=self.backend, instance=self.instance
-        )
-        return self._pulse
 
     def _bitstring_to_nodes(self, bitstring: str) -> list[int]:
         result: list[int] = []
@@ -171,11 +134,10 @@ class MISSolverQuantum(BaseSolver):
                 result.append(i)
         return result
 
-    def _process(self, data: Counter[str]) -> list[MISSolution]:
+    def _process(self, instance: MISInstance, data: Counter[str]) -> list[MISSolution]:
         """
         Process bitstrings into solutions.
         """
-        assert self._preprocessed_instance is not None
         total = data.total()
         if len(data) == 0:
             # No data? This can only happen if the graph was empty in the first place.
@@ -183,16 +145,14 @@ class MISSolverQuantum(BaseSolver):
             # to whittle down the original graph to an empty graph. But we need at least one
             # partial solution to be able to rebuild an MIS, so we handle this edge
             # case by injecting an empty solution.
-            postprocessed = [
-                MISSolution(instance=self._preprocessed_instance, frequency=1, nodes=[])
-            ]
+            postprocessed = [MISSolution(instance=instance, frequency=1, nodes=[])]
 
             # No noise here, since there wasn't any quantum measurement, so no
             # postprocessing.
         else:
             raw = [
                 MISSolution(
-                    instance=self._preprocessed_instance,
+                    instance=instance,
                     frequency=count
                     / total,  # Note: If total == 0, the list is empty, so this line is never called.
                     nodes=self._bitstring_to_nodes(bitstr),
@@ -218,14 +178,25 @@ class MISSolverQuantum(BaseSolver):
         Returns:
             MISSolution: Final result after execution and postprocessing.
         """
-        self._preprocessed_instance = self.fixtures.preprocess()
-        if len(self._preprocessed_instance.graph) == 0:
+        preprocessed_instance = self.fixtures.preprocess()
+        if len(preprocessed_instance.graph) == 0:
             # Edge case: we cannot process an empty register.
-            return self._process(Counter())
-        embedding = self.embedding()
-        pulse = self.pulse(embedding)
-        execution_result = self.execute(pulse, embedding)
-        return self._process(execution_result)
+            return self._process(instance=preprocessed_instance, data=Counter())
+
+        register = self._embedder.embed(
+            instance=preprocessed_instance,
+            config=self.config,
+            backend=self.backend,
+        )
+
+        pulse = self._shaper.generate(
+            config=self.config,
+            register=register,
+            backend=self.backend,
+            instance=preprocessed_instance,
+        )
+        execution_result = self.execute(pulse, register)
+        return self._process(instance=preprocessed_instance, data=execution_result)
 
     def execute(self, pulse: Pulse, register: Register) -> Counter[str]:
         """
@@ -294,8 +265,8 @@ class GreedyMISSolver(BaseSolver):
         """
         if self.backend is None:
             # A default layout for the classical solver.
-            return Layout(data=self.instance, rydberg_blockade=1.0)
-        return Layout.from_device(data=self.instance, device=self.backend.device())
+            return Layout(data=self.original_instance, rydberg_blockade=1.0)
+        return Layout.from_device(data=self.original_instance, device=self.backend.device())
 
     def solve(self) -> list[MISSolution]:
         """
@@ -326,7 +297,7 @@ class GreedyMISSolver(BaseSolver):
                 Returns:
                     Execution containing a list of optimal or near-optimal MIS solutions.
         """
-        return self._solve_recursive(self.instance)
+        return self._solve_recursive(self.original_instance)
 
     def _solve_recursive(self, instance: MISInstance) -> list[MISSolution]:
         """
@@ -377,7 +348,9 @@ class GreedyMISSolver(BaseSolver):
                 for rem_sol in remainder_solutions:
                     combined_nodes = current_mis + rem_sol.nodes
                     if (best_solution is None) or (
-                        self.weight_picker.subgraph_weight(self.instance.graph, combined_nodes)
+                        self.weight_picker.subgraph_weight(
+                            self.original_instance.graph, combined_nodes
+                        )
                         > best_solution.weight
                     ):
                         best_solution = MISSolution(
