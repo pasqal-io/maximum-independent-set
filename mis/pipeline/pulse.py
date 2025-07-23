@@ -64,6 +64,7 @@ class DefaultPulseShaper(BasePulseShaper):
 
         # Cache mapping node value -> node index.
         pos = register.sorted_coords
+        assert len(pos) == len(graph)
 
         def calculate_edge_interaction(edge: tuple[int, int]) -> float:
             pos_a, pos_b = pos[edge[0]], pos[edge[1]]
