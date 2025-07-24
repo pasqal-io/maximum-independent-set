@@ -235,6 +235,7 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
                 continue
 
             if self.is_isolated_and_maximum(node):
+                logger.debug("search_rule_isolated_node_removal: removing node %s", node)
                 self.apply_rule_isolated_node_removal(node)
 
     # -----------------node_fold---------------------------
@@ -555,6 +556,7 @@ class WeightedKernelization(BaseKernelization):
 
     def is_maximum(self, node: int, neighbours: list[int]) -> bool:
         max: float = self.node_weight(node)
+        logging.debug("is_maximum: node %s, weight %s vs. %s", node, max, [self.node_weight(v) for v in neighbours if v != node])
         for v in neighbours:
             if v != node and self.node_weight(v) > max:
                 return False

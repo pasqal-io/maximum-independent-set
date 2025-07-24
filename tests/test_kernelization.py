@@ -1,4 +1,5 @@
 from __future__ import annotations
+from enum import Enum
 import pytest
 import random
 
@@ -7,6 +8,30 @@ import mis.pipeline.kernelization as ker
 from mis.shared.types import Weighting
 import networkx as nx
 
+class GraphVariant(str, Enum):
+    RAW = "RAW"
+    SOME_WEIGHTS = "SOME WEIGHTS"
+    ALL_WEIGHTS = "ALL WEIGHTS"
+
+def add_weights_everywhere(graph: nx.Graph) -> nx.Graph:
+    graph = graph.copy()
+    for i, node in enumerate(graph.nodes):
+        graph.nodes[node]["weight"] = float(i + 1)
+    return graph
+
+def add_weights_somewhere(graph: nx.Graph) -> nx.Graph:
+    graph = graph.copy()
+    for i, node in enumerate(graph.nodes):
+        if i % 2 == 0:
+            graph.nodes[node]["weight"] = float(i + 1)
+    return graph
+
+def graph_variants(graph: nx.Graph) -> list[tuple[GraphVariant, nx.Graph]]:
+    return [
+        (GraphVariant.RAW, graph),
+        (GraphVariant.ALL_WEIGHTS, add_weights_everywhere(graph)),
+        (GraphVariant.SOME_WEIGHTS, add_weights_somewhere(graph))
+    ]
 
 @pytest.mark.parametrize("weighting", [Weighting.UNWEIGHTED, Weighting.WEIGHTED])
 def test_is_subclique(weighting: Weighting) -> None:
@@ -40,7 +65,9 @@ def test_is_subclique(weighting: Weighting) -> None:
     assert test_instance.is_subclique(clique)
     assert not test_instance.is_subclique([out_of_clique, *clique_set])
 
-
+# In graph_isolated,
+#
+# Nodes {0, }
 graph_isolated = nx.Graph()
 graph_isolated.add_nodes_from(range(6))
 graph_isolated.add_edges_from([(0, 1), (1, 2), (2, 5), (5, 1), (2, 3), (3, 4), (4, 5)])
@@ -82,27 +109,47 @@ K4.add_edges_from([(0, 1), (0, 2), (1, 2), (0, 3), (1, 3), (2, 3)])
 K3_CLAW = nx.Graph()
 K3_CLAW.add_nodes_from(range(6))
 K3_CLAW.add_edges_from([(0, 1), (0, 2), (1, 2), (2, 3), (4, 3), (5, 3)])
-# ------------------------------UNWEIGHTED TESTS--------------------------------------
+
 
 
 @pytest.mark.parametrize("weighting", [Weighting.UNWEIGHTED, Weighting.WEIGHTED])
-def test_apply_rule_isolated_node_removal(weighting: Weighting) -> None:
+@pytest.mark.parametrize("graph", [g for g in graph_variants(graph_isolated)])
+def test_apply_rule_isolated_node_removal(weighting: Weighting, graph: tuple[GraphVariant, nx.Graph]) -> None:
+    """
+    Test isolated node removal.
+
+    This test only checks the removal/rebuild operations, without attempting to determine whether the node
+    needs to be removed.
+    """
+    _, graph_isolated = graph
     test_instance = ker.Kernelization(SolverConfig(weighting=weighting), graph_isolated)._kernelizer
     test_instance.apply_rule_isolated_node_removal(0)
-    assert not all(test_instance.kernel.has_node(node) for node in [0, 1])
+
+    # We should have removed {0} and its neighborhood.
+    assert not any(test_instance.kernel.has_node(node) for node in [0, 1])
     assert all(test_instance.kernel.has_node(node) for node in [2, 3, 4, 5])
     test_mis = test_instance.rebuild({2})
     assert test_mis == {0, 2}
 
 
 @pytest.mark.parametrize("weighting", [Weighting.UNWEIGHTED, Weighting.WEIGHTED])
-def test_search_rule_isolated_node_removal(weighting: Weighting) -> None:
+@pytest.mark.parametrize("graph", [g for g in graph_variants(graph_isolated)])
+def test_search_rule_isolated_node_removal(caplog, weighting: Weighting, graph: tuple[GraphVariant, nx.Graph]) -> None:
+    import logging
+    caplog.set_level(logging.DEBUG)
+    variant, graph_isolated = graph
     test_instance = ker.Kernelization(SolverConfig(weighting=weighting), graph_isolated)._kernelizer
     test_instance.search_rule_isolated_node_removal()
-    assert not all(test_instance.kernel.has_node(node) for node in [0, 1])
-    assert all(test_instance.kernel.has_node(node) for node in [2, 3, 4, 5])
-    test_mis = test_instance.rebuild({2})
-    assert test_mis == {0, 2}
+
+    if weighting == Weighting.WEIGHTED and variant == GraphVariant.ALL_WEIGHTS:
+        # {0} is isolated but not maximal, this transformation doesn't affect the graph
+        assert all(test_instance.kernel.has_node(node) for node in [0, 1, 2, 3, 4, 5])
+    else:
+        # {0} is isolated and maximal, so removing {0} and its neighborhood.
+        assert not any(test_instance.kernel.has_node(node) for node in [0, 1])
+        assert all(test_instance.kernel.has_node(node) for node in [2, 3, 4, 5])
+        test_mis = test_instance.rebuild({2})
+        assert test_mis == {0, 2}
 
 
 @pytest.mark.parametrize("weighting", [Weighting.UNWEIGHTED, Weighting.WEIGHTED])
