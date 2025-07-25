@@ -182,6 +182,7 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         """
         # Invariant: from this point, `self.kernel` does not contain any
         # self-loop.
+        self.initial_cleanup()
         while (kernel_size_start := self.kernel.number_of_nodes()) > 0:
             logger.info("preprocessing - current kernel size is %s", kernel_size_start)
             self.search_rule_neighborhood_removal()
@@ -201,6 +202,14 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
     def add_rebuilder(self, rebuilder: "BaseRebuilder") -> None:
         logger.debug("adding rebuilder %s", rebuilder)
         self.rule_application_sequence.append(rebuilder)
+
+    # -----------------cleanup----------------------------------------
+    @abc.abstractmethod
+    def initial_cleanup(self) -> None:
+        """
+        One-time cleanup of nodes that are trivially useless, e.g. negative weights.
+        """
+        ...
 
     # -----------------neighborhood_removal---------------------------
     @abc.abstractmethod
@@ -352,7 +361,11 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         w_u = self.node_weight(u)
         w_v = self.node_weight(v)
         w_neighbours = self.subgraph_weight(neighbours)
-        v_prime = self.add_node(w_neighbours - (w_u + w_v))
+        new_weight = w_neighbours - (w_u + w_v)
+        assert (
+            new_weight > 0
+        )  # In weighted mode, we have checked that `w_u + w_v < w_neighbours_sum`. In non-weighted, it's exactly 1.0
+        v_prime = self.add_node(new_weight)
         rule_app_B = RebuilderTwinIndependent(v, u, neighbours, v_prime)
         self.add_rebuilder(rule_app_B)
         self.fold_twin(u=u, v=v, v_prime=v_prime, u_neighbours=neighbours)
@@ -404,7 +417,9 @@ class UnweightedKernelization(BaseKernelization):
     """
 
     def add_node(self, weight: float) -> int:
-        assert weight == 1.0
+        assert (
+            weight == 1.0
+        )  # There are only additions and subtractions of small integers, so we don't expect rounding errors.
         node = self._new_node_gen_counter
         self._new_node_gen_counter += 1
         self.kernel.add_node(node)
@@ -415,6 +430,14 @@ class UnweightedKernelization(BaseKernelization):
         Since all nodes have the same weight, no node has a strictly higher weight.
         """
         return True
+
+    # -----------------cleanup----------------------------------------
+    def initial_cleanup(self) -> None:
+        """
+        One-time cleanup of nodes that are trivially useless, e.g. negative weights.
+        """
+        # In unweighted, nothing to do.
+        return
 
     # -----------------isolated node removal--------------------
     def get_nodes_with_strictly_higher_weight(
@@ -548,6 +571,8 @@ class UnweightedKernelization(BaseKernelization):
 class WeightedKernelization(BaseKernelization):
 
     def add_node(self, weight: float) -> int:
+        # Our invariant is that we never add nodes with a weight <= 0.
+        assert weight > 0
         node = self._new_node_gen_counter
         self._new_node_gen_counter += 1
         self.kernel.add_node(node)
@@ -556,11 +581,30 @@ class WeightedKernelization(BaseKernelization):
 
     def is_maximum(self, node: int, neighbours: list[int]) -> bool:
         max: float = self.node_weight(node)
-        logging.debug("is_maximum: node %s, weight %s vs. %s", node, max, [self.node_weight(v) for v in neighbours if v != node])
+        logging.debug(
+            "is_maximum: node %s, weight %s vs. %s",
+            node,
+            max,
+            [self.node_weight(v) for v in neighbours if v != node],
+        )
         for v in neighbours:
             if v != node and self.node_weight(v) > max:
                 return False
         return True
+
+    # -----------------cleanup----------------------------------------
+    def initial_cleanup(self) -> None:
+        """
+        One-time cleanup of nodes that are trivially useless, e.g. negative weights.
+        """
+        # Negative weight nodes can never be part of a solution, so we
+        # simply remove them.
+        #
+        # After this, our invariant is that any node we create has a
+        # weight > 0.
+        for node in list(self.kernel.nodes):
+            if self.node_weight(node) <= 0:
+                self.kernel.remove_node(node)
 
     # -----------------isolated node removal--------------------
     def get_nodes_with_strictly_higher_weight(
