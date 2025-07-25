@@ -1,6 +1,9 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from .types import Weighting
+import typing
+
+if typing.TYPE_CHECKING:
+    from .types import Weighting
 
 import networkx as nx
 
@@ -66,6 +69,8 @@ class BaseWeightPicker(ABC):
         """
         Pick a cost picker for an objective.
         """
+        from .types import Weighting
+
         if weighting == Weighting.UNWEIGHTED:
             return UnweightedPicker
         elif weighting == Weighting.WEIGHTED:
@@ -78,6 +83,10 @@ class WeightedPicker(BaseWeightPicker):
         result = graph.nodes[node].get("weight", 1.0)
         assert isinstance(result, float)
         return result
+
+    @classmethod
+    def set_node_weight(cls, graph: nx.Graph, node: int, weight: float) -> None:
+        graph.nodes[node]["weight"] = weight
 
     @classmethod
     def subgraph_weight(cls, graph: nx.Graph, nodes: list[int]) -> float:
