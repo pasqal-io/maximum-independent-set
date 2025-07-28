@@ -262,17 +262,17 @@ def test_fold_twin_uw(weighting: Weighting) -> None:
 
 
 @pytest.mark.parametrize("weighting", [Weighting.UNWEIGHTED, Weighting.WEIGHTED])
-def test_find_twin(weighting: Weighting) -> None:
+def test_find_removable_twin(weighting: Weighting) -> None:
     test_instance = ker.Kernelization(
         SolverConfig(weighting=weighting), graph=K23_CLAW_bis
     )._kernelizer
-    twin_1 = test_instance.find_twin(0)
+    twin_1 = test_instance.find_removable_twin(0)
     assert twin_1 is not None
     assert twin_1.category == "INDEPENDENT"
     test_instance2 = ker.Kernelization(
         SolverConfig(weighting=weighting), graph=K23_CLAW_twin_linked
     )._kernelizer
-    assert test_instance2.find_twin(0) is None
+    assert test_instance2.find_removable_twin(0) is None
 
 
 @pytest.mark.parametrize("weighting", [Weighting.UNWEIGHTED, Weighting.WEIGHTED])

@@ -59,15 +59,33 @@ class Kernelization(BasePreprocessor):
                 raise NotImplementedError
 
     def preprocess(self) -> nx.Graph:
+        """
+        Run preprocessing steps on the graph.
+
+        This will reduce the size of the graph. Do not forget to call `rebuild()` to
+        convert solutions on the reduced graph into solutions on the original graph!
+        """
         return self._kernelizer.preprocess()
 
     def rebuild(self, partial_solution: set[int]) -> set[int]:
+        """
+        Expand from MIS solutions on a reduced graph obtained by `preprocess()` into
+        solutions on the original graph.
+
+        Arguments:
+            partial_solution A solution on the reduced graph. Note that we do not
+            check that this solution is correct.
+        Returns:
+            A solution on the original graph.
+        """
         return self._kernelizer.rebuild(partial_solution)
 
     def is_independent(self, nodes: list[int]) -> bool:
         """
         Determine if a set of nodes represents an independent set within a given graph.
 
+        Arguments:
+            A list of nodes within the latest iteration of the graph.
         """
         return self._kernelizer.is_independent(nodes)
 
@@ -186,7 +204,7 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         while (kernel_size_start := self.kernel.number_of_nodes()) > 0:
             logger.info("preprocessing - current kernel size is %s", kernel_size_start)
             self.search_rule_neighborhood_removal()
-            self.search_rule_isolated_node_removal()  # TODO: In the original, the weighted kernelizer has essentially two copies of this rule, once with weight and once without. Double-check.
+            self.search_rule_isolated_node_removal()
             self.search_rule_twin_reduction()
             self.search_rule_node_fold()
             self.search_rule_unconfined_and_diamond()
@@ -200,6 +218,9 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         return self.kernel
 
     def add_rebuilder(self, rebuilder: "BaseRebuilder") -> None:
+        """
+        Store a rebuilder step to be called during rebuild().
+        """
         logger.debug("adding rebuilder %s", rebuilder)
         self.rule_application_sequence.append(rebuilder)
 
@@ -213,15 +234,44 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
 
     # -----------------neighborhood_removal---------------------------
     @abc.abstractmethod
-    def search_rule_neighborhood_removal(self) -> None: ...
+    def search_rule_neighborhood_removal(self) -> None:
+        """
+        Weighted: If a node has a greater weight than all its neighbours together,
+        remove the node (it will be part of the WMIS) and all its neighbours (they
+        won't).
+        Unweighted: Noop.
+        """
+        ...
 
     # -----------------isolated_node_removal---------------------------
     @abc.abstractmethod
     def get_nodes_with_strictly_higher_weight(
         self, node: int, neighborhood: list[int]
-    ) -> list[int]: ...
+    ) -> list[int]:
+        """
+        Return the nodes with a weight strictly higher than a give node.
+
+        Arguments:
+            node: The main node.
+            neighborhood: The list of nodes in which to search for a
+                weight strictly higher than `node`.
+
+        Returns:
+            A list (possibly empty) of nodes from `neighborhood`. All
+            these nodes are guaranteed to have a weight strictly higher
+            than that of `node`.
+
+            In unweighted mode, this list is always empty.
+        """
+        ...
 
     def apply_rule_isolated_node_removal(self, isolated: int) -> None:
+        """
+        Remove an isolated node / store the rebuild operation.
+
+        Arguments:
+            isolated An isolated node. We do not re-check that it is isolated.
+        """
         neighborhood = list(self.kernel.neighbors(isolated))
         higher = self.get_nodes_with_strictly_higher_weight(isolated, neighborhood)
         rule_app = RebuilderIsolatedNodeRemoval(isolated, higher)
@@ -261,8 +311,18 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
     def apply_rule_node_fold(
         self, v: Any, w_v: float, u: Any, w_u: float, x: Any, w_x: float
     ) -> None:
+        """
+        Fold three nodes V, U and X into a new single node / store the rebuild operation.
+
+        Arguments:
+            v, u, x: Three nodes. U and X MUST both be neightours of V. There MUST NOT
+                be any edge between U and X.
+            w_v, w_u, w_x: The weight of nodes v, u, x. We MUST have w_u + w_x > w_v
+                (always true in unweighted mode). We MUST have w_x <= w_v and w_u <= w_v
+                (always true in unweighted mode).
+        """
         v_prime = self.add_node(w_u + w_x - w_v)
-        rule_app = RebuilderNodeFolding(v, u, x, v_prime)  # FIXME: Adapt?
+        rule_app = RebuilderNodeFolding(v, u, x, v_prime)
         self.add_rebuilder(rule_app)
         self.fold_three(v, u, x, v_prime)
 
@@ -310,18 +370,28 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
     @abc.abstractmethod
     def twin_category(self, u: int, v: int, neighbours: list[int]) -> _TwinCategory:
         """
+        Determine which operations we can perform on two twin nodes.
+
         Arguments:
             - u, v: two distinct nodes with the same set of neighbours
-            - neighbours: the neighbours of u
+            - neighbours: the neighbours of u (or equivalently v)
         """
         ...
 
-    def find_twin(self, v: int) -> _Twin | None:
+    def find_removable_twin(self, v: int) -> _Twin | None:
         """
         Find a twin of a node, i.e. another node with the same
-        neighbours.
+        neighbours, and check what we can do with this node.
+
+        Arguments:
+            v: a node
+        Returns:
+            A `_Twin` if any twin of v was found and it can be
+            removed, `None` otherwise.
         """
-        neighbors_v: set[int] = set(self.kernel.neighbors(v))  # FIXME: We could factorize this.
+        neighbors_v: set[int] = set(self.kernel.neighbors(v))
+        # We recompute `neighbors_v` at each call to `find_removable_twin` because we
+        # may have changed the graph between these calls.
 
         for u in self.kernel.nodes():
             if u == v:
@@ -338,6 +408,14 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         return None
 
     def fold_twin(self, u: int, v: int, v_prime: int, u_neighbours: list[int]) -> None:
+        """
+        Fold two twins U and V into a single node V'.
+
+        Arguments:
+            u, v: The nodes to fold.
+            v_prime: The new node, already created.
+            u_neighbours: The neighbours of U (or equivalently of V).
+        """
         neighborhood_u_neighbours: list[int] = list(
             set().union(*[set(self.kernel.neighbors(node)) for node in u_neighbours])
         )
@@ -347,6 +425,15 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         self.kernel.remove_nodes_from(u_neighbours)
 
     def apply_rule_twins_in_solution(self, v: int, u: int, neighbors_u: list[int]) -> None:
+        """
+        Remove two twin nodes and their neighbours / store the rebuild operation.
+
+        We use this rule when we know that the twins will always be part of the solution.
+
+        Arguments:
+            u, v: The twin nodes.
+            neighbours_u: The neighbours of U (or equivalently of V).
+        """
         rule_app = RebuilderTwinAlwaysInSolution(v, u)
         self.add_rebuilder(rule_app)
         self.kernel.remove_nodes_from(neighbors_u)
@@ -354,9 +441,15 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
 
     def apply_rule_twin_independent(self, u: int, v: int, neighbours: list[int]) -> None:
         """
+        Remove two twin nodes and their neighbours / store the rebuild operation.
+
+        We use this rule when U and V are independent, i.e. either all the neighbours
+        are part of the solution or both U and V are part of the solution, but we don't
+        yet know which.
+
         Arguments:
-            - u, v: two distinct nodes with the same set of neighbours
-            - neighbours: the neighbours of u (which are also the neighbours of v)
+            u, v: The twin nodes.
+            neighbours_u: The neighbours of U (or equivalently of V).
         """
         w_u = self.node_weight(u)
         w_v = self.node_weight(v)
@@ -374,18 +467,21 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         """
         If a node V and a node U have the exact same neighbours
         (which indicates that they're not nightbours themselves),
-        we can merge U, V and their neighborhoods.
+        we may be able to merge U, V and their neighborhoods into
+        a single node.
+
+        Note: as of this writing, in unweighted mode, the heuristic
+        works when there are exactly 3 neighbours.
         """
         if self.kernel.number_of_nodes() == 0:
             return
-        assert isinstance(self.kernel.degree, DegreeView)
         for v in list(self.kernel.nodes()):
             # Since we're modifying `self.kernel` while iterating, we're
             # calling `list()` to make sure that we still have some kind
             # of valid iterator.
             if not self.kernel.has_node(v):
                 continue
-            twin: _Twin | None = self.find_twin(v)
+            twin: _Twin | None = self.find_removable_twin(v)
             if twin is None:
                 continue
             u = twin.node
@@ -401,7 +497,13 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
     # -----------------unconfined reduction---------------------------
 
     @abc.abstractmethod
-    def search_rule_unconfined_and_diamond(self) -> None: ...
+    def search_rule_unconfined_and_diamond(self) -> None:
+        """
+        Look for unconfined nodes, i.e. a category of nodes
+        for which we can prove easily that they cannot be part
+        of a solution.
+        """
+        ...
 
 
 class UnweightedKernelization(BaseKernelization):
@@ -417,9 +519,17 @@ class UnweightedKernelization(BaseKernelization):
     """
 
     def add_node(self, weight: float) -> int:
-        assert (
-            weight == 1.0
-        )  # There are only additions and subtractions of small integers, so we don't expect rounding errors.
+        """
+        Add a node with a weight of exactly 1.0.
+
+        Arguments:
+            weight: MUST be 1.0 in unweighted mode.
+
+        Returns:
+            The index of the new node.
+        """
+        assert weight == 1.0
+        # There are only additions and subtractions of small integers, so we don't expect rounding errors.
         node = self._new_node_gen_counter
         self._new_node_gen_counter += 1
         self.kernel.add_node(node)
@@ -457,6 +567,18 @@ class UnweightedKernelization(BaseKernelization):
     # -----------------twin reduction---------------------------
 
     def twin_category(self, u: int, v: int, neighbours: list[int]) -> _TwinCategory:
+        """
+        Determine which operations we can perform on two twin nodes.
+
+        Arguments:
+            - u, v: two distinct nodes with the same set of neighbours
+            - neighbours: the neighbours of u (or equivalently v)
+
+        Returns:
+            - CannotRemove if the number of neighbours is not exactly 3.
+            - Independent if the neighbours are independent from each other.
+            - InSolution otherwise.
+        """
         if len(neighbours) != 3:
             # The heuristic only works with exactly 3 neighbours.
             return _TwinCategory.CannotRemove
@@ -635,10 +757,11 @@ class WeightedKernelization(BaseKernelization):
 
     def search_rule_neighborhood_removal(self) -> None:
         """
-        Weighted: If a node has a greater weight than all its neighbours together,
-        remove the node (it will be part of the WMIS) and all its neighbours (they
-        won't).
-        Unweighted: Noop.
+        If a node has a greater weight than all its neighbours together,
+        remove the node and all its neighbours.
+
+        During rebuild, the node will always be part of the WMIS, the
+        neighbours never will.
         """
 
         for node in list(self.kernel.nodes()):
