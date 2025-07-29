@@ -1,6 +1,9 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from .types import Weighting
+import typing
+
+if typing.TYPE_CHECKING:
+    from .types import Weighting
 
 import networkx as nx
 
@@ -51,7 +54,7 @@ class BaseWeightPicker(ABC):
 
     @classmethod
     @abstractmethod
-    def subgraph_weight(cls, graph: nx.Graph, nodes: list[int]) -> float:
+    def subgraph_weight(cls, graph: nx.Graph, nodes: typing.Iterable[int]) -> float:
         """
         Get the weight of a subraph.
 
@@ -66,6 +69,8 @@ class BaseWeightPicker(ABC):
         """
         Pick a cost picker for an objective.
         """
+        from .types import Weighting
+
         if weighting == Weighting.UNWEIGHTED:
             return UnweightedPicker
         elif weighting == Weighting.WEIGHTED:
@@ -80,7 +85,11 @@ class WeightedPicker(BaseWeightPicker):
         return result
 
     @classmethod
-    def subgraph_weight(cls, graph: nx.Graph, nodes: list[int]) -> float:
+    def set_node_weight(cls, graph: nx.Graph, node: int, weight: float) -> None:
+        graph.nodes[node]["weight"] = weight
+
+    @classmethod
+    def subgraph_weight(cls, graph: nx.Graph, nodes: typing.Iterable[int]) -> float:
         return float(sum(cls.node_weight(graph, n) for n in nodes))
 
 
@@ -94,8 +103,16 @@ class UnweightedPicker(BaseWeightPicker):
         raise NotImplementedError("UnweightedPicker does not support operation `set_node_weight`")
 
     @classmethod
-    def subgraph_weight(cls, graph: nx.Graph, nodes: list[int]) -> float:
-        return float(len(nodes))
+    def subgraph_weight(cls, graph: nx.Graph, nodes: typing.Iterable[int]) -> float:
+        # In the unweighted picker, we can usually run this function in constant time.
+        if hasattr(nodes, "__len__"):
+            # Usually, we call this with a list or a set, so `len()` is fast.
+            sized = typing.cast(typing.Sized, nodes)
+            return float(len(sized))
+        # Otherwise, we have to count the number of nodes.
+        # Apparently, constructor `tuple` is optimized for this, and clearly faster
+        # than calling `node_weight` for each node.
+        return float(len(tuple(nodes)))
 
 
 def closed_neighborhood(graph: nx.Graph, node: int) -> list[int]:
