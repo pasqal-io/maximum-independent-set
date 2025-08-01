@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 from mis.shared.types import MethodType, Weighting
 
 from qoolqit._solvers import BackendType  # noqa: F401 # imported for re-export
-from qoolqit._solvers.backends import BaseBackend, BackendConfig
+from qoolqit._solvers import BaseBackend, BackendConfig
 
 # Modules to be automatically added to the MISSolver namespace
 __all__ = [
