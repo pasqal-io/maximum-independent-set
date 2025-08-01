@@ -15,7 +15,7 @@ benchmarking purposes.
 
 from __future__ import annotations
 
-from qoolqit._solvers.backends import BackendConfig, BackendType
+from qoolqit._solvers import BackendConfig, BackendType
 from .solver.solver import MISSolver
 from .pipeline.config import GreedyConfig, SolverConfig
 from .shared.types import MISInstance, MethodType, Weighting, MISSolution
