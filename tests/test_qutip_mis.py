@@ -2,8 +2,6 @@ from typing import Callable
 import networkx as nx
 import pytest
 
-import pulser
-
 from mis import BackendConfig
 from mis.solver.solver import MISInstance, MISSolver
 from mis.pipeline.config import SolverConfig
@@ -124,7 +122,6 @@ def test_star_qtip_mis(
         preprocessor=preprocessor,
         postprocessor=postprocessor,
         weighting=weighting,
-        device=pulser.AnalogDevice,
     )
 
     # Create the MIS instance
