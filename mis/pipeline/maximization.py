@@ -57,9 +57,9 @@ class Maximization(BasePostprocessor):
         """
         Check whether a solution is independent.
         """
-        return self.is_independent_list(graph=solution.instance.graph, nodes=solution.node_indices)
+        return self._is_independent_list(graph=solution.instance.graph, nodes=solution.node_indices)
 
-    def is_independent_list(self, graph: nx.Graph, nodes: list[int]) -> bool:
+    def _is_independent_list(self, graph: nx.Graph, nodes: list[int]) -> bool:
         """
         Check whether a list of nodes within a graph is independent.
 
@@ -100,7 +100,7 @@ class Maximization(BasePostprocessor):
             for node in order:
                 maybe_picked = list(picked)  # Copy the list.
                 maybe_picked.append(node)
-                if self.is_independent_list(graph=solution.instance.graph, nodes=maybe_picked):
+                if self._is_independent_list(graph=solution.instance.graph, nodes=maybe_picked):
                     # Commit our pick.
                     picked = maybe_picked
                     weight += self.picker.node_weight(solution.instance.graph, node)
@@ -147,7 +147,7 @@ class Maximization(BasePostprocessor):
             retained_nodes = set(simplified_graph.nodes)
 
             candidate = list(retained_nodes)
-            if self.is_independent_list(graph=solution.instance.graph, nodes=candidate):
+            if self._is_independent_list(graph=solution.instance.graph, nodes=candidate):
                 # As the empty set is independent and `candidates` keeps decreasing,
                 # this will eventually be `True`.
                 return MISSolution(
