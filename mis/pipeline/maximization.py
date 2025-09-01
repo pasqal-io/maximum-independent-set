@@ -57,13 +57,21 @@ class Maximization(BasePostprocessor):
         """
         Check whether a solution is independent.
         """
-        return self.is_independent_list(graph=solution.instance.graph, nodes=solution.nodes)
+        return self._is_independent_list(graph=solution.instance.graph, nodes=solution.node_indices)
 
-    def is_independent_list(self, graph: nx.Graph, nodes: list[int]) -> bool:
+    def _is_independent_list(self, graph: nx.Graph, nodes: list[int]) -> bool:
         """
         Check whether a list of nodes within a graph is independent.
+
+        A list is dependent if there exist two nodes in `nodes` that are
+        connected by edges in `graph`, independent otherwise.
+
+        Attributes:
+            graph: The graph to which the nodes belong.
+            nodes: A list of nodes in graph.
         """
         for i, u in enumerate(nodes):
+            assert graph.has_node(u), f"Node {u} does not belong to the graph"
             for v in nodes[i:]:
                 if graph.has_edge(u, v):
                     return False
@@ -92,7 +100,7 @@ class Maximization(BasePostprocessor):
             for node in order:
                 maybe_picked = list(picked)  # Copy the list.
                 maybe_picked.append(node)
-                if self.is_independent_list(graph=solution.instance.graph, nodes=maybe_picked):
+                if self._is_independent_list(graph=solution.instance.graph, nodes=maybe_picked):
                     # Commit our pick.
                     picked = maybe_picked
                     weight += self.picker.node_weight(solution.instance.graph, node)
@@ -122,7 +130,7 @@ class Maximization(BasePostprocessor):
 
         # Simplify the graph by removing the nodes that we have already rejected.
         simplified_graph = solution.instance.graph.copy()
-        rejected_nodes = set(simplified_graph.nodes) - set(solution.nodes)
+        rejected_nodes = set(simplified_graph.nodes) - set(solution.node_indices)
         simplified_graph.remove_nodes_from(rejected_nodes)
 
         while True:
@@ -139,7 +147,7 @@ class Maximization(BasePostprocessor):
             retained_nodes = set(simplified_graph.nodes)
 
             candidate = list(retained_nodes)
-            if self.is_independent_list(graph=solution.instance.graph, nodes=candidate):
+            if self._is_independent_list(graph=solution.instance.graph, nodes=candidate):
                 # As the empty set is independent and `candidates` keeps decreasing,
                 # this will eventually be `True`.
                 return MISSolution(
