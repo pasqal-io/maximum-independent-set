@@ -157,6 +157,18 @@ class MISInstance:
         plt.axis("off")
         plt.show()
 
+    def node_index(self, node: Any) -> int:
+        """
+        Return the index for a node in the original graph.
+        """
+        return self.node_label_to_index[node]
+
+    def node_indices(self, nodes: list[Any]) -> list[int]:
+        """
+        Return the indices for nodes in the original graph.
+        """
+        return [self.node_index(node) for node in nodes]
+
 
 class MISSolution:
     """
