@@ -52,11 +52,6 @@ def test_greedy_solver_with_pre_post(
     Test greedy solver behavior with optional pre- and postprocessing,
     in both classical and quantum modes.
     """
-    # TODO: FIX greedy algorithm without preprocessing.
-    # Needs to be investigated. Possibly because of misalignment in the node_ids of the
-    # preprocessed graph, and the subgraph built on the layout in the greedy algorithm
-    if preprocessor is None and use_quantum:
-        pytest.skip("Skipping test because postprocessor is None.")
 
     if use_quantum:
         if not all("pos" in simple_graph.nodes[n] for n in simple_graph.nodes):

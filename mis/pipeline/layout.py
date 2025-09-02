@@ -9,6 +9,14 @@ import matplotlib.pyplot as plt
 from mis.shared.types import MISInstance
 from pulser.devices import Device
 
+# When we need to rescale to ensure that the minimal distance between atoms
+# in a register is larger than the minimal distance on the device, rounding
+# errors may cause the minimal distance to actually be slightly too small.
+#
+# We multiply by SCALE_FACTOR to be (reasonably) certain that we're slightly
+# larger than the minimum.
+SCALE_FACTOR = 1.0000001
+
 
 class Layout:
     """
@@ -74,7 +82,7 @@ class Layout:
         ]
         min_distance = min(distances)
         if min_distance < device.min_atom_distance:
-            scale = device.min_atom_distance / min_distance
+            scale = SCALE_FACTOR * device.min_atom_distance / min_distance
             coords = {k: tuple(v * scale) for k, v in coords.items()}
         else:
             coords = {k: tuple(v) for k, v in coords.items()}

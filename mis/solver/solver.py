@@ -52,8 +52,12 @@ class MISSolver:
             self._solver = solver_factory(instance, config)
 
     def solve(self) -> list[MISSolution]:
+        # Handle edge cases.
         if len(self.instance.graph.nodes) == 0:
             return []
+        if len(self.instance.graph.nodes) == 1:
+            nodes = list(self.instance.graph.nodes)
+            return [MISSolution(self.instance, nodes, frequency=1)]
         return self._solver.solve()
 
 
@@ -181,7 +185,13 @@ class MISSolverQuantum(BaseSolver):
         preprocessed_instance = self.fixtures.preprocess()
         if len(preprocessed_instance.graph) == 0:
             # Edge case: we cannot process an empty register.
+            # Luckily, the solution is trivial.
             return self._process(instance=preprocessed_instance, data=Counter())
+        if len(preprocessed_instance.graph) == 1:
+            # Edge case: we also cannot process a register with a single atom.
+            # Luckily, the solution is trivial.
+            nodes = list(preprocessed_instance.graph.nodes)
+            return [MISSolution(preprocessed_instance, nodes, frequency=1)]
 
         register = self._embedder.embed(
             instance=preprocessed_instance,
