@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from math import inf
 from statistics import mean
 
 import numpy as np
@@ -8,6 +9,14 @@ import matplotlib.pyplot as plt
 
 from mis.shared.types import MISInstance
 from pulser.devices import Device
+
+# When we need to rescale to ensure that the minimal distance between atoms
+# in a register is larger than the minimal distance on the device, rounding
+# errors may cause the minimal distance to actually be slightly too small.
+#
+# We multiply by SCALE_FACTOR to be (reasonably) certain that we're slightly
+# larger than the minimum.
+SCALE_FACTOR = 1.0000001
 
 
 class Layout:
@@ -65,24 +74,30 @@ class Layout:
         Creates a Layout using `device.min_atom_distance` as the blockade,
         and rescales coordinates so no pair is too close.
         """
-        coords = cls._get_coords(data)
-        assert len(coords) >= 1
+        nd_coords = cls._get_coords(data)
+        if len(nd_coords) == 0:
+            return cls(data={}, rydberg_blockade=device.min_atom_distance)
 
         # Compute all pairwise distances
         distances = [
-            np.linalg.norm(coords[v1] - coords[v2]) for v1 in coords for v2 in coords if v1 < v2
+            np.linalg.norm(nd_coords[v1] - nd_coords[v2])
+            for v1 in nd_coords
+            for v2 in nd_coords
+            if v1 < v2
         ]
-        min_distance = min(distances)
+        min_distance = min(distances) if len(distances) != 0 else inf
         if min_distance < device.min_atom_distance:
-            scale = device.min_atom_distance / min_distance
-            coords = {k: tuple(v * scale) for k, v in coords.items()}
+            scale = SCALE_FACTOR * device.min_atom_distance / min_distance
+            coords = {k: tuple(v * scale) for k, v in nd_coords.items()}
         else:
-            coords = {k: tuple(v) for k, v in coords.items()}
+            coords = {k: tuple(v) for k, v in nd_coords.items()}
 
         return cls(data=coords, rydberg_blockade=device.min_atom_distance)
 
     def _build_graph(self) -> nx.Graph:
         node_ids = list(self.coords.keys())
+        if len(node_ids) == 0:
+            return nx.Graph()
         positions = np.array([self.coords[node_id] for node_id in node_ids])  # shape: (n, 2)
         diff = positions[:, np.newaxis, :] - positions[np.newaxis, :, :]  # shape: (n, n, 2)
         dist_matrix = np.linalg.norm(diff, axis=2)  # shape: (n, n)

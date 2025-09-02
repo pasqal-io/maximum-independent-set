@@ -10,9 +10,14 @@ from mis.pipeline.maximization import Maximization
 from mis.shared.types import MethodType, Weighting
 from mis.shared.graphs import is_independent
 
+from conftest import simple_graph, empty_graph, one_node_graph, complex_graph
+
 
 @pytest.mark.parametrize("weighting", argvalues=[Weighting.UNWEIGHTED, Weighting.WEIGHTED])
 @pytest.mark.parametrize("use_quantum", [False, True])
+@pytest.mark.parametrize(
+    "simple_graph", argvalues=[simple_graph(), empty_graph(), one_node_graph()]
+)
 def test_greedy_mis_basic(
     simple_graph: nx.Graph,
     use_quantum: bool,
@@ -32,7 +37,8 @@ def test_greedy_mis_basic(
     solver = MISSolver(instance, config)
     solutions = solver.solve()
 
-    assert len(solutions) > 0
+    if len(simple_graph) > 0:
+        assert len(solutions) > 0
     assert all(isinstance(sol.nodes, list) for sol in solutions)
     assert all(is_independent(instance.graph, sol.nodes) for sol in solutions)
 
@@ -41,6 +47,9 @@ def test_greedy_mis_basic(
 @pytest.mark.parametrize("postprocessor", argvalues=[None, lambda config: Maximization(config)])
 @pytest.mark.parametrize("weighting", argvalues=[Weighting.UNWEIGHTED, Weighting.WEIGHTED])
 @pytest.mark.parametrize("use_quantum", [False, True])
+@pytest.mark.parametrize(
+    "simple_graph", argvalues=[simple_graph(), empty_graph(), one_node_graph()]
+)
 def test_greedy_solver_with_pre_post(
     preprocessor: None | Callable[[SolverConfig, nx.Graph], Kernelization],
     postprocessor: None | Callable[[SolverConfig], Maximization],
@@ -52,11 +61,6 @@ def test_greedy_solver_with_pre_post(
     Test greedy solver behavior with optional pre- and postprocessing,
     in both classical and quantum modes.
     """
-    # TODO: FIX greedy algorithm without preprocessing.
-    # Needs to be investigated. Possibly because of misalignment in the node_ids of the
-    # preprocessed graph, and the subgraph built on the layout in the greedy algorithm
-    if preprocessor is None and use_quantum:
-        pytest.skip("Skipping test because postprocessor is None.")
 
     if use_quantum:
         if not all("pos" in simple_graph.nodes[n] for n in simple_graph.nodes):
@@ -78,7 +82,8 @@ def test_greedy_solver_with_pre_post(
     solver = MISSolver(instance, config)
     solutions = solver.solve()
 
-    assert len(solutions) > 0
+    if len(simple_graph) > 0:
+        assert len(solutions) > 0
     for solution in solutions:
         assert isinstance(solution.nodes, list)
         assert len(set(solution.nodes)) == len(solution.nodes)
@@ -87,6 +92,7 @@ def test_greedy_solver_with_pre_post(
 
 @pytest.mark.parametrize("weighting", argvalues=[Weighting.UNWEIGHTED, Weighting.WEIGHTED])
 @pytest.mark.parametrize("use_quantum", [False, True])
+@pytest.mark.parametrize("complex_graph", argvalues=[complex_graph()])
 def test_greedy_mis_long(complex_graph: nx.Graph, use_quantum: bool, weighting: Weighting) -> None:
     """
     Test Greedy MIS solver in both classical and quantum modes with default settings.
