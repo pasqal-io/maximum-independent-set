@@ -31,7 +31,7 @@ class BaseSolver(ABC):
             instance (MISInstance): The MISproblem to solve.
             config (SolverConfig): Configuration settings for the solver.
         """
-        self.instance: MISInstance = instance
+        self.original_instance: MISInstance = instance
         self.config: SolverConfig = config
 
     @abstractmethod

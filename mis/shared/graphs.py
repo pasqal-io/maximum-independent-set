@@ -1,20 +1,127 @@
 from __future__ import annotations
+from abc import ABC, abstractmethod
+import typing
+
+if typing.TYPE_CHECKING:
+    from .types import Weighting
 
 import networkx as nx
 
 
-def calculate_weight(graph: nx.Graph, nodes: list[int]) -> float:
+class BaseWeightPicker(ABC):
     """
-    Calculates the total weight of a set of nodes in a given MISInstance
+    Utility class to pick the weight of a node.
 
-    Args:
-        graph: The graph to check.
-        nodes: List of node indices.
-
-    Returns:
-        Total weight as a float.
+    Unweighted implementations optimize the methods into trivial
+    operations.
     """
-    return float(sum(graph.nodes[n].get("weight", 1.0) for n in nodes))
+
+    @classmethod
+    @abstractmethod
+    def node_weight(cls, graph: nx.Graph, node: int) -> float:
+        """
+        Get the weight of a node.
+
+        For a weighted cost picker, this returns attribute `weight` of the node,
+        or 1. if the node doesn't specify a `weight`.
+
+        For an unweighted cost picker, this always returns 1.
+        """
+        raise NotImplementedError
+
+    @classmethod
+    @abstractmethod
+    def set_node_weight(cls, graph: nx.Graph, node: int, weight: float) -> None:
+        """
+        Set the weight of a node.
+
+        For a weighted cost picker, this returns attribute `weight` of the node,
+        or 1. if the node doesn't specify a `weight`.
+
+        For an unweighted cost picker, raise an error.
+        """
+        raise NotImplementedError
+
+    @classmethod
+    @abstractmethod
+    def node_delta(cls, graph: nx.Graph, node: int, delta: float) -> float:
+        """
+        Apply a delta to the weight of a node.
+
+        Raises an error in an unweighted cost picker.
+        """
+        raise NotImplementedError
+
+    @classmethod
+    @abstractmethod
+    def subgraph_weight(cls, graph: nx.Graph, nodes: typing.Iterable[int]) -> float:
+        """
+        Get the weight of a subraph.
+
+        See `node_weight` for the definition of weight.
+
+        For an unweighted cost picker, this always returns `len(nodes)`.
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def for_weighting(cls, weighting: Weighting) -> type[BaseWeightPicker]:
+        """
+        Pick a cost picker for an objective.
+        """
+        from .types import Weighting
+
+        if weighting == Weighting.UNWEIGHTED:
+            return UnweightedPicker
+        elif weighting == Weighting.WEIGHTED:
+            return WeightedPicker
+
+
+class WeightedPicker(BaseWeightPicker):
+    @classmethod
+    def node_weight(cls, graph: nx.Graph, node: int) -> float:
+        result = graph.nodes[node].get("weight", 1.0)
+        assert isinstance(result, float)
+        return result
+
+    @classmethod
+    def set_node_weight(cls, graph: nx.Graph, node: int, weight: float) -> None:
+        graph.nodes[node]["weight"] = weight
+
+    @classmethod
+    def subgraph_weight(cls, graph: nx.Graph, nodes: typing.Iterable[int]) -> float:
+        return float(sum(cls.node_weight(graph, n) for n in nodes))
+
+
+class UnweightedPicker(BaseWeightPicker):
+    @classmethod
+    def node_weight(cls, graph: nx.Graph, node: int) -> float:
+        return 1.0
+
+    @classmethod
+    def set_node_weight(cls, graph: nx.Graph, node: int, weight: float) -> None:
+        raise NotImplementedError("UnweightedPicker does not support operation `set_node_weight`")
+
+    @classmethod
+    def subgraph_weight(cls, graph: nx.Graph, nodes: typing.Iterable[int]) -> float:
+        # In the unweighted picker, we can usually run this function in constant time.
+        if hasattr(nodes, "__len__"):
+            # Usually, we call this with a list or a set, so `len()` is fast.
+            sized = typing.cast(typing.Sized, nodes)
+            return float(len(sized))
+        # Otherwise, we have to count the number of nodes.
+        # Apparently, constructor `tuple` is optimized for this, and clearly faster
+        # than calling `node_weight` for each node.
+        return float(len(tuple(nodes)))
+
+
+def closed_neighborhood(graph: nx.Graph, node: int) -> list[int]:
+    """
+    Return the list of closed neighbours of a node.
+    """
+    neighbours = list(graph.neighbors(node))
+    neighbours.append(node)
+    return neighbours
 
 
 def is_independent(graph: nx.Graph, nodes: list[int]) -> bool:

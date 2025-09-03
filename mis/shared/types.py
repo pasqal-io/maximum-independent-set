@@ -4,12 +4,57 @@ from enum import Enum
 from typing import Any
 import networkx
 import matplotlib.pyplot as plt
-from mis.shared.graphs import calculate_weight
 
 
 class MethodType(str, Enum):
+    """
+    The method used to extract the MIS.
+    """
+
     EAGER = "eager"
+    """
+    An eager solver that attempts to extract a MIS in a single
+    shot.
+    """
+
     GREEDY = "greedy"
+    """
+    A greedy solver that decomposes the graph into smaller subgraphs
+    that can benefit from device-specific physical layouts.
+    """
+
+
+class Weighting(str, Enum):
+    """
+    The algorithm used by the solver.
+    """
+
+    UNWEIGHTED = "unweighted"
+    """
+    Unweighted Maximum Independent Set
+
+    Ignore any weight attached to nodes and attempt to maximize the number
+    of nodes in the resulting independent set.
+
+    This algorithm imposes fewer restrictions on the underlying quantum
+    device than the weighted algorithm and may call upon faster and more
+    benefitial pre/post-processing heuristics.
+    """
+
+    WEIGHTED = "weighted"
+    """
+    Weighted Maximum Independent Set
+
+    Any node in the graph may have a property `weight` (float, defaulting to
+    `1.0`) specifying their weight. The algorithm attempts to maximize
+    the total weight in the resulting independent set.
+
+    This algorithm may not work on all quantum devices, as it relies upon
+    specific hardware capabilities. As of this writing, pre-processing and
+    post-processing heuristics are typically slower and less benefitial than
+    the unweighted heuristics, with the consequence that execution on a
+    device may require more qubits.
+    """
 
 
 class MISInstance:
@@ -112,6 +157,18 @@ class MISInstance:
         plt.axis("off")
         plt.show()
 
+    def node_index(self, node: Any) -> int:
+        """
+        Return the index for a node in the original graph.
+        """
+        return self.node_label_to_index[node]
+
+    def node_indices(self, nodes: list[Any]) -> list[int]:
+        """
+        Return the indices for nodes in the original graph.
+        """
+        return [self.node_index(node) for node in nodes]
+
 
 class MISSolution:
     """
@@ -137,7 +194,11 @@ class MISSolution:
 
         # Note: As of this writing, self.weight is still considered a work in progress, so we
         # leave it out of the documentation.
-        self.weight = calculate_weight(instance.graph, nodes)
+        from mis.shared.graphs import BaseWeightPicker  # Avoid cycles.
+
+        self.weight = BaseWeightPicker.for_weighting(Weighting.WEIGHTED).subgraph_weight(
+            instance.graph, nodes
+        )
 
     def draw(
         self,

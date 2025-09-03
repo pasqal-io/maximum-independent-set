@@ -28,10 +28,10 @@ class Fixtures:
         self.config = config
         self.preprocessor: BasePreprocessor | None = None
         if self.config.preprocessor is not None:
-            self.preprocessor = self.config.preprocessor(instance.graph)
+            self.preprocessor = self.config.preprocessor(config, instance.graph)
         self.postprocessor: BasePostprocessor | None = None
         if self.config.postprocessor is not None:
-            self.postprocessor = self.config.postprocessor()
+            self.postprocessor = self.config.postprocessor(config)
 
     def preprocess(self) -> MISInstance:
         """
@@ -76,7 +76,7 @@ class Fixtures:
             processed_solution = self.postprocessor.postprocess(solution)
             if processed_solution is None:
                 continue
-            key = f"{processed_solution.nodes}"  # This is a bit of a waste, we could have used bistrings.
+            key = f"{sorted(processed_solution.node_indices)}"  # This is a bit of a waste, we could have used bistrings.
             previous = postprocessed_solutions.get(key)
             if previous is None:
                 postprocessed_solutions[key] = processed_solution

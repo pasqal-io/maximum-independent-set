@@ -64,6 +64,7 @@ class DefaultPulseShaper(BasePulseShaper):
 
         # Cache mapping node value -> node index.
         pos = register.sorted_coords
+        assert len(pos) == len(graph)
 
         def calculate_edge_interaction(edge: tuple[int, int]) -> float:
             pos_a, pos_b = pos[edge[0]], pos[edge[1]]
@@ -82,13 +83,13 @@ class DefaultPulseShaper(BasePulseShaper):
             u_min = np.min(connected)
 
         # Determine the maximal energy between two disconnected nodes.
+        max_amp_device = device.channels["rydberg_global"].max_amp or np.inf
         if len(disconnected) == 0:
-            u_max = np.inf
+            maximum_amplitude = max_amp_device
         else:
             u_max = np.max(disconnected)
+            maximum_amplitude = min(max_amp_device, u_max + np.float16(0.8) * (u_min - u_max))
 
-        max_amp_device = device.channels["rydberg_global"].max_amp or np.inf
-        maximum_amplitude = min(max_amp_device, u_max + 0.8 * (u_min - u_max))
         # FIXME: Why 0.8?
 
         # Compute min/max degrees
