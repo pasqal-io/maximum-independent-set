@@ -17,13 +17,17 @@ from __future__ import annotations
 
 from qoolqit._solvers.backends import BackendConfig, BackendType
 from .solver.solver import MISSolver
-from .pipeline.config import SolverConfig
-from .shared.types import MISInstance
+from .pipeline.config import GreedyConfig, SolverConfig
+from .shared.types import MISInstance, MethodType, Weighting, MISSolution
 
 __all__ = [
     "MISSolver",
     "MISInstance",
+    "MISSolution",
     "SolverConfig",
     "BackendConfig",
     "BackendType",
+    "GreedyConfig",
+    "MethodType",
+    "Weighting",
 ]
