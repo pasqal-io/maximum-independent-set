@@ -39,7 +39,7 @@ dependencies = [
   "pasqal-cloud",
   "pandas",
   "geopy",
-  "qoolqit[solvers]==0.0.7",
+  "qoolqit[solvers]==0.1.1",
 ]
 
 [tool.hatch.metadata]
@@ -65,6 +65,7 @@ dependencies = [
   "pytest-xdist",
   "pytest-asyncio",
   "pytest-markdown-docs",
+  "pytest-rerunfailures",
   "nbconvert",
   "ipykernel",
   "pre-commit",

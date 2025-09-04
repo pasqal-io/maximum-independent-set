@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from abc import ABC, abstractmethod
 
 from networkx.classes.reportviews import DegreeView
-from pulser import InterpolatedWaveform, Pulse, Register
+from pulser import AnalogDevice, InterpolatedWaveform, Pulse, Register
 
 from qoolqit._solvers.backends import BaseBackend
 from mis.shared.types import MISInstance
@@ -13,6 +13,11 @@ from mis.pipeline.config import SolverConfig
 import numpy as np
 import networkx as nx
 from scipy.spatial.distance import euclidean
+
+# Due to rounding errors, with some devices, running pulses with the max
+# amplitude causes the sequence to be rejected. To avoid that, we multiply
+# the max amplitude by AMP_SAFETY_FACTOR.
+AMP_SAFETY_FACTOR = 0.99999
 
 
 @dataclass
@@ -83,14 +88,13 @@ class DefaultPulseShaper(BasePulseShaper):
             u_min = np.min(connected)
 
         # Determine the maximal energy between two disconnected nodes.
-        max_amp_device = device.channels["rydberg_global"].max_amp or np.inf
+        max_amp_device = AMP_SAFETY_FACTOR * (device.channels["rydberg_global"].max_amp or np.inf)
         if len(disconnected) == 0:
             maximum_amplitude = max_amp_device
         else:
             u_max = np.max(disconnected)
             maximum_amplitude = min(max_amp_device, u_max + np.float16(0.8) * (u_min - u_max))
-
-        # FIXME: Why 0.8?
+            # FIXME: Why 0.8?
 
         # Compute min/max degrees
         degree = graph.degree
@@ -116,6 +120,10 @@ class DefaultPulseShaper(BasePulseShaper):
         duration_us = self.duration_us
         if duration_us is None:
             duration_us = device.max_sequence_duration
+        if duration_us is None:
+            # Last resort.
+            duration_us = AnalogDevice.max_sequence_duration
+        assert duration_us is not None
 
         amplitude = InterpolatedWaveform(
             duration_us, [1e-9, maximum_amplitude, 1e-9]
