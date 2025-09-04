@@ -36,7 +36,6 @@ dependencies = [
   "torch",
   "torch_geometric",
   "matplotlib",
-  "emu-mps==2.2.1",
   "pasqal-cloud",
   "pandas",
   "geopy",
@@ -54,7 +53,7 @@ extras = [
 ]
 
 [project.urls]
-#Documentation = "https://pqs.pages.pasqal.com/maximum-independent-set/"
+Documentation = "https://pasqal-io.github.io/maximum-independent-set/latest/"
 Issues = "https://github.com/pasqal-io/maximum-independent-set/issues"
 Source = "https://github.com/pasqal-io/maximum-independent-set"
 
