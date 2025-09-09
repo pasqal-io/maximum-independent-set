@@ -33,7 +33,7 @@ class Fixtures:
         if self.config.postprocessor is not None:
             self.postprocessor = self.config.postprocessor(config)
 
-    def preprocess(self) -> MISInstance:
+    def preprocess(self) -> list[MISInstance]:
         """
         Apply preprocessing steps to the MIS instance before solving.
 
@@ -41,9 +41,8 @@ class Fixtures:
             MISInstance: The processed or annotated instance.
         """
         if self.preprocessor is not None:
-            graph = self.preprocessor.preprocess()
-            return MISInstance(graph)
-        return self.instance
+            return [MISInstance(graph) for graph in self.preprocessor.preprocess()]
+        return [self.instance]
 
     def rebuild(self, solution: MISSolution) -> MISSolution:
         """

@@ -82,27 +82,28 @@ class MISSolverClassical(BaseSolver):
         """
         Solve the MIS problem and return a single optimal solution.
         """
-
         if not self.original_instance.graph.nodes:
             return []
 
-        preprocessed_instance = self.fixtures.preprocess()
-        if len(preprocessed_instance.graph) == 0:
-            # Edge case: nx.maximal_independent_set doesn't work with an empty graph.
-            partial_solution = MISSolution(instance=preprocessed_instance, frequency=1.0, nodes=[])
-        else:
-            mis = nx.approximation.maximum_independent_set(G=preprocessed_instance.graph)
-            assert isinstance(mis, set)
-            partial_solution = MISSolution(
-                instance=preprocessed_instance,
-                frequency=1.0,
-                nodes=list(mis),
-            )
+        preprocessed_instances = self.fixtures.preprocess()
 
-        solutions = self.fixtures.postprocess([partial_solution])
+        partial_solutions = []
+        for preprocessed_instance in preprocessed_instances:
+            if len(preprocessed_instance.graph) == 0:
+                # Edge case: nx.maximal_independent_set doesn't work with an empty graph.
+                partial_solutions.append(
+                    MISSolution(instance=preprocessed_instance, frequency=1.0, nodes=[])
+                )
+            else:
+                mis = nx.approximation.maximum_independent_set(G=preprocessed_instance.graph)
+                assert isinstance(mis, set)
+                partial_solutions.append(
+                    MISSolution(instance=preprocessed_instance, frequency=1.0, nodes=list(mis))
+                )
+
+        solutions = self.fixtures.postprocess(partial_solutions)
         solutions = [self.fixtures.rebuild(sol) for sol in solutions]
         solutions.sort(key=lambda sol: sol.frequency, reverse=True)
-
         return solutions[: self.config.max_number_of_solutions]
 
 
@@ -138,34 +139,37 @@ class MISSolverQuantum(BaseSolver):
                 result.append(i)
         return result
 
-    def _process(self, instance: MISInstance, data: Counter[str]) -> list[MISSolution]:
+    def _process(self, instances: list[MISInstance], data: list[Counter[str]]) -> list[MISSolution]:
         """
         Process bitstrings into solutions.
         """
-        total = data.total()
-        if len(data) == 0:
-            # No data? This can only happen if the graph was empty in the first place.
-            # In turn, this can happen if preprocessing was really lucky and managed
-            # to whittle down the original graph to an empty graph. But we need at least one
-            # partial solution to be able to rebuild an MIS, so we handle this edge
-            # case by injecting an empty solution.
-            postprocessed = [MISSolution(instance=instance, frequency=1, nodes=[])]
+        postprocessed = []
+        for i, instance in enumerate(instances):
+            total = data[i].total()
+            if len(data[i]) == 0:
+                # No data? This can only happen if the graph was empty in the first place.
+                # In turn, this can happen if preprocessing was really lucky and managed
+                # to whittle down the original graph to an empty graph. But we need at least one
+                # partial solution to be able to rebuild an MIS, so we handle this edge
+                # case by injecting an empty solution.
+                # postprocessed = [MISSolution(instance=instance, frequency=1, nodes=[])]
+                postprocessed.append(MISSolution(instance=instance, frequency=1, nodes=[]))
 
-            # No noise here, since there wasn't any quantum measurement, so no
-            # postprocessing.
-        else:
-            raw = [
-                MISSolution(
-                    instance=instance,
-                    frequency=count
-                    / total,  # Note: If total == 0, the list is empty, so this line is never called.
-                    nodes=self._bitstring_to_nodes(bitstr),
-                )
-                for [bitstr, count] in data.items()
-            ]
+                # No noise here, since there wasn't any quantum measurement, so no
+                # postprocessing.
+            else:
+                raw = [
+                    MISSolution(
+                        instance=instance,
+                        frequency=count
+                        / total,  # Note: If total == 0, the list is empty, so this line is never called.
+                        nodes=self._bitstring_to_nodes(bitstr),
+                    )
+                    for [bitstr, count] in data[i].items()
+                ]
 
-            # Postprocess to get rid of quantum noise.
-            postprocessed = self.fixtures.postprocess(raw)
+                # Postprocess to get rid of quantum noise.
+                postprocessed = self.fixtures.postprocess(raw)
 
         # Then rebuild any partial solution into solutions on the full graph.
         rebuilt = [self.fixtures.rebuild(r) for r in postprocessed]
@@ -182,31 +186,36 @@ class MISSolverQuantum(BaseSolver):
         Returns:
             MISSolution: Final result after execution and postprocessing.
         """
-        preprocessed_instance = self.fixtures.preprocess()
-        if len(preprocessed_instance.graph) == 0:
-            # Edge case: we cannot process an empty register.
-            # Luckily, the solution is trivial.
-            return self._process(instance=preprocessed_instance, data=Counter())
-        if len(preprocessed_instance.graph) == 1:
-            # Edge case: we also cannot process a register with a single atom.
-            # Luckily, the solution is trivial.
-            nodes = list(preprocessed_instance.graph.nodes)
-            return [MISSolution(preprocessed_instance, nodes, frequency=1)]
+        preprocessed_instances = self.fixtures.preprocess()
 
-        register = self._embedder.embed(
-            instance=preprocessed_instance,
-            config=self.config,
-            backend=self.backend,
-        )
+        empty_graph: list[MISInstance] = []
+        execution_results: list[Counter[str]] = []
+        for preprocessed_instance in preprocessed_instances:
+            if len(preprocessed_instance.graph) == 0:
+                empty_graph.append(preprocessed_instance)
+                execution_results.append(Counter())
+            elif len(preprocessed_instance.graph) == 1:
+                # Edge case: we also cannot process a register with a single atom.
+                # Luckily, the solution is trivial.
+                nodes = list(preprocessed_instance.graph.nodes)
+                return [MISSolution(preprocessed_instance, nodes, frequency=1)]
+            else:
+                register = self._embedder.embed(
+                    instance=preprocessed_instance,
+                    config=self.config,
+                    backend=self.backend,
+                )
 
-        pulse = self._shaper.generate(
-            config=self.config,
-            register=register,
-            backend=self.backend,
-            instance=preprocessed_instance,
-        )
-        execution_result = self.execute(pulse, register)
-        return self._process(instance=preprocessed_instance, data=execution_result)
+                pulse = self._shaper.generate(
+                    config=self.config,
+                    register=register,
+                    backend=self.backend,
+                    instance=preprocessed_instance,
+                )
+
+                execution_result = self.execute(pulse, register)
+                execution_results.append(execution_result)
+        return self._process(instances=preprocessed_instances, data=execution_results)
 
     def execute(self, pulse: Pulse, register: Register) -> Counter[str]:
         """
