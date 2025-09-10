@@ -65,6 +65,28 @@ jobs:
     - name: Run tests
       run: |
         hatch -v run test
+
+  test_mis_windows_readme:
+    name: Run unit/integration tests readme (Windows)
+    # Testing Windows separately and with fewer versions
+    # of Python, as it's much slower.
+    strategy:
+      matrix:
+        os: [windows-latest]
+        python-version: ["3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout mis
+      uses: actions/checkout@v5
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install Hatch
+      run: |
+        pip install hatch
+    - name: Run tests
+      run: |
         hatch -v run test_readme_windows
 
   test_doc:
