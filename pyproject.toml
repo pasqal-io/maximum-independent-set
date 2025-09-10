@@ -79,7 +79,7 @@ dependencies = [
 [tool.hatch.envs.default.scripts]
 test = "pytest -n auto --cov-report=xml --cov-config=pyproject.toml --cov=mis --cov=tests --markdown-docs {args}"
 test_readme = "pytest --markdown-docs README.md docs/"
-test_readme_windows = "pytest --markdown-docs README.md docs\\"
+test_readme_windows = "pytest --markdown-docs README.md docs"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
