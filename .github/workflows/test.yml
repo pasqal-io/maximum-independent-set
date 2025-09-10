@@ -65,7 +65,7 @@ jobs:
     - name: Run tests
       run: |
         hatch -v run test
-        hatch -v run test_readme
+        hatch -v run test_readme_windows
 
   test_doc:
     name: Test docs build
