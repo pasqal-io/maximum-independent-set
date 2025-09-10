@@ -56,6 +56,7 @@ $ pipx install maximum-independent-set
 ## QuickStart
 
 ```python
+import os
 from mis import MISSolver, MISInstance, BackendConfig, SolverConfig
 import networkx as nx
 
@@ -72,8 +73,8 @@ solver = MISSolver(instance, config)
 results = solver.solve()
 
 # Show the results.
-print("MIS solutions:", results)
-results[0].draw()
+# print("MIS solutions:", results)
+# results[0].draw()
 ```
 
 ## Documentation

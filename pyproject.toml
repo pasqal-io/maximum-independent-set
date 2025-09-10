@@ -59,6 +59,7 @@ Issues = "https://github.com/pasqal-io/maximum-independent-set/issues"
 Source = "https://github.com/pasqal-io/maximum-independent-set"
 
 [tool.hatch.envs.default]
+installer = "uv"
 features = ["extras"]
 dependencies = [
   "pytest",
@@ -79,7 +80,7 @@ dependencies = [
 [tool.hatch.envs.default.scripts]
 test = "pytest -n auto --cov-report=xml --cov-config=pyproject.toml --cov=mis --cov=tests --markdown-docs {args}"
 test_readme = "pytest --markdown-docs README.md docs/"
-test_readme_windows = "pytest --collect-only -v --markdown-docs README.md docs"
+test_readme_windows = "pytest --markdown-docs README.md docs"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -98,6 +99,7 @@ asyncio_mode="auto"
 asyncio_default_fixture_loop_scope="function"
 
 [tool.hatch.envs.docs]
+installer = "uv"
 dependencies = [
   "mkdocs>=0.15",
   "mkdocs-material",
