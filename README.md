@@ -73,8 +73,8 @@ solver = MISSolver(instance, config)
 results = solver.solve()
 
 # Show the results.
-# print("MIS solutions:", results)
-# results[0].draw()
+print("MIS solutions:", results)
+results[0].draw()
 ```
 
 ## Documentation

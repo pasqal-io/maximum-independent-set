@@ -46,7 +46,12 @@ jobs:
   test_mis_windows:
     name: Run unit/integration tests (Windows)
     # Testing Windows separately and with fewer versions
-    # of Python, as it's much slower.
+    # of Python, as:
+    # - it's much slower;
+    # - generating illustrations in markdown seems to freeze
+    #   under Windows (it's waiting for user interaction to
+    #   close the window), so we want to only test documentation
+    #   snippets under Unix.
     strategy:
       matrix:
         os: [windows-latest]
@@ -65,7 +70,6 @@ jobs:
     - name: Run tests
       run: |
         hatch -v run test
-        hatch -v run test_readme_windows
 
   test_doc:
     name: Test docs build
