@@ -16,12 +16,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test_mis:
-    name: Run unit/integration tests
+  test_mis_ubuntu:
+    name: Run unit/integration tests (Ubuntu)
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     runs-on: ${{ matrix.os }}
     steps:
     - name: Checkout mis
@@ -42,6 +42,34 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         slug: pasqal-io/maximum-independent-set
+
+  test_mis_windows:
+    name: Run unit/integration tests (Windows)
+    # Testing Windows separately and with fewer versions
+    # of Python, as:
+    # - it's much slower;
+    # - generating illustrations in markdown seems to freeze
+    #   under Windows (it's waiting for user interaction to
+    #   close the window), so we want to only test documentation
+    #   snippets under Unix.
+    strategy:
+      matrix:
+        os: [windows-latest]
+        python-version: ["3.12"]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout mis
+      uses: actions/checkout@v5
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v6
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install Hatch
+      run: |
+        pip install hatch
+    - name: Run tests
+      run: |
+        hatch -v run test
 
   test_doc:
     name: Test docs build
