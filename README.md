@@ -56,7 +56,6 @@ $ pipx install maximum-independent-set
 ## QuickStart
 
 ```python
-import os
 from mis import MISSolver, MISInstance, BackendConfig, SolverConfig
 import networkx as nx
 
