@@ -5,6 +5,8 @@ import logging
 import typing
 from typing import Any, Iterable
 
+from collections import deque
+
 import networkx as nx
 from networkx.classes.reportviews import DegreeView
 from mis.pipeline.preprocessor import BasePreprocessor
@@ -199,29 +201,43 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         """
         ...
 
-    def preprocess(self) -> nx.Graph:
+    def preprocess(self) -> list[nx.Graph]:
         """
         Apply all rules, exhaustively, until the graph cannot be reduced
         further, storing the rules for rebuilding after the fact.
         """
         # Invariant: from this point, `self.kernel` does not contain any
         # self-loop.
-        self.initial_cleanup()
-        while (kernel_size_start := self.kernel.number_of_nodes()) > 0:
-            logger.info("preprocessing - current kernel size is %s", kernel_size_start)
-            self.search_rule_neighborhood_removal()
-            self.search_rule_isolated_node_removal()
-            self.search_rule_twin_reduction()
-            self.search_rule_node_fold()
-            self.search_rule_unconfined_and_diamond()
+        isolated_nodes: deque[int] = deque(
+            [node for node in list(self.kernel.nodes()) if self.is_isolated_and_maximum(node)]
+        )
 
-            kernel_size_end: int = self.kernel.number_of_nodes()
-            assert kernel_size_end <= kernel_size_start  # Just in case.
-            if kernel_size_start == kernel_size_end:
-                # We didn't find any rule to apply, time to stop.
-                logger.info("preprocessing - ran out of rules")
-                break
-        return self.kernel
+        if not isolated_nodes:
+            return [self.kernel]
+
+        kernels = []
+        kernel_copy = self.kernel.copy()
+        while isolated_nodes:
+            self.initial_cleanup()
+            while (kernel_size_start := self.kernel.number_of_nodes()) > 0:
+                logger.info("preprocessing - current kernel size is %s", kernel_size_start)
+                self.search_rule_neighborhood_removal()
+                self.search_rule_isolated_node_removal()
+                self.search_rule_twin_reduction()
+                self.search_rule_node_fold()
+                self.search_rule_unconfined_and_diamond()
+
+                kernel_size_end: int = self.kernel.number_of_nodes()
+                assert kernel_size_end <= kernel_size_start  # Just in case.
+                if kernel_size_start == kernel_size_end:
+                    # We didn't find any rule to apply, time to stop.
+                    logger.info("preprocessing - ran out of rules")
+                    break
+                kernels.append(self.kernel)
+
+            isolated_nodes.popleft()
+            self.kernel = kernel_copy
+        return kernels
 
     def add_rebuilder(self, rebuilder: "BaseRebuilder") -> None:
         """
