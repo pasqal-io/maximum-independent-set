@@ -32,7 +32,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install Hatch
       run: |
-        pip install hatch
+        pip install hatch==1.14.0
     - name: Run tests
       run: |
         hatch -v run test

@@ -7,7 +7,9 @@ from networkx.classes.reportviews import DegreeView
 from pulser import AnalogDevice, InterpolatedWaveform, Pulse, Register
 
 from qoolqit._solvers.backends import BaseBackend
-from mis.shared.types import MISInstance
+from qoolqit._solvers import Detuning
+from mis.shared.graphs import WeightedPicker
+from mis.shared.types import MISInstance, Weighting
 from mis.pipeline.config import SolverConfig
 
 import numpy as np
@@ -36,7 +38,7 @@ class BasePulseShaper(ABC):
     If unspecified, use the maximal duration for the device."""
 
     @abstractmethod
-    def generate(
+    def pulse(
         self, config: SolverConfig, register: Register, backend: BaseBackend, instance: MISInstance
     ) -> Pulse:
         """
@@ -51,21 +53,34 @@ class BasePulseShaper(ABC):
         """
         pass
 
+    @abstractmethod
+    def detuning(
+        self, config: SolverConfig, register: Register, backend: BaseBackend, instance: MISInstance
+    ) -> list[Detuning]:
+        # By default, no detuning.
+        return []
+
+
+@dataclass
+class _Parameters:
+    final_detuning: float
+    duration_us: int
+    maximum_amplitude: float
+
 
 class DefaultPulseShaper(BasePulseShaper):
     """
     A simple pulse shaper.
     """
 
-    def generate(
-        self, config: SolverConfig, register: Register, backend: BaseBackend, instance: MISInstance
-    ) -> Pulse:
+    def _calculate_parameters(
+        self, register: Register, backend: BaseBackend, instance: MISInstance
+    ) -> _Parameters:
         """
-        Return a simple constant waveform pulse
+        Compute parameters shared between the pulse and the detunings.
         """
-
-        device = backend.device()
         graph = instance.graph  # Guaranteed to be consecutive integers starting from 0.
+        device = backend.device()
 
         # Cache mapping node value -> node index.
         pos = register.sorted_coords
@@ -90,6 +105,7 @@ class DefaultPulseShaper(BasePulseShaper):
         # Determine the maximal energy between two disconnected nodes.
         max_amp_device = AMP_SAFETY_FACTOR * (device.channels["rydberg_global"].max_amp or np.inf)
         if len(disconnected) == 0:
+            u_max = np.inf
             maximum_amplitude = max_amp_device
         else:
             u_max = np.max(disconnected)
@@ -125,10 +141,64 @@ class DefaultPulseShaper(BasePulseShaper):
             duration_us = AnalogDevice.max_sequence_duration
         assert duration_us is not None
 
+        return _Parameters(
+            final_detuning=final_detuning,
+            duration_us=duration_us,
+            maximum_amplitude=maximum_amplitude,
+        )
+
+    def detuning(
+        self, config: SolverConfig, register: Register, backend: BaseBackend, instance: MISInstance
+    ) -> list[Detuning]:
+        """
+        Return a simple constant waveform pulse
+        """
+        if config.weighting == Weighting.UNWEIGHTED:
+            return []
+
+        parameters = self._calculate_parameters(
+            register=register, backend=backend, instance=instance
+        )
+
+        # Normalize node weights to [0, 1]
+        # FIXME: We assume that weights are >= 0, but we haven't checked that anywhere.
+        max_weight: float = max(
+            WeightedPicker.node_weight(instance.graph, x) for x in instance.graph
+        )
+        norm_node_weights = {
+            register.qubit_ids[i]: 1 - WeightedPicker.node_weight(instance.graph, x) / max_weight
+            for (i, x) in enumerate(instance.graph)
+        }
+        waveform = InterpolatedWaveform(
+            parameters.duration_us, values=[0, 0, -parameters.final_detuning]
+        )
+
+        # The constructor of InterpolatedWaveform does interesting metaprogramming
+        # that mypy cannot follow.
+        assert isinstance(waveform, InterpolatedWaveform)
+        return [
+            Detuning(
+                weights=norm_node_weights,
+                waveform=waveform,
+            )
+        ]
+
+    def pulse(
+        self, config: SolverConfig, register: Register, backend: BaseBackend, instance: MISInstance
+    ) -> Pulse:
+        """
+        Return a simple constant waveform pulse
+        """
+        parameters = self._calculate_parameters(
+            backend=backend, register=register, instance=instance
+        )
+
         amplitude = InterpolatedWaveform(
-            duration_us, [1e-9, maximum_amplitude, 1e-9]
+            parameters.duration_us, [1e-9, parameters.maximum_amplitude, 1e-9]
         )  # FIXME: This should be 0, investigate why it's 1e-9
-        detuning = InterpolatedWaveform(duration_us, [-final_detuning, 0, final_detuning])
+        detuning = InterpolatedWaveform(
+            parameters.duration_us, [-parameters.final_detuning, 0, parameters.final_detuning]
+        )
         rydberg_pulse = Pulse(amplitude, detuning, 0)
         # Pulser overrides PulserPulse.__new__ with an exotic type, so we need
         # to help mypy.
