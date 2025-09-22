@@ -32,8 +32,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install Hatch
       run: |
-        pipx install hatch==1.14.0
-        pipx inject hatch click==8.2.2 --force # See https://github.com/pypa/hatch/issues/2052
+        pipx install hatch
+        pipx inject hatch click"<8.3" --force # See https://github.com/pypa/hatch/issues/2052
     - name: Run tests
       run: |
         hatch -v run test
@@ -67,8 +67,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install Hatch
       run: |
-        pipx install hatch==1.14.0
-        pipx inject hatch click==8.2.2 --force # See https://github.com/pypa/hatch/issues/2052
+        pipx install hatch
+        pipx inject hatch click"<8.3" --force # See https://github.com/pypa/hatch/issues/2052
     - name: Run tests
       run: |
         hatch -v run test
@@ -89,8 +89,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install Hatch
       run: |
-        pipx install hatch==1.14.0
-        pipx inject hatch click==8.2.2 --force # See https://github.com/pypa/hatch/issues/2052
+        pipx install hatch
+        pipx inject hatch click"<8.3" --force # See https://github.com/pypa/hatch/issues/2052
     - name: Run tests
       run: |
         hatch -v run docs:build
@@ -111,8 +111,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install Hatch
         run: |
-          pipx install hatch==1.14.0
-          pipx inject hatch click==8.2.2 --force # See https://github.com/pypa/hatch/issues/2052
+          pipx install hatch
+          pipx inject hatch click"<8.3" --force # See https://github.com/pypa/hatch/issues/2052
       - name: Run notebooks
         run: |
           hatch run pip install jupyter
