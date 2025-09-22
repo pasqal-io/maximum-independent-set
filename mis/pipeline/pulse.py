@@ -151,7 +151,7 @@ class DefaultPulseShaper(BasePulseShaper):
         self, config: SolverConfig, register: Register, backend: BaseBackend, instance: MISInstance
     ) -> list[Detuning]:
         """
-        Return a simple constant waveform pulse
+        Return detunings to be executed alongside the pulses.
         """
         if config.weighting == Weighting.UNWEIGHTED:
             return []

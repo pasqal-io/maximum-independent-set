@@ -218,11 +218,13 @@ class MISSolverQuantum(BaseSolver):
 
     def execute(self, pulse: Pulse, register: Register, detunings: list[Detuning]) -> Counter[str]:
         """
-        Execute the pulse schedule on the backend and retrieve the solution.
+        Execute the pulse + detunings schedule on the backend and retrieve the solution.
 
         Args:
-            pulse (object): Pulse schedule or execution payload.
-            embedding (Register): The register to be executed.
+            pulse: Pulse schedule or execution payload.
+            detunings: (possibly empty) list of detunings schedules to execute
+                alongside the pulse.
+            embedding: The register to be executed.
 
         Returns:
             Result: The solution from execution.

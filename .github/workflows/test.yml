@@ -136,8 +136,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install Hatch
         run: |
-          pipx install hatch==1.14.0
-          pipx inject hatch click==8.2.2 --force # See https://github.com/pypa/hatch/issues/2052
+          pipx install hatch
+          pipx inject hatch click<8.3.0 --force # See https://github.com/pypa/hatch/issues/2052
       - name: Run notebook
         run: |
           hatch run pip install jupyter
