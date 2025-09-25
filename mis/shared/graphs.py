@@ -81,8 +81,9 @@ class WeightedPicker(BaseWeightPicker):
     @classmethod
     def node_weight(cls, graph: nx.Graph, node: int) -> float:
         result = graph.nodes[node].get("weight", 1.0)
-        assert isinstance(result, float)
-        return result
+        # Convert to float, in case weights are integers or
+        # numpy-style floats.
+        return float(result)
 
     @classmethod
     def set_node_weight(cls, graph: nx.Graph, node: int, weight: float) -> None:
