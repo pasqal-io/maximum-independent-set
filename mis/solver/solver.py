@@ -1,11 +1,10 @@
 from __future__ import annotations
-from typing import Counter, Callable
+from typing import Counter, Callable, Optional
 import networkx as nx
 import copy
 
-from pulser import Pulse, Register
 from qoolqit._solvers.backends import BaseBackend, get_backend
-from qoolqit._solvers import QuantumProgram, Detuning
+from qoolqit._solvers import QuantumProgram
 
 from mis.shared.types import MISInstance, MISSolution, MethodType
 from mis.pipeline.basesolver import BaseSolver
@@ -59,6 +58,14 @@ class MISSolver:
             nodes = list(self.instance.graph.nodes)
             return [MISSolution(self.instance, nodes, frequency=1)]
         return self._solver.solve()
+
+    def inner(self) -> BaseSolver:
+        """
+        Return the implementation used by this solver, e.g. quantum, greedy or classical.
+
+        This method is provided mostly for pedagogical and debugging reasons.
+        """
+        return self._solver
 
 
 class MISSolverClassical(BaseSolver):
@@ -167,6 +174,42 @@ class MISSolverQuantum(BaseSolver):
         solutions.sort(key=lambda sol: sol.frequency, reverse=True)
         return solutions[: self.config.max_number_of_solutions]
 
+    def quantum_program(
+        self, preprocessed_instance: Optional[MISInstance] = None
+    ) -> QuantumProgram:
+        """
+        Return the quantum program that the solver will run.
+
+        This method is provided mostly for pedagogical and debugging purposes.
+        """
+        if preprocessed_instance is None:
+            instance = self.original_instance
+        else:
+            instance = preprocessed_instance
+
+        register = self._embedder.embed(
+            instance=instance,
+            config=self.config,
+            backend=self.backend,
+        )
+
+        pulse = self._shaper.pulse(
+            config=self.config,
+            register=register,
+            backend=self.backend,
+            instance=instance,
+        )
+
+        detunings = self._shaper.detuning(
+            config=self.config,
+            register=register,
+            backend=self.backend,
+            instance=instance,
+        )
+        return QuantumProgram(
+            device=self.backend.device(), register=register, pulse=pulse, detunings=detunings
+        )
+
     def solve(self) -> list[MISSolution]:
         """
         Execute the full quantum pipeline: preprocess, embed, pulse, execute,
@@ -186,30 +229,11 @@ class MISSolverQuantum(BaseSolver):
             nodes = list(preprocessed_instance.graph.nodes)
             return [MISSolution(preprocessed_instance, nodes, frequency=1)]
 
-        register = self._embedder.embed(
-            instance=preprocessed_instance,
-            config=self.config,
-            backend=self.backend,
-        )
-
-        pulse = self._shaper.pulse(
-            config=self.config,
-            register=register,
-            backend=self.backend,
-            instance=preprocessed_instance,
-        )
-
-        detunings = self._shaper.detuning(
-            config=self.config,
-            register=register,
-            backend=self.backend,
-            instance=preprocessed_instance,
-        )
-
-        execution_result = self.execute(pulse, register, detunings)
+        program = self.quantum_program()
+        execution_result = self.execute(program)
         return self._process(instance=preprocessed_instance, data=execution_result)
 
-    def execute(self, pulse: Pulse, register: Register, detunings: list[Detuning]) -> Counter[str]:
+    def execute(self, program: QuantumProgram) -> Counter[str]:
         """
         Execute the pulse + detunings schedule on the backend and retrieve the solution.
 
@@ -222,9 +246,6 @@ class MISSolverQuantum(BaseSolver):
         Returns:
             Result: The solution from execution.
         """
-        program = QuantumProgram(
-            register=register, pulse=pulse, detunings=detunings, device=self.backend.device()
-        )
         counts = self.backend.run(program=program, runs=self.config.runs).counts
         assert isinstance(counts, Counter)  # Not sure why mypy expects that `counts` is `Any`.
         return counts
