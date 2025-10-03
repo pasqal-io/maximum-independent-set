@@ -222,9 +222,9 @@ class MISSolverQuantum(BaseSolver):
 
         Args:
             pulse: Pulse schedule or execution payload.
+            register: The register to be executed.
             detunings: (possibly empty) list of detunings schedules to execute
                 alongside the pulse.
-            embedding: The register to be executed.
 
         Returns:
             Result: The solution from execution.
