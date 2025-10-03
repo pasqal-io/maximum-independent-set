@@ -229,7 +229,7 @@ class MISSolverQuantum(BaseSolver):
             nodes = list(preprocessed_instance.graph.nodes)
             return [MISSolution(preprocessed_instance, nodes, frequency=1)]
 
-        program = self.quantum_program()
+        program = self.quantum_program(preprocessed_instance)
         execution_result = self.execute(program)
         return self._process(instance=preprocessed_instance, data=execution_result)
 
