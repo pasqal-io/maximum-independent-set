@@ -10,6 +10,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from mis.pipeline.config import SolverConfig
 from mis.shared.types import MISInstance, MISSolution
+from qoolqit._solvers import QuantumProgram
 
 
 class BaseSolver(ABC):
@@ -39,8 +40,21 @@ class BaseSolver(ABC):
         """
         Solve the given MISinstance.
 
+        Arguments:
+            instance: if None (default), use the original instance passed during
+            initialization. Otherwise, pass a custom instance. Used e.g. for
+            preprocessing.
+
         Returns:
             A list of solutions, ranked from best (lowest energy) to worst
             (highest energy).
         """
         pass
+
+    def quantum_program(self) -> QuantumProgram:
+        """
+        If this solver executes a quantum program, return it.
+
+        This method is meant mostly for pedagogical or debugging purposes.
+        """
+        raise NotImplementedError
