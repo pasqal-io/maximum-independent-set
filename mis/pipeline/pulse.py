@@ -30,8 +30,8 @@ class BasePulseShaper(ABC):
     is passed at the time of pulse generation, not during initialization.
     """
 
-    duration_us: int | None = None
-    """The duration of the pulse, in microseconds.
+    duration_ns: int | None = None
+    """The duration of the pulse, in nanoseconds.
 
     If unspecified, use the maximal duration for the device."""
 
@@ -66,8 +66,8 @@ class PulseParameters:
     # Maximal energy between two disconnected nodes.
     maximum_amplitude: float
 
-    # The duration of the pulse, in microseconds.
-    duration_us: float
+    # The duration of the pulse, in nanoseconds.
+    duration_ns: float
 
     # The final detuning.
     final_detuning: float
@@ -134,16 +134,16 @@ class DefaultPulseShaper(BasePulseShaper):
         det_max_device = device.channels["rydberg_global"].max_abs_detuning or np.inf
         final_detuning = min(det_final_theory, det_max_device)
 
-        duration_us = self.duration_us
-        if duration_us is None:
-            duration_us = device.max_sequence_duration
-        if duration_us is None:
+        duration_ns = self.duration_ns
+        if duration_ns is None:
+            duration_ns = device.max_sequence_duration
+        if duration_ns is None:
             # Last resort.
-            duration_us = AnalogDevice.max_sequence_duration
-        assert duration_us is not None
+            duration_ns = AnalogDevice.max_sequence_duration
+        assert duration_ns is not None
 
         return PulseParameters(
-            duration_us=duration_us,
+            duration_ns=duration_ns,
             connected=connected,
             disconnected=disconnected,
             u_min=u_min,
@@ -159,10 +159,10 @@ class DefaultPulseShaper(BasePulseShaper):
         """
         parameters = self._calculate_parameters(config, register, backend, instance)
         amplitude = InterpolatedWaveform(
-            parameters.duration_us, [1e-9, parameters.maximum_amplitude, 1e-9]
+            parameters.duration_ns, [1e-9, parameters.maximum_amplitude, 1e-9]
         )  # FIXME: This should be 0, investigate why it's 1e-9
         detuning = InterpolatedWaveform(
-            parameters.duration_us, [-parameters.final_detuning, 0, parameters.final_detuning]
+            parameters.duration_ns, [-parameters.final_detuning, 0, parameters.final_detuning]
         )
         rydberg_pulse = Pulse(amplitude, detuning, 0)
         # Pulser overrides PulserPulse.__new__ with an exotic type, so we need
