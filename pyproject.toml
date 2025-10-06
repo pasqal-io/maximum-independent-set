@@ -67,6 +67,7 @@ dependencies = [
   "pytest-xdist",
   "pytest-asyncio",
   "pytest-markdown-docs",
+  "pytest-rerunfailures",
   "nbconvert",
   "ipykernel",
   "pre-commit",
