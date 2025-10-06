@@ -26,7 +26,7 @@ class BasePreprocessor(abc.ABC):
     """
 
     @abc.abstractmethod
-    def rebuild(self, partial_solution: set[int]) -> set[int]: ...
+    def rebuild(self, partial_solution: frozenset[int]) -> list[frozenset[int]]: ...
 
     """
     Apply any pending rebuild operations.

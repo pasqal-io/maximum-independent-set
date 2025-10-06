@@ -67,7 +67,7 @@ class Kernelization(BasePreprocessor):
         """
         return self._kernelizer.preprocess()
 
-    def rebuild(self, partial_solution: set[int]) -> set[int]:
+    def rebuild(self, partial_solution: frozenset[int]) -> list[frozenset[int]]:
         """
         Expand from MIS solutions on a reduced graph obtained by `preprocess()` into
         solutions on the original graph.
@@ -76,7 +76,7 @@ class Kernelization(BasePreprocessor):
             partial_solution A solution on the reduced graph. Note that we do not
             check that this solution is correct.
         Returns:
-            A solution on the original graph.
+            A list of solutions on the original graph.
         """
         return self._kernelizer.rebuild(partial_solution)
 
@@ -126,16 +126,19 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
     various kinds of graphs (e.g. unweighted vs. weighted).
     """
 
-    def rebuild(self, partial_solution: set[int]) -> set[int]:
+    def rebuild(self, partial_solution: frozenset[int]) -> list[frozenset[int]]:
         """
         Rebuild a MIS solution to the original graph from
         a partial MIS solution on the reduced graph obtained
         by kernelization.
         """
-        partial_solution = set(partial_solution)
+        partial_solutions = [partial_solution]
         for rule_app in reversed(self.rule_application_sequence):
-            rule_app.rebuild(partial_solution)
-        return partial_solution
+            new_partial_solutions: list[frozenset[int]] = []
+            for old_partial_solution in partial_solutions:
+                new_partial_solutions.extend(rule_app.rebuild(old_partial_solution))
+            partial_solutions = new_partial_solutions
+        return partial_solutions
 
     def is_independent(self, nodes: list[int]) -> bool:
         """
@@ -868,7 +871,7 @@ class BaseRebuilder(abc.ABC):
     """
 
     @abc.abstractmethod
-    def rebuild(self, partial_solution: set[int]) -> None: ...
+    def rebuild(self, partial_solution: frozenset[int]) -> list[frozenset[int]]: ...
 
     """
     Convert a solution `partial_solution` that is valid on a reduced
@@ -880,11 +883,13 @@ class BaseRebuilder(abc.ABC):
 class RebuilderIsolatedNodeRemoval(BaseRebuilder):
     def __init__(self, isolated: int, higher: list[int]):
         self.isolated = isolated
-        self.higher = higher
+        self.higher = frozenset(higher)
 
-    def rebuild(self, partial_solution: set[int]) -> None:
-        if len(partial_solution & set(self.higher)) == 0:
-            partial_solution.add(self.isolated)
+    def rebuild(self, partial_solution: frozenset[int]) -> list[frozenset[int]]:
+        if len(partial_solution & self.higher) == 0:
+            return [partial_solution.union([self.isolated])]
+        else:
+            return [partial_solution]
 
 
 class RebuilderNodeFolding(BaseRebuilder):
@@ -894,22 +899,24 @@ class RebuilderNodeFolding(BaseRebuilder):
         self.x = x
         self.v_prime = v_prime
 
-    def rebuild(self, partial_solution: set[int]) -> None:
+    def rebuild(self, partial_solution: frozenset[int]) -> list[frozenset[int]]:
         if self.v_prime in partial_solution:
-            partial_solution.add(self.u)
-            partial_solution.add(self.x)
-            partial_solution.remove(self.v_prime)
+            mutable_partial_solution = set(partial_solution)
+            mutable_partial_solution.add(self.u)
+            mutable_partial_solution.add(self.x)
+            mutable_partial_solution.remove(self.v_prime)
+            return [frozenset(mutable_partial_solution)]
         else:
-            partial_solution.add(self.v)
+            return [partial_solution.union([self.v])]
 
 
 class RebuilderUnconfined(BaseRebuilder):
-    def rebuild(self, partial_solution: set[int]) -> None:
+    def rebuild(self, partial_solution: frozenset[int]) -> list[frozenset[int]]:
         """
         By definition, unconfined nodes are never part of the solution,
         so rebuilding is a noop.
         """
-        pass
+        return [partial_solution]
 
 
 class RebuilderTwinIndependent(BaseRebuilder):
@@ -927,22 +934,23 @@ class RebuilderTwinIndependent(BaseRebuilder):
         self.neighbors = neighbors
         self.v_prime: int = v_prime
 
-    def rebuild(self, partial_solution: set[int]) -> None:
+    def rebuild(self, partial_solution: frozenset[int]) -> list[frozenset[int]]:
         if self.v_prime in partial_solution:
             # Since V' is part of the solution, none of its
             # neighbors is part of the solution. Consequently,
             # either U and V can be added to grow the solution
             # or neighbors can be added to grow the solution,
             # without affecting the rest of the system.
-            partial_solution.update(self.neighbors)
-            partial_solution.remove(self.v_prime)
+            mutable_partial_solution = set(partial_solution)
+            mutable_partial_solution.update(self.neighbors)
+            mutable_partial_solution.remove(self.v_prime)
+            return [frozenset(mutable_partial_solution)]
         else:
             # The only neighbors of U and V are represented
             # by V'. Since V' is not part of the solution,
             # and since U and V are not neighbors, we can
             # always add U and V.
-            partial_solution.add(self.u)
-            partial_solution.add(self.v)
+            return [partial_solution.union([self.u, self.v])]
 
 
 class RebuilderTwinAlwaysInSolution(BaseRebuilder):
@@ -956,15 +964,14 @@ class RebuilderTwinAlwaysInSolution(BaseRebuilder):
         self.v: int = v
         self.u: int = u
 
-    def rebuild(self, partial_solution: set[int]) -> None:
+    def rebuild(self, partial_solution: frozenset[int]) -> list[frozenset[int]]:
         # Because of the invariants, U and V are always part of the solution.
-        partial_solution.add(self.u)
-        partial_solution.add(self.v)
+        return [partial_solution.union([self.u, self.v])]
 
 
 class RebuilderNeighborhoodRemoval(BaseRebuilder):
     def __init__(self, dominant_vertex: int):
         self.dominant_vertex = dominant_vertex
 
-    def rebuild(self, partial_solution: set[int]) -> None:
-        partial_solution.add(self.dominant_vertex)
+    def rebuild(self, partial_solution: frozenset[int]) -> list[frozenset[int]]:
+        return [partial_solution.union([self.dominant_vertex])]

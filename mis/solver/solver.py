@@ -100,7 +100,6 @@ class MISSolverClassical(BaseSolver):
             )
 
         solutions = self.fixtures.postprocess([partial_solution])
-        solutions = [self.fixtures.rebuild(sol) for sol in solutions]
         solutions.sort(key=lambda sol: sol.frequency, reverse=True)
 
         return solutions[: self.config.max_number_of_solutions]
@@ -149,7 +148,7 @@ class MISSolverQuantum(BaseSolver):
             # to whittle down the original graph to an empty graph. But we need at least one
             # partial solution to be able to rebuild an MIS, so we handle this edge
             # case by injecting an empty solution.
-            postprocessed = [MISSolution(instance=instance, frequency=1, nodes=[])]
+            solutions = [MISSolution(instance=instance, frequency=1, nodes=[])]
 
             # No noise here, since there wasn't any quantum measurement, so no
             # postprocessing.
@@ -165,14 +164,11 @@ class MISSolverQuantum(BaseSolver):
             ]
 
             # Postprocess to get rid of quantum noise.
-            postprocessed = self.fixtures.postprocess(raw)
-
-        # Then rebuild any partial solution into solutions on the full graph.
-        rebuilt = [self.fixtures.rebuild(r) for r in postprocessed]
+            solutions = self.fixtures.postprocess(raw)
 
         # And present the most interesting solutions first.
-        rebuilt.sort(key=lambda sol: sol.frequency, reverse=True)
-        return rebuilt[: self.config.max_number_of_solutions]
+        solutions.sort(key=lambda sol: sol.frequency, reverse=True)
+        return solutions[: self.config.max_number_of_solutions]
 
     def solve(self) -> list[MISSolution]:
         """
