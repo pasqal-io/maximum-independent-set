@@ -71,7 +71,7 @@ class MISInstance:
             self.index_to_node_label[index] = label
             self.node_label_to_index[label] = index
 
-        # Copy nodes (and weights), if they exist.
+        # Copy nodes (and weights, if they exist).
         self.graph = networkx.Graph()
         for index, node in enumerate(graph.nodes()):
             self.graph.add_node(index)

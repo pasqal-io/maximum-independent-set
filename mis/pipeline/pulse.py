@@ -68,7 +68,7 @@ class DefaultPulseShaper(BasePulseShaper):
         graph = instance.graph  # Guaranteed to be consecutive integers starting from 0.
 
         # Cache mapping node value -> node index.
-        pos = register.sorted_coords
+        pos = list(register.qubits.values())
         assert len(pos) == len(graph)
 
         def calculate_edge_interaction(edge: tuple[int, int]) -> float:
