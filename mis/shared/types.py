@@ -216,3 +216,6 @@ class MISSolution:
             font (str): Font type
         """
         self.instance.draw(self.node_indices, node_size, highlight_color, font_family)
+
+    def __repr__(self) -> str:
+        return f"{self.nodes}: {self.frequency}"

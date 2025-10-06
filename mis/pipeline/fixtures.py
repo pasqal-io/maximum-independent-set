@@ -79,39 +79,50 @@ class Fixtures:
             list[MISSolution]: The cleaned or transformed solution.
         """
 
+        print("YORIC: postprocess starting with %s solutions, best length %s" % (solutions, max([sol.size for sol in solutions])))
         # Start with postprocessing, to compensate for noise or rounding errors.
         if self.postprocessor is None:
+            print("YORIC: postprocessor is None")
             bag: dict[str, MISSolution] = {self._solution_key(solution): solution for solution in solutions}
         else:
+            print("YORIC: postprocessor is set")
             bag = {}
             for solution in solutions:
                 processed = self.postprocessor.postprocess(solution)
                 if processed is None:
                     # Disregard solution.
                     continue
-                # Deduplicate if necessary.
                 key = self._solution_key(solution)
                 existing = bag.get(key)
                 if existing is None:
                     bag[key] = solution
                 else:
+                    # Deduplicate solution.
                     existing.frequency += solution.frequency
+        print("YORIC: postprocess done with %s solutions, best length %s" % ( bag.values(), max([sol.size for sol in bag.values()])))
 
         # Now, any remaining solution should be a valid (w)MIS. However,
         # these solutions may be valid only for preprocessed graphs.
         # Rebuild these into solutions on the original graph.
         old_bag = bag
         if self.preprocessor is None:
+            print("YORIC: preprocessor is None")
             bag = old_bag
         else:
+            print("YORIC: preprocessor is set")
             bag = {}
             for partial in old_bag.values():
                 for nodes in self.preprocessor.rebuild(frozenset(partial.nodes)):
+                    print("YORIC: rebuilt a solution with size %s into a solution with size %s" % (partial.size, len(nodes)))
                     key = self._solution_key(nodes)
                     existing = bag.get(key)
                     if existing is None:
+                        print("YORIC: rebuilt solution is fresh")
                         bag[key] = MISSolution(instance=self.instance, nodes=list(nodes), frequency=partial.frequency)
                     else:
+                        # Deduplicate solution.
+                        print("YORIC: rebuilt solution is old")
                         existing.frequency += partial.frequency
+        print("YORIC: preprocess rebuild done with %s solutions, best length %s" % (bag.values(), max([sol.size for sol in bag.values()])))
 
         return list(bag.values())

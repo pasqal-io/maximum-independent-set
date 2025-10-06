@@ -224,6 +224,7 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
                 # We didn't find any rule to apply, time to stop.
                 logger.info("preprocessing - ran out of rules")
                 break
+        logger.info("preprocessing - complete")
         return self.kernel
 
     def add_rebuilder(self, rebuilder: "BaseRebuilder") -> None:

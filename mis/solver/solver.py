@@ -148,10 +148,7 @@ class MISSolverQuantum(BaseSolver):
             # to whittle down the original graph to an empty graph. But we need at least one
             # partial solution to be able to rebuild an MIS, so we handle this edge
             # case by injecting an empty solution.
-            solutions = [MISSolution(instance=instance, frequency=1, nodes=[])]
-
-            # No noise here, since there wasn't any quantum measurement, so no
-            # postprocessing.
+            raw = [MISSolution(instance=instance, frequency=1, nodes=[])]
         else:
             raw = [
                 MISSolution(
@@ -162,13 +159,17 @@ class MISSolverQuantum(BaseSolver):
                 )
                 for [bitstr, count] in data.items()
             ]
+            print("YORIC: solver starting with %s solutions" % (len(raw), ))
 
-            # Postprocess to get rid of quantum noise.
-            solutions = self.fixtures.postprocess(raw)
+        # Postprocess to get rid of quantum noise.
+        solutions = self.fixtures.postprocess(raw)
+        print("YORIC: solver continuing with %s solutions" % (len(solutions), ))
 
         # And present the most interesting solutions first.
         solutions.sort(key=lambda sol: sol.frequency, reverse=True)
-        return solutions[: self.config.max_number_of_solutions]
+        cut = solutions[: self.config.max_number_of_solutions]
+        print("YORIC: solver cutting to %s solutions (max %s)" % (len(cut), self.config.max_number_of_solutions))
+        return cut
 
     def solve(self) -> list[MISSolution]:
         """
@@ -331,10 +332,6 @@ class GreedyMISSolver(BaseSolver):
             sub_instance = MISInstance(graph=layout_subgraph)
             solver = self.solver_factory(sub_instance, self.config)
 
-            # Note:
-            # this forces the computation to be in sync.
-            # TODO: Align with async SDK - when it is available in the future.
-            # results in a solution in forms of layout nodes
             results = solver.solve()
 
             # inverse mappings from from layout nodes - to - graph nodes
