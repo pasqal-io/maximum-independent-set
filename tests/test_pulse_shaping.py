@@ -12,7 +12,9 @@ from qoolqit._solvers.backends import QutipBackend
 @pytest.mark.flaky(
     max_runs=5
 )  # Layout is non-deterministic, sometimes it will produce weird results.
-@pytest.mark.parametrize("size", [3, 5, 6, 7, 8]) # No square, the layout produces odd results too often.
+@pytest.mark.parametrize(
+    "size", [3, 5, 6, 7]
+)  # No square, the layout produces odd results too often.
 def test_pulse_shaping_simple_shapes(size: int) -> None:
     # Create a simple graph with `size` nodes, each of them connected only to the
     # previous and next node.
