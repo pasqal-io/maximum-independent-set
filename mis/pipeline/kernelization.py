@@ -134,6 +134,7 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         """
         partial_solutions = [partial_solution]
         for rule_app in reversed(self.rule_application_sequence):
+            print("YORIC: rebuild %s in progress with %s solution, best length %s: %s" % (type(rule_app), len(partial_solutions), max([len(p) for p in partial_solutions]), partial_solutions))
             new_partial_solutions: list[frozenset[int]] = []
             for old_partial_solution in partial_solutions:
                 new_partial_solutions.extend(rule_app.rebuild(old_partial_solution))
