@@ -159,20 +159,13 @@ class MISSolverQuantum(BaseSolver):
                 )
                 for [bitstr, count] in data.items()
             ]
-            print("YORIC: solver starting with %s solutions" % (len(raw),))
 
         # Postprocess to get rid of quantum noise.
         solutions = self.fixtures.postprocess(raw)
-        print("YORIC: solver continuing with %s solutions" % (len(solutions),))
 
         # And present the most interesting solutions first.
         solutions.sort(key=lambda sol: sol.frequency, reverse=True)
-        cut = solutions[: self.config.max_number_of_solutions]
-        print(
-            "YORIC: solver cutting to %s solutions (max %s)"
-            % (len(cut), self.config.max_number_of_solutions)
-        )
-        return cut
+        return solutions[: self.config.max_number_of_solutions]
 
     def solve(self) -> list[MISSolution]:
         """
