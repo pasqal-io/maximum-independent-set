@@ -30,6 +30,7 @@ def test_empty_qtip_mis(
         preprocessor=preprocessor,
         postprocessor=postprocessor,
         weighting=weighting,
+        max_number_of_solutions=10,
     )
 
     # Create the MIS instance
@@ -71,6 +72,7 @@ def test_disconnected_qtip_mis(
         preprocessor=preprocessor,
         postprocessor=postprocessor,
         weighting=weighting,
+        max_number_of_solutions=10,
     )
 
     # Create the MIS instance
@@ -123,6 +125,7 @@ def test_star_qtip_mis(
         preprocessor=preprocessor,
         postprocessor=postprocessor,
         weighting=weighting,
+        max_number_of_solutions=10,
     )
 
     # Create the MIS instance

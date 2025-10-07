@@ -100,7 +100,6 @@ class MISSolverClassical(BaseSolver):
             )
 
         solutions = self.fixtures.postprocess([partial_solution])
-        solutions = [self.fixtures.rebuild(sol) for sol in solutions]
         solutions.sort(key=lambda sol: sol.frequency, reverse=True)
 
         return solutions[: self.config.max_number_of_solutions]
@@ -149,10 +148,7 @@ class MISSolverQuantum(BaseSolver):
             # to whittle down the original graph to an empty graph. But we need at least one
             # partial solution to be able to rebuild an MIS, so we handle this edge
             # case by injecting an empty solution.
-            postprocessed = [MISSolution(instance=instance, frequency=1, nodes=[])]
-
-            # No noise here, since there wasn't any quantum measurement, so no
-            # postprocessing.
+            raw = [MISSolution(instance=instance, frequency=1, nodes=[])]
         else:
             raw = [
                 MISSolution(
@@ -164,15 +160,12 @@ class MISSolverQuantum(BaseSolver):
                 for [bitstr, count] in data.items()
             ]
 
-            # Postprocess to get rid of quantum noise.
-            postprocessed = self.fixtures.postprocess(raw)
-
-        # Then rebuild any partial solution into solutions on the full graph.
-        rebuilt = [self.fixtures.rebuild(r) for r in postprocessed]
+        # Postprocess to get rid of quantum noise.
+        solutions = self.fixtures.postprocess(raw)
 
         # And present the most interesting solutions first.
-        rebuilt.sort(key=lambda sol: sol.frequency, reverse=True)
-        return rebuilt[: self.config.max_number_of_solutions]
+        solutions.sort(key=lambda sol: sol.frequency, reverse=True)
+        return solutions[: self.config.max_number_of_solutions]
 
     def solve(self) -> list[MISSolution]:
         """
@@ -335,10 +328,6 @@ class GreedyMISSolver(BaseSolver):
             sub_instance = MISInstance(graph=layout_subgraph)
             solver = self.solver_factory(sub_instance, self.config)
 
-            # Note:
-            # this forces the computation to be in sync.
-            # TODO: Align with async SDK - when it is available in the future.
-            # results in a solution in forms of layout nodes
             results = solver.solve()
 
             # inverse mappings from from layout nodes - to - graph nodes

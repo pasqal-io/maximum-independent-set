@@ -135,8 +135,8 @@ def test_apply_rule_isolated_node_removal(
     # We should have removed {0} and its neighborhood.
     assert not any(test_instance.kernel.has_node(node) for node in [0, 1])
     assert all(test_instance.kernel.has_node(node) for node in [2, 3, 4, 5])
-    test_mis = test_instance.rebuild({2})
-    assert test_mis == {0, 2}
+    test_mis = test_instance.rebuild(frozenset({2}))
+    assert test_mis == [frozenset({0, 2})]
 
 
 @pytest.mark.parametrize("weighting", [Weighting.UNWEIGHTED, Weighting.WEIGHTED])
@@ -155,8 +155,8 @@ def test_search_rule_isolated_node_removal(
         # {0} is isolated and maximal, so removing {0} and its neighborhood.
         assert not any(test_instance.kernel.has_node(node) for node in [0, 1])
         assert all(test_instance.kernel.has_node(node) for node in [2, 3, 4, 5])
-        test_mis = test_instance.rebuild({2})
-        assert test_mis == {0, 2}
+        test_mis = test_instance.rebuild(frozenset({2}))
+        assert test_mis == [frozenset({0, 2})]
 
 
 @pytest.mark.parametrize("weighting", [Weighting.UNWEIGHTED, Weighting.WEIGHTED])
@@ -177,10 +177,10 @@ def test_apply_rule_node_fold_uw(weighting: Weighting) -> None:
     test_instance.apply_rule_node_fold(v=0, w_v=1.0, u=1, w_u=1.0, x=2, w_x=1.0)
     assert not all(test_instance.kernel.has_node(node) for node in [0, 1, 2])
     assert all(test_instance.kernel.has_node(node) for node in [9, 3, 4, 5, 6, 7, 8])
-    mis_1 = test_instance.rebuild({9})
-    assert mis_1 == {1, 2}
-    mis_2 = test_instance.rebuild({4})
-    assert mis_2 == {0, 4}
+    mis_1 = test_instance.rebuild(frozenset({9}))
+    assert mis_1 == [frozenset({1, 2})]
+    mis_2 = test_instance.rebuild(frozenset({4}))
+    assert mis_2 == [frozenset({0, 4})]
 
 
 @pytest.mark.parametrize("weighting", [Weighting.UNWEIGHTED, Weighting.WEIGHTED])
@@ -191,10 +191,10 @@ def test_rule_node_fold(weighting: Weighting) -> None:
     test_instance.search_rule_node_fold()
     assert not all(test_instance.kernel.has_node(node) for node in [0, 1, 2])
     assert all(test_instance.kernel.has_node(node) for node in [9, 3, 4, 5, 6, 7, 8])
-    mis_1 = test_instance.rebuild({9})
-    assert mis_1 == {1, 2}
-    mis_2 = test_instance.rebuild({4})
-    assert mis_2 == {0, 4}
+    mis_1 = test_instance.rebuild(frozenset({9}))
+    assert mis_1 == [frozenset({1, 2})]
+    mis_2 = test_instance.rebuild(frozenset({4}))
+    assert mis_2 == [frozenset({0, 4})]
 
 
 def test_aux_search_confinement() -> None:
@@ -204,7 +204,7 @@ def test_aux_search_confinement() -> None:
     confinement_1 = test_instance.aux_search_confinement({1}, {0})
     assert confinement_1 is not None
     assert confinement_1.node == 1
-    assert confinement_1.set_diff == {2}
+    assert confinement_1.set_diff == set({2})
 
     confinement_2 = test_instance.aux_search_confinement({1}, {0, 2})
     assert confinement_2 is None
@@ -218,7 +218,7 @@ def test_aux_search_confinement() -> None:
     confinement_4 = test_instance_2.aux_search_confinement({1}, {0})
     assert confinement_4 is not None
     assert confinement_4.node == 1
-    assert confinement_4.set_diff == {2, 3}
+    assert confinement_4.set_diff == set({2, 3})
 
 
 def test_apply_rule_unconfined() -> None:
@@ -226,7 +226,7 @@ def test_apply_rule_unconfined() -> None:
     weighting = Weighting.UNWEIGHTED
     test_instance = ker.UnweightedKernelization(SolverConfig(weighting=weighting), graph=P_3)
     test_instance.apply_rule_unconfined(2)
-    assert set(test_instance.kernel.nodes) == {0, 1}
+    assert frozenset(test_instance.kernel.nodes) == frozenset({0, 1})
 
 
 def test_unconfined_loop() -> None:
@@ -246,7 +246,7 @@ def test_search_rule_unconfined_and_diamond() -> None:
     weighting = Weighting.UNWEIGHTED
     test_instance = ker.UnweightedKernelization(SolverConfig(weighting=weighting), graph=K3_CLAW)
     test_instance.search_rule_unconfined_and_diamond()
-    assert set(test_instance.kernel) == {2, 4, 5}
+    assert frozenset(test_instance.kernel) == frozenset({2, 4, 5})
 
 
 @pytest.mark.parametrize("weighting", [Weighting.UNWEIGHTED, Weighting.WEIGHTED])
@@ -257,8 +257,8 @@ def test_fold_twin_uw(weighting: Weighting) -> None:
     test_instance.fold_twin(0, 1, 10, [2, 3, 4])
     assert not all(test_instance.kernel.has_node(node) for node in [0, 1, 2, 3, 4])
     assert all(test_instance.kernel.has_node(node) for node in [10, 5, 6])
-    N_v_prime = set(test_instance.kernel.neighbors(10))
-    assert N_v_prime == {5, 6}
+    N_v_prime = frozenset(test_instance.kernel.neighbors(10))
+    assert N_v_prime == frozenset({5, 6})
 
 
 @pytest.mark.parametrize("weighting", [Weighting.UNWEIGHTED, Weighting.WEIGHTED])
@@ -281,11 +281,11 @@ def test_apply_rule_twin_ind(weighting: Weighting) -> None:
         SolverConfig(weighting=weighting), graph=K23_CLAW_bis
     )._kernelizer
     test_instance.apply_rule_twin_independent(0, 1, [2, 3, 4])
-    assert set(test_instance.kernel.nodes()) == {5, 6, 7}
-    mis_1 = test_instance.rebuild({7})
-    assert mis_1 == {2, 3, 4}
-    mis_2 = test_instance.rebuild(set())
-    assert mis_2 == {0, 1}
+    assert frozenset(test_instance.kernel.nodes()) == frozenset({5, 6, 7})
+    mis_1 = test_instance.rebuild(frozenset({7}))
+    assert mis_1 == [frozenset({2, 3, 4})]
+    mis_2 = test_instance.rebuild(frozenset())
+    assert mis_2 == [frozenset({0, 1})]
 
 
 @pytest.mark.parametrize("weighting", [Weighting.UNWEIGHTED, Weighting.WEIGHTED])
@@ -294,9 +294,9 @@ def test_apply_rule_twin_not_ind(weighting: Weighting) -> None:
         SolverConfig(weighting=weighting), graph=K23_CLAW_N_linked
     )._kernelizer
     test_instance.apply_rule_twins_in_solution(0, 1, [2, 3, 4])
-    assert set(test_instance.kernel.nodes()) == {5, 6}
-    mis_1 = test_instance.rebuild(set())
-    assert mis_1 == {0, 1}
+    assert frozenset(test_instance.kernel.nodes()) == frozenset({5, 6})
+    mis_1 = test_instance.rebuild(frozenset())
+    assert mis_1 == [frozenset({0, 1})]
 
 
 @pytest.mark.parametrize("weighting", [Weighting.UNWEIGHTED, Weighting.WEIGHTED])
@@ -305,15 +305,15 @@ def test_search_rule_twin_reduction(weighting: Weighting) -> None:
         SolverConfig(weighting=weighting), graph=K23_CLAW_bis
     )._kernelizer
     test_instance.search_rule_twin_reduction()
-    assert set(test_instance.kernel.nodes()) == {5, 6, 7}
-    mis_1 = test_instance.rebuild({7})
-    assert mis_1 == {2, 3, 4}
-    mis_2 = test_instance.rebuild(set())
-    assert mis_2 == {0, 1}
+    assert frozenset(test_instance.kernel.nodes()) == frozenset({5, 6, 7})
+    mis_1 = test_instance.rebuild(frozenset({7}))
+    assert mis_1 == [frozenset({2, 3, 4})]
+    mis_2 = test_instance.rebuild(frozenset())
+    assert mis_2 == [frozenset({0, 1})]
     test_instance_2 = ker.Kernelization(
         SolverConfig(weighting=weighting), graph=K23_CLAW_N_linked
     )._kernelizer
     test_instance_2.apply_rule_twins_in_solution(0, 1, [2, 3, 4])
-    assert set(test_instance_2.kernel.nodes()) == {5, 6}
-    mis_3 = test_instance_2.rebuild(set())
-    assert mis_3 == {0, 1}
+    assert frozenset(test_instance_2.kernel.nodes()) == frozenset({5, 6})
+    mis_3 = test_instance_2.rebuild(frozenset())
+    assert mis_3 == [frozenset({0, 1})]
