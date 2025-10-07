@@ -1,4 +1,5 @@
 import abc
+import copy
 from dataclasses import dataclass
 from enum import Enum
 import logging
@@ -282,11 +283,9 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         Arguments:
             isolated An isolated node. We do not re-check that it is isolated.
         """
-        neighborhood = list(self.kernel.neighbors(isolated))
-        higher = self.get_nodes_with_strictly_higher_weight(isolated, neighborhood)
-        rule_app = RebuilderIsolatedNodeRemoval(isolated, higher)
+        rule_app = RebuilderIsolatedNodeRemoval(kernelization=self, isolated=isolated)
         self.add_rebuilder(rule_app)
-        self.kernel.remove_nodes_from(neighborhood)
+        self.kernel.remove_nodes_from(list(self.kernel.neighbors(isolated)))
         self.kernel.remove_node(isolated)
 
     def search_rule_isolated_node_removal(self) -> None:
@@ -882,15 +881,29 @@ class BaseRebuilder(abc.ABC):
 
 
 class RebuilderIsolatedNodeRemoval(BaseRebuilder):
-    def __init__(self, isolated: int, higher: list[int]):
+    def __init__(self, kernelization: BaseKernelization, isolated: int):
         self.isolated = isolated
-        self.higher = frozenset(higher)
+        self.snapshot = copy.deepcopy(kernelization)
 
     def rebuild(self, partial_solution: frozenset[int]) -> list[frozenset[int]]:
-        if len(partial_solution & self.higher) == 0:
-            return [partial_solution.union([self.isolated])]
-        else:
-            return [partial_solution]
+        # Any node in the clique could be part of a larger solution.
+        clique: frozenset[int] = frozenset(self.snapshot.kernel.neighbors(self.isolated)).union(
+            [self.isolated]
+        )
+
+        larger_solutions = []
+        for node in clique:
+            neighbours = frozenset(self.snapshot.kernel.neighbors(node))
+            if not neighbours.issubset(clique):
+                continue
+            higher = frozenset(
+                self.snapshot.get_nodes_with_strictly_higher_weight(node, neighbours)
+            )
+            if len(partial_solution & higher) == 0:
+                larger_solutions.append(partial_solution.union([node]))
+        if len(larger_solutions) == 0:
+            larger_solutions = [partial_solution]
+        return larger_solutions
 
 
 class RebuilderNodeFolding(BaseRebuilder):
