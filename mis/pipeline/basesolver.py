@@ -10,6 +10,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from mis.pipeline.config import SolverConfig
 from mis.shared.types import MISInstance, MISSolution
+from pulser import Register, Pulse
 
 
 class BaseSolver(ABC):
@@ -42,5 +43,28 @@ class BaseSolver(ABC):
         Returns:
             A list of solutions, ranked from best (lowest energy) to worst
             (highest energy).
+        """
+        pass
+
+    @abstractmethod
+    def embedding(self) -> Register:
+        """
+        Generate or retrieve an embedding for the instance.
+
+        Returns:
+            dict: Embedding information for the instance.
+        """
+        pass
+
+    @abstractmethod
+    def pulse(self, embedding: Register) -> Pulse:
+        """
+        Generate a pulse schedule for the quantum device based on the embedding.
+
+        Args:
+            embedding (dict): Embedding information.
+
+        Returns:
+            Pulse: Pulse schedule.
         """
         pass
