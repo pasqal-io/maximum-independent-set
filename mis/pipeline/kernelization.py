@@ -1,4 +1,5 @@
 import abc
+import copy
 from dataclasses import dataclass
 from enum import Enum
 import logging
@@ -284,7 +285,7 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         """
         rule_app = RebuilderIsolatedNodeRemoval(kernelization=self, isolated=isolated)
         self.add_rebuilder(rule_app)
-        self.kernel.remove_nodes_from(list(self.kernel.neighbors(isolated)))
+        self.kernel.remove_nodes_from(neighborhood)
         self.kernel.remove_node(isolated)
 
     def search_rule_isolated_node_removal(self) -> None:
@@ -897,24 +898,21 @@ class RebuilderIsolatedNodeRemoval(BaseRebuilder):
         self.snapshot = kernelization.kernel.copy()
 
     def rebuild(self, partial_solution: frozenset[int]) -> list[frozenset[int]]:
-        """
-        Expand the solution.
-
-        Note that we do not expect `self.isolated` to be the only isolated node
-        within the clique, as this would cause us to lose potential solutions,
-        see e.g. issue #135.
-        """
         # Any node in the clique could be part of a larger solution.
-        clique: frozenset[int] = frozenset(self.snapshot.neighbors(self.isolated)).union(
+        clique: frozenset[int] = frozenset(self.snapshot.kernel.neighbors(self.isolated)).union(
             [self.isolated]
         )
 
         larger_solutions = []
         for node in clique:
-            neighbours = frozenset(self.snapshot.neighbors(node))
+            neighbours = frozenset(self.snapshot.kernel.neighbors(node))
             if not neighbours.issubset(clique):
                 continue
-            larger_solutions.append(partial_solution.union([node]))
+            higher = frozenset(
+                self.snapshot.get_nodes_with_strictly_higher_weight(node, neighbours)
+            )
+            if len(partial_solution & higher) == 0:
+                larger_solutions.append(partial_solution.union([node]))
         if len(larger_solutions) == 0:
             # If we haven't produced any new solution, then `partial_solution`
             # remains a MIS for the larger graph.
