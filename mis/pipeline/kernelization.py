@@ -882,10 +882,29 @@ class BaseRebuilder(abc.ABC):
 
 class RebuilderIsolatedNodeRemoval(BaseRebuilder):
     def __init__(self, kernelization: BaseKernelization, isolated: int):
+        """
+        Construct a rebuilder for isolated node removal.
+
+        Args:
+            - kernelization: The kernelizer at the time we construct the rebuilder
+              (before removing any node). We store a deep copy of the kernelizer
+              until rebuilding.
+            - isolated: The isolated node we have detected. The neighborhood of
+              this node MUST be a clique. We expect that the neighborhood of this
+              node and the node itself will be removed just after creating this
+              rebuilder.
+        """
         self.isolated = isolated
         self.snapshot = copy.deepcopy(kernelization)
 
     def rebuild(self, partial_solution: frozenset[int]) -> list[frozenset[int]]:
+        """
+        Expand the solution.
+
+        Note that we do not expect `self.isolated` to be the only isolated node
+        within the clique, as this would cause us to lose potential solutions,
+        see e.g. issue #135.
+        """
         # Any node in the clique could be part of a larger solution.
         clique: frozenset[int] = frozenset(self.snapshot.kernel.neighbors(self.isolated)).union(
             [self.isolated]
@@ -896,12 +915,10 @@ class RebuilderIsolatedNodeRemoval(BaseRebuilder):
             neighbours = frozenset(self.snapshot.kernel.neighbors(node))
             if not neighbours.issubset(clique):
                 continue
-            higher = frozenset(
-                self.snapshot.get_nodes_with_strictly_higher_weight(node, neighbours)
-            )
-            if len(partial_solution & higher) == 0:
-                larger_solutions.append(partial_solution.union([node]))
+            larger_solutions.append(partial_solution.union([node]))
         if len(larger_solutions) == 0:
+            # If we haven't produced any new solution, then `partial_solution`
+            # remains a MIS for the larger graph.
             larger_solutions = [partial_solution]
         return larger_solutions
 
