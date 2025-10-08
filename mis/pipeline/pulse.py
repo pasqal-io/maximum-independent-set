@@ -30,8 +30,8 @@ class BasePulseShaper(ABC):
     is passed at the time of pulse generation, not during initialization.
     """
 
-    duration_us: int | None = None
-    """The duration of the pulse, in microseconds.
+    duration_ns: int | None = None
+    """The duration of the pulse, in nanoseconds.
 
     If unspecified, use the maximal duration for the device."""
 
@@ -52,23 +52,40 @@ class BasePulseShaper(ABC):
         pass
 
 
+@dataclass
+class PulseParameters:
+    # Interaction strength for connected nodes.
+    connected: list[float]
+
+    # Interaction strength for disconnected nodes.
+    disconnected: list[float]
+
+    # Minimal energy between two connected nodes.
+    u_min: float
+
+    # Maximal energy between two disconnected nodes.
+    maximum_amplitude: float
+
+    # The duration of the pulse, in nanoseconds.
+    duration_ns: float
+
+    # The final detuning.
+    final_detuning: float
+
+
 class DefaultPulseShaper(BasePulseShaper):
     """
     A simple pulse shaper.
     """
 
-    def generate(
+    def _calculate_parameters(
         self, config: SolverConfig, register: Register, backend: BaseBackend, instance: MISInstance
-    ) -> Pulse:
-        """
-        Return a simple constant waveform pulse
-        """
-
+    ) -> PulseParameters:
         device = backend.device()
         graph = instance.graph  # Guaranteed to be consecutive integers starting from 0.
 
         # Cache mapping node value -> node index.
-        pos = register.sorted_coords
+        pos = list(register.qubits.values())
         assert len(pos) == len(graph)
 
         def calculate_edge_interaction(edge: tuple[int, int]) -> float:
@@ -117,18 +134,36 @@ class DefaultPulseShaper(BasePulseShaper):
         det_max_device = device.channels["rydberg_global"].max_abs_detuning or np.inf
         final_detuning = min(det_final_theory, det_max_device)
 
-        duration_us = self.duration_us
-        if duration_us is None:
-            duration_us = device.max_sequence_duration
-        if duration_us is None:
+        duration_ns = self.duration_ns
+        if duration_ns is None:
+            duration_ns = device.max_sequence_duration
+        if duration_ns is None:
             # Last resort.
-            duration_us = AnalogDevice.max_sequence_duration
-        assert duration_us is not None
+            duration_ns = AnalogDevice.max_sequence_duration
+        assert duration_ns is not None
 
+        return PulseParameters(
+            duration_ns=duration_ns,
+            connected=connected,
+            disconnected=disconnected,
+            u_min=u_min,
+            maximum_amplitude=maximum_amplitude,
+            final_detuning=final_detuning,
+        )
+
+    def generate(
+        self, config: SolverConfig, register: Register, backend: BaseBackend, instance: MISInstance
+    ) -> Pulse:
+        """
+        Return a simple constant waveform pulse
+        """
+        parameters = self._calculate_parameters(config, register, backend, instance)
         amplitude = InterpolatedWaveform(
-            duration_us, [1e-9, maximum_amplitude, 1e-9]
+            parameters.duration_ns, [1e-9, parameters.maximum_amplitude, 1e-9]
         )  # FIXME: This should be 0, investigate why it's 1e-9
-        detuning = InterpolatedWaveform(duration_us, [-final_detuning, 0, final_detuning])
+        detuning = InterpolatedWaveform(
+            parameters.duration_ns, [-parameters.final_detuning, 0, parameters.final_detuning]
+        )
         rydberg_pulse = Pulse(amplitude, detuning, 0)
         # Pulser overrides PulserPulse.__new__ with an exotic type, so we need
         # to help mypy.
