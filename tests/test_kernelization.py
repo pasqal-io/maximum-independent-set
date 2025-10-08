@@ -3,6 +3,7 @@ from enum import Enum
 import pytest
 import random
 
+from mis import MISInstance, MISSolver, BackendConfig
 from mis.pipeline.config import SolverConfig
 import mis.pipeline.kernelization as ker
 from mis.shared.types import Weighting
@@ -317,3 +318,30 @@ def test_search_rule_twin_reduction(weighting: Weighting) -> None:
     assert frozenset(test_instance_2.kernel.nodes()) == frozenset({5, 6})
     mis_3 = test_instance_2.rebuild(frozenset())
     assert mis_3 == [frozenset({0, 1})]
+
+
+def test_kernelization_does_not_eat_solutions(python_dependency_graph: MISInstance) -> None:
+    """Test for issue 135: kernelization should not eat solutions."""
+    instance = python_dependency_graph
+    solver = MISSolver(
+        instance,
+        config=SolverConfig(
+            preprocessor=lambda config, graph: ker.Kernelization(config, graph),
+            backend=BackendConfig(),
+            max_number_of_solutions=10,
+        ),
+    )
+    solutions = solver.solve()
+
+    assert len(solutions) == 2
+    expected = [
+        {"mygreatlib", "anotherlib", "Python 3.10"},
+        {"mygreatlib", "anotherlib", "Python 3.13"},
+    ]
+    for nodes in expected:
+        found = False
+        for sol in solutions:
+            if set(sol.nodes) == nodes:
+                found = True
+                break
+        assert found, f"Found solution {nodes} among {[set(sol.nodes) for sol in solutions]}"
