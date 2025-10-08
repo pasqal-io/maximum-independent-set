@@ -62,12 +62,12 @@ Source = "https://github.com/pasqal-io/maximum-independent-set"
 installer = "uv"
 features = ["extras"]
 dependencies = [
+  "flaky",
   "pytest",
   "pytest-cov",
   "pytest-xdist",
   "pytest-asyncio",
   "pytest-markdown-docs",
-  "pytest-rerunfailures",
   "nbconvert",
   "ipykernel",
   "pre-commit",

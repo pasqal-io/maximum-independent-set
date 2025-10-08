@@ -5,7 +5,7 @@ import copy
 
 from pulser import Pulse, Register
 from qoolqit._solvers.backends import BaseBackend, get_backend
-from qoolqit._solvers import QuantumProgram
+from qoolqit._solvers import QuantumProgram, Detuning
 
 from mis.shared.types import MISInstance, MISSolution, MethodType
 from mis.pipeline.basesolver import BaseSolver
@@ -192,27 +192,39 @@ class MISSolverQuantum(BaseSolver):
             backend=self.backend,
         )
 
-        pulse = self._shaper.generate(
+        pulse = self._shaper.pulse(
             config=self.config,
             register=register,
             backend=self.backend,
             instance=preprocessed_instance,
         )
-        execution_result = self.execute(pulse, register)
+
+        detunings = self._shaper.detuning(
+            config=self.config,
+            register=register,
+            backend=self.backend,
+            instance=preprocessed_instance,
+        )
+
+        execution_result = self.execute(pulse, register, detunings)
         return self._process(instance=preprocessed_instance, data=execution_result)
 
-    def execute(self, pulse: Pulse, register: Register) -> Counter[str]:
+    def execute(self, pulse: Pulse, register: Register, detunings: list[Detuning]) -> Counter[str]:
         """
-        Execute the pulse schedule on the backend and retrieve the solution.
+        Execute the pulse + detunings schedule on the backend and retrieve the solution.
 
         Args:
-            pulse (object): Pulse schedule or execution payload.
-            embedding (Register): The register to be executed.
+            pulse: Pulse schedule or execution payload.
+            register: The register to be executed.
+            detunings: (possibly empty) list of detunings schedules to execute
+                alongside the pulse.
 
         Returns:
             Result: The solution from execution.
         """
-        program = QuantumProgram(register=register, pulse=pulse, device=self.backend.device())
+        program = QuantumProgram(
+            register=register, pulse=pulse, detunings=detunings, device=self.backend.device()
+        )
         counts = self.backend.run(program=program, runs=self.config.runs).counts
         assert isinstance(counts, Counter)  # Not sure why mypy expects that `counts` is `Any`.
         return counts

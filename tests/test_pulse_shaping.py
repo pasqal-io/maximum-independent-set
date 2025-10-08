@@ -35,7 +35,7 @@ def test_pulse_shaping_simple_shapes(size: int) -> None:
 
     # Compute parameters
     register = embedder.embed(instance, config, backend)
-    parameters = shaper._calculate_parameters(config, register, backend, instance)
+    parameters = shaper._calculate_parameters(register, backend, instance)
 
     assert len(parameters.connected) == size
     if size > 3:
