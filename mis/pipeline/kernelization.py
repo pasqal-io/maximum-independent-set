@@ -1,5 +1,4 @@
 import abc
-import copy
 from dataclasses import dataclass
 from enum import Enum
 import logging
@@ -32,6 +31,31 @@ class _TwinCategory(str, Enum):
     """
     The rule does not work for these twin nodes.
     """
+
+
+class _IsolationLevel(str, Enum):
+    """
+    How isolated a node is.
+    """
+
+    StillConnected = "STILL-CONNECTED"
+    """
+    The node has neighbors outside of a clique,
+    i.e. it does not count as isolated.
+    """
+
+    IsolatedAndMaximum = "ISOLATED-MAX"
+    """
+    The node is isolated and no neighbouring
+    node has a weight strictly greater than
+    that node.
+    """
+
+    IsolatedNotMaximum = "ISOLATED-NOT-MAX"
+    """
+    The node is isolated and at least one neighbouring
+    node has a weight strictly greater than that
+    node."""
 
 
 @dataclass
@@ -185,7 +209,7 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         """
         ...
 
-    def is_isolated_and_maximum(self, node: int) -> bool:
+    def get_isolation(self, node: int) -> _IsolationLevel:
         """
         Determine whether a node is isolated and maximum, i.e.
         1. this node + its neighbors represent a clique; AND
@@ -193,8 +217,10 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         """
         neighborhood = closed_neighborhood(self.kernel, node)
         if not self.is_subclique(nodes=neighborhood):
-            return False
-        return self.is_maximum(node, neighborhood)
+            return _IsolationLevel.StillConnected
+        if self.is_maximum(node, neighborhood):
+            return _IsolationLevel.IsolatedAndMaximum
+        return _IsolationLevel.IsolatedNotMaximum
 
     @abc.abstractmethod
     def add_node(self, weight: float) -> int:
@@ -283,14 +309,35 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
         Arguments:
             isolated An isolated node. We do not re-check that it is isolated.
         """
-        rule_app = RebuilderIsolatedNodeRemoval(kernelization=self, isolated=isolated)
-        self.add_rebuilder(rule_app)
-        self.kernel.remove_nodes_from(neighborhood)
-        self.kernel.remove_node(isolated)
+
+        # Find out which neighboring nodes have a weight that is lower or equal
+        # and which have a weight that is strictly larger.
+        lower = [isolated]
+        higher = []
+        isolated_weight = self.node_weight(isolated)
+        for node in self.kernel.neighbors(isolated):
+            weight = self.node_weight(node)
+            if weight <= isolated_weight:
+                lower.append(node)
+            else:
+                higher.append(node)
+
+        self.add_rebuilder(RebuilderIsolatedNodeRemoval(self, isolated))
+
+        # Remove all the lower-weight node (including `isolated`).
+        self.kernel.remove_nodes_from(lower)
+
+        # If there is any higher-level node, we retain it but decrease its weight.
+        #
+        # If it's picked nevertheless, it means that it's worth picking, despite not
+        # being able to pick a node with weight `isolated_weight` (or lower).
+        for node in higher:
+            self.cost_picker.node_delta(self.kernel, node, -isolated_weight)
 
     def search_rule_isolated_node_removal(self) -> None:
         """
-        Remove any isolated node (see `is_isolated` for a definition).
+        Remove any isolated node that is also maximal
+        (see `get_isolation` for a definition).
         """
         for node in list(self.kernel.nodes()):
             # Since we're modifying `self.kernel` while iterating, we're
@@ -302,8 +349,11 @@ class BaseKernelization(BasePreprocessor, abc.ABC):
                 # disappear from `self.kernel`.
                 continue
 
-            if self.is_isolated_and_maximum(node):
-                logger.debug("search_rule_isolated_node_removal: removing node %s", node)
+            level = self.get_isolation(node)
+            if level == _IsolationLevel.StillConnected:
+                # Node is not isolated, can't remove it.
+                continue
+            else:
                 self.apply_rule_isolated_node_removal(node)
 
     # -----------------node_fold---------------------------
@@ -895,9 +945,16 @@ class RebuilderIsolatedNodeRemoval(BaseRebuilder):
               rebuilder.
         """
         self.isolated = isolated
-        self.snapshot = kernelization.kernel.copy()
+        self.snapshot = kernelization.__class__(kernelization.config, kernelization.kernel)
 
     def rebuild(self, partial_solution: frozenset[int]) -> list[frozenset[int]]:
+        """
+        Expand the solution.
+
+        Note that we do not expect `self.isolated` to be the only isolated node
+        within the clique, as this would cause us to lose potential solutions,
+        see e.g. issue #135.
+        """
         # Any node in the clique could be part of a larger solution.
         clique: frozenset[int] = frozenset(self.snapshot.kernel.neighbors(self.isolated)).union(
             [self.isolated]
@@ -905,14 +962,24 @@ class RebuilderIsolatedNodeRemoval(BaseRebuilder):
 
         larger_solutions = []
         for node in clique:
-            neighbours = frozenset(self.snapshot.kernel.neighbors(node))
-            if not neighbours.issubset(clique):
+            level = self.snapshot.get_isolation(node)
+            if level == _IsolationLevel.StillConnected:
+                # Node is not isolated, can't be part of the solution.
                 continue
-            higher = frozenset(
-                self.snapshot.get_nodes_with_strictly_higher_weight(node, neighbours)
-            )
-            if len(partial_solution & higher) == 0:
+            elif level == _IsolationLevel.IsolatedAndMaximum:
+                # Node is isolated and maximum, part of a solution.
                 larger_solutions.append(partial_solution.union([node]))
+            else:
+                # If none of the higher neighbouring nodes is already part of
+                # a solution, then `node` is part of a solution.
+                higher = []
+                node_weight = self.snapshot.node_weight(node)
+                for neighbour in self.snapshot.kernel.neighbors(node):
+                    if self.snapshot.node_weight(neighbour) > node_weight:
+                        higher.append(neighbour)
+                assert len(higher) > 0
+                if len(partial_solution & frozenset(higher)) == 0:
+                    larger_solutions.append(partial_solution.union([node]))
         if len(larger_solutions) == 0:
             # If we haven't produced any new solution, then `partial_solution`
             # remains a MIS for the larger graph.
