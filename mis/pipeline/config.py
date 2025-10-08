@@ -111,7 +111,7 @@ class SolverConfig:
     max_iterations (int): Maximum number of iterations allowed for solving.
     """
 
-    max_number_of_solutions: int = 1
+    max_number_of_solutions: int = 10
     """
     A maximal number of solutions to return.
 
