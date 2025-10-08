@@ -72,9 +72,6 @@ def test_is_subclique(weighting: Weighting) -> None:
     assert not test_instance.is_subclique([out_of_clique, *clique_set])
 
 
-# In graph_isolated,
-#
-# Nodes {0, }
 graph_isolated = nx.Graph()
 graph_isolated.add_nodes_from(range(6))
 graph_isolated.add_edges_from([(0, 1), (1, 2), (2, 5), (5, 1), (2, 3), (3, 4), (4, 5)])

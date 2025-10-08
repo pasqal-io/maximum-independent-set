@@ -93,6 +93,8 @@ def test_disconnected_qtip_mis(
             found = True
             break
     if preprocessor is not None or postprocessor is not None:
+        # We do NOT always find a solution using only the quantum
+        # component. Filed as #119.
         assert found
 
 
