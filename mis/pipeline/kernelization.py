@@ -1,5 +1,4 @@
 import abc
-import copy
 from dataclasses import dataclass
 from enum import Enum
 import logging
@@ -895,7 +894,7 @@ class RebuilderIsolatedNodeRemoval(BaseRebuilder):
               rebuilder.
         """
         self.isolated = isolated
-        self.snapshot = copy.deepcopy(kernelization)
+        self.snapshot = kernelization.kernel.copy()
 
     def rebuild(self, partial_solution: frozenset[int]) -> list[frozenset[int]]:
         """
@@ -906,13 +905,13 @@ class RebuilderIsolatedNodeRemoval(BaseRebuilder):
         see e.g. issue #135.
         """
         # Any node in the clique could be part of a larger solution.
-        clique: frozenset[int] = frozenset(self.snapshot.kernel.neighbors(self.isolated)).union(
+        clique: frozenset[int] = frozenset(self.snapshot.neighbors(self.isolated)).union(
             [self.isolated]
         )
 
         larger_solutions = []
         for node in clique:
-            neighbours = frozenset(self.snapshot.kernel.neighbors(node))
+            neighbours = frozenset(self.snapshot.neighbors(node))
             if not neighbours.issubset(clique):
                 continue
             larger_solutions.append(partial_solution.union([node]))
