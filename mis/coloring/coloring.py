@@ -47,10 +47,10 @@ class GraphColoringSolver(BaseSolver):
         self.solver_config = config
 
     def embedding(self) -> Register:
-        raise NotImplementedError()
+        raise NotImplementedError("GraphColoringSolver produces multiple embeddings.")
 
     def pulse(self, embedding: Register) -> Pulse:
-        raise NotImplementedError()
+        raise NotImplementedError("GraphColoringSolver produces multiple pulses.")
 
     def solve(
         self, antennas: Optional[set[int]] = None, is_second_coloring: bool = False

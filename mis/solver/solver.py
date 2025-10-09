@@ -66,6 +66,9 @@ class MISSolver:
     def pulse(self, embedding: Register) -> Pulse:
         return self._solver.pulse(embedding)
 
+    def detuning(self, embedding: Register) -> list[Detuning]:
+        return self._solver.detuning(embedding)
+
 
 class MISSolverClassical(BaseSolver):
     """
@@ -111,12 +114,10 @@ class MISSolverClassical(BaseSolver):
         return solutions[: self.config.max_number_of_solutions]
 
     def embedding(self) -> Register:
-        # Classical solvers do not do embedding.
-        raise NotImplementedError()
+        raise NotImplementedError("Classical solvers do not do embedding.")
 
     def pulse(self, embedding: Register) -> Pulse:
-        # Classical solvers do not do pulses.
-        raise NotImplementedError()
+        raise NotImplementedError("Classical solvers do not do pulses.")
 
 
 class MISSolverQuantum(BaseSolver):
@@ -155,13 +156,23 @@ class MISSolverQuantum(BaseSolver):
 
     def pulse(self, embedding: Register) -> Pulse:
         preprocessed_instance = self._preprocessed_instance or self.original_instance
-        pulse = self._shaper.generate(
+        pulse = self._shaper.pulse(
             config=self.config,
             register=embedding,
             backend=self.backend,
             instance=preprocessed_instance,
         )
         return pulse
+
+    def detuning(self, embedding: Register) -> Pulse:
+        preprocessed_instance = self._preprocessed_instance or self.original_instance
+        detunings = self._shaper.detuning(
+            config=self.config,
+            register=embedding,
+            backend=self.backend,
+            instance=preprocessed_instance,
+        )
+        return detunings
 
     def _bitstring_to_nodes(self, bitstring: str) -> list[int]:
         result: list[int] = []
@@ -303,10 +314,10 @@ class GreedyMISSolver(BaseSolver):
         self.layout = self._build_layout()
 
     def embedding(self) -> Register:
-        raise NotImplementedError()
+        raise NotImplementedError("GreedyMISSolver produces multiple embeddings.")
 
     def pulse(self, embedding: Register) -> Pulse:
-        raise NotImplementedError()
+        raise NotImplementedError("GreedyMISSolver produces multiple pulses.")
 
     def _build_layout(self) -> Layout:
         """
