@@ -135,6 +135,12 @@ def test_empty_mis(
 
     assert len(solutions) == 0
 
+    with pytest.raises(NotImplementedError):
+        solver.embedding()
+
+    with pytest.raises(NotImplementedError):
+        solver.pulse(None)
+
 
 @pytest.mark.parametrize("postprocessor", [None, lambda config: Maximization(config)])
 @pytest.mark.parametrize("preprocessor", [None, lambda config, graph: Kernelization(config, graph)])

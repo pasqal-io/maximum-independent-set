@@ -60,6 +60,15 @@ class MISSolver:
             return [MISSolution(self.instance, nodes, frequency=1)]
         return self._solver.solve()
 
+    def embedding(self) -> Register:
+        return self._solver.embedding()
+
+    def pulse(self, embedding: Register) -> Pulse:
+        return self._solver.pulse(embedding)
+
+    def detuning(self, embedding: Register) -> list[Detuning]:
+        return self._solver.detuning(embedding)
+
 
 class MISSolverClassical(BaseSolver):
     """
@@ -104,6 +113,12 @@ class MISSolverClassical(BaseSolver):
 
         return solutions[: self.config.max_number_of_solutions]
 
+    def embedding(self) -> Register:
+        raise NotImplementedError("Classical solvers do not do embedding.")
+
+    def pulse(self, embedding: Register) -> Pulse:
+        raise NotImplementedError("Classical solvers do not do pulses.")
+
 
 class MISSolverQuantum(BaseSolver):
     """
@@ -129,6 +144,35 @@ class MISSolverQuantum(BaseSolver):
         self._shaper = (
             config.pulse_shaper if config.pulse_shaper is not None else DefaultPulseShaper()
         )
+        self._preprocessed_instance: MISInstance | None = None
+
+    def embedding(self) -> Register:
+        preprocessed_instance = self._preprocessed_instance or self.original_instance
+        return self._embedder.embed(
+            instance=preprocessed_instance,
+            config=self.config,
+            backend=self.backend,
+        )
+
+    def pulse(self, embedding: Register) -> Pulse:
+        preprocessed_instance = self._preprocessed_instance or self.original_instance
+        pulse = self._shaper.pulse(
+            config=self.config,
+            register=embedding,
+            backend=self.backend,
+            instance=preprocessed_instance,
+        )
+        return pulse
+
+    def detuning(self, embedding: Register) -> Pulse:
+        preprocessed_instance = self._preprocessed_instance or self.original_instance
+        detunings = self._shaper.detuning(
+            config=self.config,
+            register=embedding,
+            backend=self.backend,
+            instance=preprocessed_instance,
+        )
+        return detunings
 
     def _bitstring_to_nodes(self, bitstring: str) -> list[int]:
         result: list[int] = []
@@ -176,6 +220,7 @@ class MISSolverQuantum(BaseSolver):
             MISSolution: Final result after execution and postprocessing.
         """
         preprocessed_instance = self.fixtures.preprocess()
+        self._preprocessed_instance = preprocessed_instance
         if len(preprocessed_instance.graph) == 0:
             # Edge case: we cannot process an empty register.
             # Luckily, the solution is trivial.
@@ -267,6 +312,12 @@ class GreedyMISSolver(BaseSolver):
         self.weight_picker = BaseWeightPicker.for_weighting(config.weighting)
         self.solver_factory = solver_factory
         self.layout = self._build_layout()
+
+    def embedding(self) -> Register:
+        raise NotImplementedError("GreedyMISSolver produces multiple embeddings.")
+
+    def pulse(self, embedding: Register) -> Pulse:
+        raise NotImplementedError("GreedyMISSolver produces multiple pulses.")
 
     def _build_layout(self) -> Layout:
         """

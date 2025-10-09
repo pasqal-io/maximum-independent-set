@@ -111,3 +111,9 @@ def test_greedy_mis_long(complex_graph: nx.Graph, use_quantum: bool, weighting: 
     assert len(solutions) > 0
     assert all(isinstance(sol.nodes, list) for sol in solutions)
     assert all(is_independent(instance.graph, sol.nodes) for sol in solutions)
+
+    with pytest.raises(NotImplementedError):
+        solver.embedding()
+
+    with pytest.raises(NotImplementedError):
+        solver.pulse(None)

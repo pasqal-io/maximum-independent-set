@@ -7,6 +7,7 @@ from mis.pipeline.config import SolverConfig
 import matplotlib.pyplot as plt
 
 from mis.shared.types import MISSolution
+from pulser import Pulse, Register
 
 
 class GraphColoringSolver(BaseSolver):
@@ -44,6 +45,12 @@ class GraphColoringSolver(BaseSolver):
         self.loader = loader
         self.antenna_range = antenna_range
         self.solver_config = config
+
+    def embedding(self) -> Register:
+        raise NotImplementedError("GraphColoringSolver produces multiple embeddings.")
+
+    def pulse(self, embedding: Register) -> Pulse:
+        raise NotImplementedError("GraphColoringSolver produces multiple pulses.")
 
     def solve(
         self, antennas: Optional[set[int]] = None, is_second_coloring: bool = False

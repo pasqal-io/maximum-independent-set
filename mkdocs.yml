@@ -1,5 +1,5 @@
 site_name: maximum independent set
-repo_url: "https://gitlab.pasqal.com/pqs/maximum-independent-set"
+repo_url: "https://github.com/pasqal-io/maximum-independent-set"
 repo_name: "maximum independent set"
 
 nav:
@@ -12,6 +12,8 @@ nav:
     - "Tutorial 2 - Using GreedyMIS to take better advantage of Quantum Hardware": "tutorial 2 - Using GreedyMIS to take better advantage of Quantum Hardware.ipynb"
     - "Tutorial 3 - 3SAT Solver": "tutorial 3 - An application of MIS - Solving the 3SAT problem.ipynb"
     - "Tutorial 4 - Graph Coloring Solver": "tutorial 4 - An application of MIS - Solving a Graph Coloring problem.ipynb"
+  - Advanced Tutorials:
+    - "Tutorial 5 - Advanced Quantum Programming": "tutorial 5 - Advanced Quantum Programming.ipynb"
   - Reference: $api/mis.***
   - Open-source:
     - Licence (MIT-Derived): LICENSE.md

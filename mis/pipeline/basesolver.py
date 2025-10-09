@@ -10,6 +10,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from mis.pipeline.config import SolverConfig
 from mis.shared.types import MISInstance, MISSolution
+from pulser import Register, Pulse
+from qoolqit._solvers import Detuning
 
 
 class BaseSolver(ABC):
@@ -49,3 +51,37 @@ class BaseSolver(ABC):
             (highest energy).
         """
         pass
+
+    @abstractmethod
+    def embedding(self) -> Register:
+        """
+        Generate or retrieve an embedding for the instance.
+
+        Returns:
+            dict: Embedding information for the instance.
+        """
+        pass
+
+    @abstractmethod
+    def pulse(self, embedding: Register) -> Pulse:
+        """
+        Generate a pulse schedule for the quantum device based on the embedding.
+
+        Args:
+            embedding (Register): Embedding information.
+
+        Returns:
+            Pulse: Pulse schedule.
+        """
+        pass
+
+    def detuning(self, embedding: Register) -> list[Detuning]:
+        """Return detunings to be executed alongside the pulses.
+
+        Args:
+            embedding (Register): Embedding information.
+
+        Returns:
+            list[Detuning]: The list of detunings.
+        """
+        return []
