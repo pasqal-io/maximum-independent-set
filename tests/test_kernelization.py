@@ -130,8 +130,19 @@ def test_apply_rule_isolated_node_removal(
     test_instance = ker.Kernelization(SolverConfig(weighting=weighting), graph_isolated)._kernelizer
     test_instance.apply_rule_isolated_node_removal(0)
 
-    # We should have removed {0} and its neighborhood.
-    assert not any(test_instance.kernel.has_node(node) for node in [0, 1])
+    # We should have removed {0}
+    assert not test_instance.kernel.has_node(0)
+    if weighting == Weighting.UNWEIGHTED or "weight" not in graph_isolated.nodes[1]:
+        assert not test_instance.kernel.has_node(1)
+    else:
+        # In weighted mode, 1 has a higher weight than 0 so its weight
+        # should have decreased.
+        assert test_instance.kernel.has_node(1)
+        assert (
+            test_instance.node_weight(1)
+            == graph_isolated.nodes[1]["weight"] - graph_isolated.nodes[0]["weight"]
+        )
+
     assert all(test_instance.kernel.has_node(node) for node in [2, 3, 4, 5])
     test_mis = test_instance.rebuild(frozenset({2}))
     assert test_mis == [frozenset({0, 2})]
@@ -146,15 +157,11 @@ def test_search_rule_isolated_node_removal(
     test_instance = ker.Kernelization(SolverConfig(weighting=weighting), graph_isolated)._kernelizer
     test_instance.search_rule_isolated_node_removal()
 
-    if weighting == Weighting.WEIGHTED and variant == GraphVariant.ALL_WEIGHTS:
-        # {0} is isolated but not maximal, this transformation doesn't affect the graph
-        assert all(test_instance.kernel.has_node(node) for node in [0, 1, 2, 3, 4, 5])
-    else:
-        # {0} is isolated and maximal, so removing {0} and its neighborhood.
-        assert not any(test_instance.kernel.has_node(node) for node in [0, 1])
-        assert all(test_instance.kernel.has_node(node) for node in [2, 3, 4, 5])
-        test_mis = test_instance.rebuild(frozenset({2}))
-        assert test_mis == [frozenset({0, 2})]
+    # {0} is isolated and maximal, so removing {0} and its neighborhood.
+    assert not any(test_instance.kernel.has_node(node) for node in [0, 1])
+    assert all(test_instance.kernel.has_node(node) for node in [2, 3, 4, 5])
+    test_mis = test_instance.rebuild(frozenset({2}))
+    assert test_mis == [frozenset({0, 2})]
 
 
 @pytest.mark.parametrize("weighting", [Weighting.UNWEIGHTED, Weighting.WEIGHTED])

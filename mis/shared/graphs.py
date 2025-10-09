@@ -93,6 +93,17 @@ class WeightedPicker(BaseWeightPicker):
     def subgraph_weight(cls, graph: nx.Graph, nodes: typing.Iterable[int]) -> float:
         return float(sum(cls.node_weight(graph, n) for n in nodes))
 
+    @classmethod
+    def node_delta(cls, graph: nx.Graph, node: int, delta: float) -> float:
+        """
+        Apply a delta to the weight of a node.
+
+        Raises an error in an unweighted cost picker.
+        """
+        weight = cls.node_weight(graph, node) + delta
+        cls.set_node_weight(graph, node, weight)
+        return weight
+
 
 class UnweightedPicker(BaseWeightPicker):
     @classmethod
