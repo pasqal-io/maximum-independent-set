@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "maximum-independent-set"
 description = "A Python library designed to help users design classical- and quantum-driven solutions for the Maximum Independent Set (MIS) problem."
 readme = "README.md"
-version = "0.2.3"
+version = "0.3.0"
 requires-python = ">=3.10"
 license = { text = "MIT-derived" }
 keywords = ["quantum"]
