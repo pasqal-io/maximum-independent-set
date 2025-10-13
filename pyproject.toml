@@ -108,7 +108,7 @@ dependencies = [
   "mkdocstrings-python",
   "mkdocs-section-index",
   "mkdocs-exclude",
-  "mkapi",
+  "mkapi<4.5.0",
   "markdown-exec",
   "pymdown-extensions",
   "mike",
