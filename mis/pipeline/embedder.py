@@ -81,7 +81,7 @@ class OptimizedEmbedder(BaseEmbedder):
             x0 = coords.flatten()
 
             center = np.mean(coords, axis=0)
-            # We multiply by SCALE_FACTOR to be (reasonably) certain that we're slightly
+            # We multiply by factors to be (reasonably) certain that we're slightly
             # within bounds.
             min_atom_distance = 1.0000001 * device.min_atom_distance
             max_radial_distance = 0.0000099 * device.max_radial_distance
