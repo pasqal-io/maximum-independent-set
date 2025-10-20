@@ -58,7 +58,11 @@ class DefaultEmbedder(BaseEmbedder):
 
 class OptimizedEmbedder(BaseEmbedder):
     """
-    An embedder using optimization to find coordinates.
+    An embedder using constrained optimization
+    (via Sequential Least Squares Programming (SLSQP))
+    to find coordinates that respect device constrained.
+
+    We try to find a correct embedding at most 10 times.
     """
 
     def embed(self, instance: MISInstance, config: SolverConfig, backend: BaseBackend) -> Register:
@@ -68,44 +72,52 @@ class OptimizedEmbedder(BaseEmbedder):
         device = backend.device()
         assert device is not None
 
-        layout = Layout.from_device(data=instance, device=device)
-        coords = np.array(list(layout.coords.values()))
-        n = coords.shape[0]
-        x0 = coords.flatten()
-        center = np.mean(coords, axis=0)
+        register = DefaultEmbedder().embed(instance, config, backend)
+        max_tries = 0
+        while max_tries < 10 and not device.validate_register(register):
+            max_tries += 1
+            coords = np.array(list(register.qubits.values()))
+            n = coords.shape[0]
+            x0 = coords.flatten()
+            center = np.mean(coords, axis=0)
+            # We multiply by SCALE_FACTOR to be (reasonably) certain that we're slightly
+            # within bounds.
+            min_atom_distance = 1.0000001 * device.min_atom_distance
+            max_radial_distance = 0.0000099 * device.max_radial_distance
 
-        min_atom_distance = 1.0000001 * device.min_atom_distance
-        max_radial_distance = 0.0000099 * device.max_radial_distance
+            # Objective: keep positions near original
+            def objective(x: np.ndarray) -> float:
+                return float(np.sum((x - x0) ** 2))
 
-        # Objective: keep positions near original
-        def objective(x: np.ndarray) -> float:
-            return float(np.sum((x - x0) ** 2))
+            # Constraint: all pairwise distances ≥ min_atom_distance
+            def pairwise_constraints(x: np.ndarray) -> np.ndarray:
+                pts = x.reshape((n, 2))
+                vals = []
+                for i in range(n):
+                    for j in range(i + 1, n):
+                        d = np.linalg.norm(pts[i] - pts[j])
+                        vals.append(d - min_atom_distance)
+                return np.array(vals)
 
-        # Constraint: all pairwise distances ≥ min_atom_distance
-        def pairwise_constraints(x: np.ndarray) -> np.ndarray:
-            pts = x.reshape((n, 2))
-            vals = []
-            for i in range(n):
-                for j in range(i + 1, n):
-                    d = np.linalg.norm(pts[i] - pts[j])
-                    vals.append(d - min_atom_distance)
-            return np.array(vals)
+            # Constraint: all points within max_radial_distance
+            def radial_constraints(x: np.ndarray) -> np.ndarray:
+                pts = x.reshape((n, 2))
+                dists = np.linalg.norm(pts - center, axis=1)
+                return max_radial_distance - dists
 
-        # Constraint: all points within max_radial_distance
-        def radial_constraints(x: np.ndarray) -> np.ndarray:
-            pts = x.reshape((n, 2))
-            dists = np.linalg.norm(pts - center, axis=1)
-            return max_radial_distance - dists
+            cons = [
+                NonlinearConstraint(pairwise_constraints, 0, np.inf),
+                NonlinearConstraint(radial_constraints, 0, np.inf),
+            ]
 
-        cons = [
-            NonlinearConstraint(pairwise_constraints, 0, np.inf),
-            NonlinearConstraint(radial_constraints, 0, np.inf),
-        ]
-
-        res = minimize(
-            objective, x0, method="SLSQP", constraints=cons, options={"maxiter": 1000, "ftol": 1e-6}
-        )
-        final_coords = res.x.reshape((n, 2))
-        qubits = {f"q{i}": coord for (i, coord) in enumerate(final_coords)}
-        reg = Register(qubits)
+            res = minimize(
+                objective,
+                x0,
+                method="SLSQP",
+                constraints=cons,
+                options={"maxiter": 1000, "ftol": 1e-6},
+            )
+            coords = res.x.reshape((n, 2))
+            qubits = {f"q{i}": coord for (i, coord) in enumerate(coords)}
+            reg = Register(qubits)
         return reg
