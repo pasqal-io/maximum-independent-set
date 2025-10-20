@@ -60,9 +60,8 @@ class OptimizedEmbedder(BaseEmbedder):
     """
     An embedder using constrained optimization
     (via Sequential Least Squares Programming (SLSQP))
-    to find coordinates that respect device constrained.
-
-    We try to find a correct embedding at most 10 times.
+    to find coordinates that respect device constrained
+    after the default embedder.
     """
 
     def embed(self, instance: MISInstance, config: SolverConfig, backend: BaseBackend) -> Register:
@@ -73,12 +72,14 @@ class OptimizedEmbedder(BaseEmbedder):
         assert device is not None
 
         register = DefaultEmbedder().embed(instance, config, backend)
-        max_tries = 0
-        while max_tries < 10 and not device.validate_register(register):
-            max_tries += 1
+
+        nb_tries = 0
+        while nb_tries < 10:
+            nb_tries += 1
             coords = np.array(list(register.qubits.values()))
             n = coords.shape[0]
             x0 = coords.flatten()
+
             center = np.mean(coords, axis=0)
             # We multiply by SCALE_FACTOR to be (reasonably) certain that we're slightly
             # within bounds.
@@ -119,5 +120,11 @@ class OptimizedEmbedder(BaseEmbedder):
             )
             coords = res.x.reshape((n, 2))
             qubits = {f"q{i}": coord for (i, coord) in enumerate(coords)}
-            reg = Register(qubits)
-        return reg
+            register = Register(qubits)
+            try:
+                device.validate_register(register)
+                break
+            except Exception:
+                continue
+        self._nb_tries = nb_tries
+        return register
