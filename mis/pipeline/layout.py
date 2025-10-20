@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from math import inf
 from statistics import mean
 
 import numpy as np
@@ -14,8 +15,8 @@ from pulser.devices import Device
 # errors may cause the minimal distance to actually be slightly too small.
 #
 # We multiply by SCALE_FACTOR to be (reasonably) certain that we're slightly
-# larger than the minimum and lower than maximum.
-SCALE_FACTOR = (1.0000001, 0.0000099)
+# larger than the minimum.
+SCALE_FACTOR = 1.0000001
 
 
 class Layout:
@@ -74,55 +75,23 @@ class Layout:
         and rescales coordinates so no pair is too close.
         """
         nd_coords = cls._get_coords(data)
-        coords_array = np.array(list(nd_coords.values()))
-        center = np.mean(coords_array, axis=0)
-        coords_array -= center
-        nd_coords = {k: v - center for k, v in nd_coords.items()}
-        # --- Compute pairwise distances ---
-        n = len(coords_array)
-        if n == 0:
-            # Nothing to scale
+        if len(nd_coords) == 0:
             return cls(data={}, rydberg_blockade=device.min_atom_distance)
-        if n == 1:
-            # Nothing to scale
-            return cls(
-                data={k: tuple(v) for k, v in nd_coords.items()},
-                rydberg_blockade=device.min_atom_distance,
-            )
 
-        # Pairwise distances
-        diff = coords_array[:, None, :] - coords_array[None, :, :]
-        distances = np.linalg.norm(diff, axis=2)
-        # --- Compute scaling bounds ---
-        min_distance = np.min(distances[np.nonzero(distances)])
-        scale_min = (
-            (SCALE_FACTOR[0] * device.min_atom_distance / min_distance)
-            if min_distance > 0 and (min_distance < device.min_atom_distance)
-            else 1.0
-        )
-
-        max_radial = np.max(np.linalg.norm(coords_array, axis=1))
-        scale_max = (
-            (SCALE_FACTOR[1] * device.max_radial_distance / max_radial)
-            if max_radial > device.max_radial_distance
-            else 1.0
-        )
-
-        # --- Check feasibility ---
-        if scale_min > scale_max:
-            # raise ValueError(
-            #     f"No uniform scale can satisfy both constraints:\n"
-            #     f"  Need ≥ {scale_min:.3f}× for min distance\n"
-            #     f"  But ≤ {scale_max:.3f}× for max radius."
-            # )
-            scale = scale_min
+        # Compute all pairwise distances
+        distances = [
+            np.linalg.norm(nd_coords[v1] - nd_coords[v2])
+            for v1 in nd_coords
+            for v2 in nd_coords
+            if v1 < v2
+        ]
+        min_distance = min(distances) if len(distances) != 0 else inf
+        if min_distance < device.min_atom_distance:
+            scale = SCALE_FACTOR * device.min_atom_distance / min_distance
+            coords = {k: tuple(v * scale) for k, v in nd_coords.items()}
         else:
+            coords = {k: tuple(v) for k, v in nd_coords.items()}
 
-            # --- Choose scale (within allowed range) ---
-            scale = min(scale_min, scale_max)
-
-        # Apply scale
-        coords = {k: tuple(v * scale) for k, v in nd_coords.items()}
         return cls(data=coords, rydberg_blockade=device.min_atom_distance)
 
     def _build_graph(self) -> nx.Graph:
