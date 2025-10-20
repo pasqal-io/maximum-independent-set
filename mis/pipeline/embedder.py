@@ -61,7 +61,10 @@ class OptimizedEmbedder(BaseEmbedder):
     An embedder using constrained optimization
     (via Sequential Least Squares Programming (SLSQP))
     to find coordinates that respect device constrained
-    after the default embedder.
+    after the DefaultEmbedder.
+
+    We try at most 10 times to run the optimization to find
+    a suitable embedding.
     """
 
     def embed(self, instance: MISInstance, config: SolverConfig, backend: BaseBackend) -> Register:
