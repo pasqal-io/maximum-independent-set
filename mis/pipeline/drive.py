@@ -76,7 +76,7 @@ class BaseDriveShaper(ABC):
         pass
 
     @abstractmethod
-    def detuning(
+    def weighted_detuning(
         self,
         config: SolverConfig,
         register: Register,
@@ -194,21 +194,21 @@ class DefaultDriveShaper(BaseDriveShaper):
         rydberg_drive = Drive(
             amplitude=amplitude,
             detuning=detuning,
-            weighted_detunings=self.detuning(
+            weighted_detunings=self.weighted_detuning(
                 config=config, register=register, instance=instance, parameters=parameters
             ),
         )
 
         return rydberg_drive
 
-    def detuning(
+    def weighted_detuning(
         self,
         config: SolverConfig,
         register: Register,
         instance: MISInstance,
         parameters: DriveParameters,
     ) -> list[WeightedDetuning] | None:
-        """Return detunings to be executed alongside the drive."""
+        """Return weighted detunings to be executed within the drive."""
 
         if config.weighting == Weighting.UNWEIGHTED:
             return None

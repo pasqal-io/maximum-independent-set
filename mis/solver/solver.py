@@ -230,7 +230,7 @@ class MISSolverQuantum(BaseSolver):
             instance=preprocessed_instance,
         )
 
-        detunings = self._shaper.detuning(
+        detunings = self._shaper.weighted_detuning(
             config=self.config,
             register=register,
             backend=self.backend,
@@ -298,8 +298,8 @@ class GreedyMISSolver(BaseSolver):
     def embedding(self) -> Register:
         raise NotImplementedError("GreedyMISSolver produces multiple embeddings.")
 
-    def drive(self, embedding: Register) -> Pulse:
-        raise NotImplementedError("GreedyMISSolver produces multiple pulses.")
+    def drive(self, embedding: Register) -> Drive:
+        raise NotImplementedError("GreedyMISSolver produces multiple drives.")
 
     def _build_layout(self) -> Layout:
         """
