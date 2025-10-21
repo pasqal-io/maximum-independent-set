@@ -6,9 +6,8 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-import pulser
-from pulser import Register
-from qoolqit._solvers.backends import BaseBackend
+from qoolqit import Register
+from qoolqit.execution.backend import BaseBackend
 
 from mis.shared.types import (
     MISInstance,
@@ -23,11 +22,11 @@ class BaseEmbedder(ABC):
     Abstract base class for all embedders.
 
     Prepares the geometry (register) of atoms based on the MISinstance.
-    Returns a Register compatible with Pasqal/Pulser devices.
+    Returns a Register compatible with Qoolqit devices.
     """
 
     @abstractmethod
-    def embed(self, instance: MISInstance, config: SolverConfig, backend: BaseBackend) -> Register:
+    def embed(self, instance: MISInstance, config: SolverConfig) -> Register:
         """
         Creates a layout of atoms as the register.
 
@@ -42,14 +41,15 @@ class DefaultEmbedder(BaseEmbedder):
     A simple embedder
     """
 
-    def embed(self, instance: MISInstance, config: SolverConfig, backend: BaseBackend) -> Register:
-        device = backend.device()
+    def embed(self, instance: MISInstance, config: SolverConfig) -> Register:
+        device = config.device
         assert device is not None
 
         # Use Layout helper to get rescaled coordinates and interaction graph
         layout = Layout.from_device(data=instance, device=device)
 
         # Finally, prepare register.
-        return pulser.register.Register(
-            qubits={f"q{node}": pos for (node, pos) in layout.coords.items()}
+        conversion_factor = device.converter.factors[2]
+        return Register(
+            qubits={f"q{node}": pos / conversion_factor for (node, pos) in layout.coords.items()}
         )

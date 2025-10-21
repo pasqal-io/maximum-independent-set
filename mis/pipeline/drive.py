@@ -4,13 +4,15 @@ from dataclasses import dataclass
 from abc import ABC, abstractmethod
 
 from networkx.classes.reportviews import DegreeView
-from pulser import AnalogDevice, InterpolatedWaveform, Pulse, Register
+from pulser import AnalogDevice
 
-from qoolqit._solvers.backends import BaseBackend
-from qoolqit._solvers import Detuning
+from qoolqit import Drive, Register
+from qoolqit.execution.backend import BaseBackend
+from qoolqit.drive import WeightedDetuning
 from mis.shared.graphs import WeightedPicker
 from mis.shared.types import MISInstance, Weighting
 from mis.pipeline.config import SolverConfig
+from mis.pipeline.waveforms import InterpolatedWaveform
 
 import numpy as np
 import networkx as nx
@@ -23,46 +25,47 @@ AMP_SAFETY_FACTOR = 0.99999
 
 
 @dataclass
-class BasePulseShaper(ABC):
+class BaseDriveShaper(ABC):
     """
-    Abstract base class for generating pulse schedules based on a MIS problem.
+    Abstract base class for generating drive schedules based on a MIS problem.
 
     This class transforms the structure of a MISInstance into a quantum
-    pulse sequence that can be applied to a physical register. The register
-    is passed at the time of pulse generation, not during initialization.
+    drive that can be applied to a physical register. The register
+    is passed at the time of drive generation, not during initialization.
     """
 
     duration_ns: int | None = None
-    """The duration of the pulse, in nanoseconds.
+    """The duration of the drive to be converted to a pulse at backend execution, 
+        in nanoseconds.
 
     If unspecified, use the maximal duration for the device."""
 
     @abstractmethod
-    def pulse(
+    def drive(
         self, config: SolverConfig, register: Register, backend: BaseBackend, instance: MISInstance
-    ) -> Pulse:
+    ) -> Drive:
         """
-        Generate a pulse based on the problem and the provided register.
+        Generate a drive based on the problem and the provided register.
 
         Args:
             config: The configuration for this pulse.
             register: The physical register layout.
 
         Returns:
-            Pulse: A generated pulse object wrapping a Pulser pulse.
+            Drive: A generated Drive object.
         """
         pass
 
     @abstractmethod
     def detuning(
         self, config: SolverConfig, register: Register, backend: BaseBackend, instance: MISInstance
-    ) -> list[Detuning]:
+    ) -> list[WeightedDetuning]:
         # By default, no detuning.
         return []
 
 
 @dataclass
-class PulseParameters:
+class DriveParameters:
     # Interaction strength for connected nodes.
     connected: list[float]
 
@@ -82,14 +85,14 @@ class PulseParameters:
     final_detuning: float
 
 
-class DefaultPulseShaper(BasePulseShaper):
+class DefaultDriveShaper(BaseDriveShaper):
     """
     A simple pulse shaper.
     """
 
     def _calculate_parameters(
         self, register: Register, backend: BaseBackend, instance: MISInstance
-    ) -> PulseParameters:
+    ) -> DriveParameters:
         """
         Compute parameters shared between the pulse and the detunings.
         """
@@ -156,7 +159,7 @@ class DefaultPulseShaper(BasePulseShaper):
             duration_ns = AnalogDevice.max_sequence_duration
         assert duration_ns is not None
 
-        return PulseParameters(
+        return DriveParameters(
             duration_ns=duration_ns,
             connected=connected,
             disconnected=disconnected,
@@ -165,11 +168,11 @@ class DefaultPulseShaper(BasePulseShaper):
             final_detuning=final_detuning,
         )
 
-    def pulse(
+    def drive(
         self, config: SolverConfig, register: Register, backend: BaseBackend, instance: MISInstance
-    ) -> Pulse:
+    ) -> Drive:
         """
-        Return a simple constant waveform pulse
+        Return a simple Drive with InterpolatedWaveform.
         """
         parameters = self._calculate_parameters(
             backend=backend, register=register, instance=instance
@@ -181,16 +184,13 @@ class DefaultPulseShaper(BasePulseShaper):
         detuning = InterpolatedWaveform(
             parameters.duration_ns, [-parameters.final_detuning, 0, parameters.final_detuning]
         )
-        rydberg_pulse = Pulse(amplitude, detuning, 0)
-        # Pulser overrides PulserPulse.__new__ with an exotic type, so we need
-        # to help mypy.
-        assert isinstance(rydberg_pulse, Pulse)
+        rydberg_drive = Drive(amplitude=amplitude, detuning=detuning)
 
-        return rydberg_pulse
+        return rydberg_drive
 
     def detuning(
         self, config: SolverConfig, register: Register, backend: BaseBackend, instance: MISInstance
-    ) -> list[Detuning]:
+    ) -> list[WeightedDetuning]:
         """
         Return detunings to be executed alongside the pulses.
         """
@@ -218,7 +218,7 @@ class DefaultPulseShaper(BasePulseShaper):
         # that mypy cannot follow.
         assert isinstance(waveform, InterpolatedWaveform)
         return [
-            Detuning(
+            WeightedDetuning(
                 weights=norm_node_weights,
                 waveform=waveform,
             )

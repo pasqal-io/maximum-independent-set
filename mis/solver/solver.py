@@ -4,15 +4,17 @@ import networkx as nx
 import copy
 
 from pulser import Pulse, Register
-from qoolqit._solvers.backends import BaseBackend, get_backend
-from qoolqit._solvers import QuantumProgram, Detuning
+from qoolqit import QuantumProgram
+from qoolqit.execution.backend import BaseBackend
+from qoolqit.drive import WeightedDetuning
+
 
 from mis.shared.types import MISInstance, MISSolution, MethodType
 from mis.pipeline.basesolver import BaseSolver
 from mis.pipeline.fixtures import Fixtures
 from mis.pipeline.embedder import DefaultEmbedder
-from mis.pipeline.pulse import DefaultPulseShaper
-from mis.pipeline.config import BackendConfig, SolverConfig
+from mis.pipeline.drive import DefaultDriveShaper
+from mis.pipeline.config import SolverConfig
 from mis.solver.greedymapping import GreedyMapping
 from mis.pipeline.layout import Layout
 from mis.shared.graphs import remove_neighborhood, BaseWeightPicker
@@ -23,8 +25,6 @@ def _extract_backend(config: SolverConfig) -> BaseBackend:
         raise ValueError("Invalid config.backend: expecting a backend to run in quantum mode")
     elif isinstance(config.backend, BaseBackend):
         return config.backend
-    elif isinstance(config.backend, BackendConfig):
-        return get_backend(config.backend)
     else:
         raise ValueError("Invalid config.backend")
 
@@ -66,7 +66,7 @@ class MISSolver:
     def pulse(self, embedding: Register) -> Pulse:
         return self._solver.pulse(embedding)
 
-    def detuning(self, embedding: Register) -> list[Detuning]:
+    def detuning(self, embedding: Register) -> list[WeightedDetuning]:
         return self._solver.detuning(embedding)
 
 
@@ -142,7 +142,7 @@ class MISSolverQuantum(BaseSolver):
         self._solution: MISSolution | None = None
         self._embedder = config.embedder if config.embedder is not None else DefaultEmbedder()
         self._shaper = (
-            config.pulse_shaper if config.pulse_shaper is not None else DefaultPulseShaper()
+            config.pulse_shaper if config.pulse_shaper is not None else DefaultDriveShaper()
         )
         self._preprocessed_instance: MISInstance | None = None
 
@@ -156,7 +156,7 @@ class MISSolverQuantum(BaseSolver):
 
     def pulse(self, embedding: Register) -> Pulse:
         preprocessed_instance = self._preprocessed_instance or self.original_instance
-        pulse = self._shaper.pulse(
+        pulse = self._shaper.drive(
             config=self.config,
             register=embedding,
             backend=self.backend,
@@ -237,7 +237,7 @@ class MISSolverQuantum(BaseSolver):
             backend=self.backend,
         )
 
-        pulse = self._shaper.pulse(
+        pulse = self._shaper.drive(
             config=self.config,
             register=register,
             backend=self.backend,

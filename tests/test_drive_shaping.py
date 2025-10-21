@@ -5,7 +5,7 @@ from mis import BackendConfig
 from mis.solver.solver import MISInstance
 from mis.pipeline.config import SolverConfig
 from mis.pipeline.embedder import DefaultEmbedder
-from mis.pipeline.pulse import DefaultPulseShaper
+from mis.pipeline.drive import DefaultDriveShaper
 from qoolqit._solvers.backends import QutipBackend
 
 
@@ -31,7 +31,7 @@ def test_pulse_shaping_simple_shapes(size: int) -> None:
     config = SolverConfig()
     backend = QutipBackend(BackendConfig())
     embedder = DefaultEmbedder()
-    shaper = DefaultPulseShaper()
+    shaper = DefaultDriveShaper()
 
     # Compute parameters
     register = embedder.embed(instance, config, backend)

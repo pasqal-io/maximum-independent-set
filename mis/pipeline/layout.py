@@ -88,9 +88,9 @@ class Layout:
         min_distance = min(distances) if len(distances) != 0 else inf
         if min_distance < device.min_atom_distance:
             scale = SCALE_FACTOR * device.min_atom_distance / min_distance
-            coords = {k: tuple(v * scale) for k, v in nd_coords.items()}
+            coords = {k: v * scale for k, v in nd_coords.items()}
         else:
-            coords = {k: tuple(v) for k, v in nd_coords.items()}
+            coords = nd_coords
 
         return cls(data=coords, rydberg_blockade=device.min_atom_distance)
 

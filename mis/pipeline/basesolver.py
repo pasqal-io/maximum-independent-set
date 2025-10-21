@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from mis.pipeline.config import SolverConfig
 from mis.shared.types import MISInstance, MISSolution
 from pulser import Register, Pulse
-from qoolqit._solvers import Detuning
+from qoolqit.drive import WeightedDetuning
 
 
 class BaseSolver(ABC):
@@ -75,13 +75,13 @@ class BaseSolver(ABC):
         """
         pass
 
-    def detuning(self, embedding: Register) -> list[Detuning]:
-        """Return detunings to be executed alongside the pulses.
+    def detuning(self, embedding: Register) -> list[WeightedDetuning]:
+        """Return weighted detunings to be executed alongside within the drive.
 
         Args:
             embedding (Register): Embedding information.
 
         Returns:
-            list[Detuning]: The list of detunings.
+            list[WeightedDetuning]: The list of detunings.
         """
         return []

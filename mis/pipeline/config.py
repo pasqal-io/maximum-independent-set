@@ -8,22 +8,22 @@ from typing import TYPE_CHECKING, Callable
 
 import networkx as nx
 
-from pulser.devices import Device
+from qoolqit.devices import Device
 
 if TYPE_CHECKING:
     from mis.pipeline.embedder import BaseEmbedder
-    from mis.pipeline.pulse import BasePulseShaper
+    from mis.pipeline.drive import BaseDriveShaper
     from mis.pipeline.postprocessor import BasePostprocessor
     from mis.pipeline.preprocessor import BasePreprocessor
 from mis.shared.types import MethodType, Weighting
 
-from qoolqit._solvers import BackendType  # noqa: F401 # imported for re-export
-from qoolqit._solvers import BaseBackend, BackendConfig
+from qoolqit.execution import LocalEmulator, RemoteEmulator, QPU
 
 # Modules to be automatically added to the MISSolver namespace
 __all__ = [
-    "BackendConfig",
-    "BackendType",
+    "LocalEmulator",
+    "RemoteEmulator",
+    "QPU",
     "SolverConfig",
 ]
 
@@ -87,7 +87,7 @@ class SolverConfig:
     Configuration class for setting up solver parameters.
     """
 
-    backend: BaseBackend | BackendConfig | None = None
+    backend: LocalEmulator | RemoteEmulator | QPU | None = None
     """
     backend (optional): Backend configuration to use. If `None`,
     use a non-quantum heuristic solver.
@@ -133,7 +133,7 @@ class SolverConfig:
         device. Ignored for non-quantum backends.
     """
 
-    pulse_shaper: BasePulseShaper | None = None
+    pulse_shaper: BaseDriveShaper | None = None
     """
     pulse_shaper: If specified, a pulse shaper, i.e. a mechanism used
         to customize the laser pulse to which the neutral atoms are
