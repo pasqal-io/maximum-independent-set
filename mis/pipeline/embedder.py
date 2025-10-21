@@ -7,7 +7,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from qoolqit import Register
-from qoolqit.execution.backend import BaseBackend
 
 from mis.shared.types import (
     MISInstance,

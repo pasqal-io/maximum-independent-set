@@ -49,7 +49,7 @@ class GraphColoringSolver(BaseSolver):
     def embedding(self) -> Register:
         raise NotImplementedError("GraphColoringSolver produces multiple embeddings.")
 
-    def pulse(self, embedding: Register) -> Pulse:
+    def drive(self, embedding: Register) -> Pulse:
         raise NotImplementedError("GraphColoringSolver produces multiple pulses.")
 
     def solve(

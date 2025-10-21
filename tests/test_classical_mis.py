@@ -139,7 +139,7 @@ def test_empty_mis(
         solver.embedding()
 
     with pytest.raises(NotImplementedError):
-        solver.pulse(None)
+        solver.drive(None)
 
 
 @pytest.mark.parametrize("postprocessor", [None, lambda config: Maximization(config)])

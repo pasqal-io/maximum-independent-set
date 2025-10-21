@@ -81,7 +81,7 @@ def test_disconnected_qtip_mis(
     # Run the solver
     solver = MISSolver(instance, config)
     assert solver.embedding() is not None
-    assert solver.pulse(solver.embedding()) is not None
+    assert solver.drive(solver.embedding()) is not None
     solutions = solver.solve()
 
     # Check that at least one of the solutions makes sense.

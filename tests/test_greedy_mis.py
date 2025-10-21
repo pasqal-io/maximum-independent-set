@@ -116,4 +116,4 @@ def test_greedy_mis_long(complex_graph: nx.Graph, use_quantum: bool, weighting: 
         solver.embedding()
 
     with pytest.raises(NotImplementedError):
-        solver.pulse(None)
+        solver.drive(None)

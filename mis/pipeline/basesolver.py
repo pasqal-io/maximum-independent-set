@@ -63,7 +63,7 @@ class BaseSolver(ABC):
         pass
 
     @abstractmethod
-    def pulse(self, embedding: Register) -> Pulse:
+    def drive(self, embedding: Register) -> Pulse:
         """
         Generate a pulse schedule for the quantum device based on the embedding.
 

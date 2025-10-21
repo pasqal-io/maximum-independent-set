@@ -3,10 +3,9 @@ from typing import Counter, Callable
 import networkx as nx
 import copy
 
-from pulser import Pulse, Register
+from qoolqit import Drive, Register
 from qoolqit import QuantumProgram
 from qoolqit.execution.backend import BaseBackend
-from qoolqit.drive import WeightedDetuning
 
 
 from mis.shared.types import MISInstance, MISSolution, MethodType
@@ -63,11 +62,8 @@ class MISSolver:
     def embedding(self) -> Register:
         return self._solver.embedding()
 
-    def pulse(self, embedding: Register) -> Pulse:
-        return self._solver.pulse(embedding)
-
-    def detuning(self, embedding: Register) -> list[WeightedDetuning]:
-        return self._solver.detuning(embedding)
+    def drive(self, embedding: Register) -> Drive:
+        return self._solver.drive(embedding)
 
 
 class MISSolverClassical(BaseSolver):
@@ -116,8 +112,8 @@ class MISSolverClassical(BaseSolver):
     def embedding(self) -> Register:
         raise NotImplementedError("Classical solvers do not do embedding.")
 
-    def pulse(self, embedding: Register) -> Pulse:
-        raise NotImplementedError("Classical solvers do not do pulses.")
+    def drive(self, embedding: Register) -> Drive:
+        raise NotImplementedError("Classical solvers do not do drives.")
 
 
 class MISSolverQuantum(BaseSolver):
@@ -154,7 +150,7 @@ class MISSolverQuantum(BaseSolver):
             backend=self.backend,
         )
 
-    def pulse(self, embedding: Register) -> Pulse:
+    def drive(self, embedding: Register) -> Drive:
         preprocessed_instance = self._preprocessed_instance or self.original_instance
         pulse = self._shaper.drive(
             config=self.config,
@@ -163,16 +159,6 @@ class MISSolverQuantum(BaseSolver):
             instance=preprocessed_instance,
         )
         return pulse
-
-    def detuning(self, embedding: Register) -> Pulse:
-        preprocessed_instance = self._preprocessed_instance or self.original_instance
-        detunings = self._shaper.detuning(
-            config=self.config,
-            register=embedding,
-            backend=self.backend,
-            instance=preprocessed_instance,
-        )
-        return detunings
 
     def _bitstring_to_nodes(self, bitstring: str) -> list[int]:
         result: list[int] = []
@@ -254,22 +240,18 @@ class MISSolverQuantum(BaseSolver):
         execution_result = self.execute(pulse, register, detunings)
         return self._process(instance=preprocessed_instance, data=execution_result)
 
-    def execute(self, pulse: Pulse, register: Register, detunings: list[Detuning]) -> Counter[str]:
+    def execute(self, drive: Drive, register: Register) -> Counter[str]:
         """
         Execute the pulse + detunings schedule on the backend and retrieve the solution.
 
         Args:
             pulse: Pulse schedule or execution payload.
             register: The register to be executed.
-            detunings: (possibly empty) list of detunings schedules to execute
-                alongside the pulse.
 
         Returns:
             Result: The solution from execution.
         """
-        program = QuantumProgram(
-            register=register, pulse=pulse, detunings=detunings, device=self.backend.device()
-        )
+        program = QuantumProgram(register=register, drive=drive, device=self.backend.device())
         counts = self.backend.run(program=program, runs=self.config.runs).counts
         assert isinstance(counts, Counter)  # Not sure why mypy expects that `counts` is `Any`.
         return counts
@@ -316,7 +298,7 @@ class GreedyMISSolver(BaseSolver):
     def embedding(self) -> Register:
         raise NotImplementedError("GreedyMISSolver produces multiple embeddings.")
 
-    def pulse(self, embedding: Register) -> Pulse:
+    def drive(self, embedding: Register) -> Pulse:
         raise NotImplementedError("GreedyMISSolver produces multiple pulses.")
 
     def _build_layout(self) -> Layout:
