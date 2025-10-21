@@ -147,7 +147,6 @@ class MISSolverQuantum(BaseSolver):
         return self._embedder.embed(
             instance=preprocessed_instance,
             config=self.config,
-            backend=self.backend,
         )
 
     def drive(self, embedding: Register) -> Drive:
@@ -155,7 +154,6 @@ class MISSolverQuantum(BaseSolver):
         pulse = self._shaper.drive(
             config=self.config,
             register=embedding,
-            backend=self.backend,
             instance=preprocessed_instance,
         )
         return pulse
@@ -220,39 +218,32 @@ class MISSolverQuantum(BaseSolver):
         register = self._embedder.embed(
             instance=preprocessed_instance,
             config=self.config,
-            backend=self.backend,
         )
 
-        pulse = self._shaper.drive(
+        drive = self._shaper.drive(
             config=self.config,
             register=register,
-            backend=self.backend,
             instance=preprocessed_instance,
         )
 
-        detunings = self._shaper.weighted_detuning(
-            config=self.config,
-            register=register,
-            backend=self.backend,
-            instance=preprocessed_instance,
-        )
-
-        execution_result = self.execute(pulse, register, detunings)
+        execution_result = self.execute(drive, register)
         return self._process(instance=preprocessed_instance, data=execution_result)
 
     def execute(self, drive: Drive, register: Register) -> Counter[str]:
         """
-        Execute the pulse + detunings schedule on the backend and retrieve the solution.
+        Execute the drive schedule on the backend and retrieve the solution.
 
         Args:
-            pulse: Pulse schedule or execution payload.
+            drive: Drive schedule or execution payload.
             register: The register to be executed.
 
         Returns:
             Result: The solution from execution.
         """
-        program = QuantumProgram(register=register, drive=drive, device=self.backend.device())
-        counts = self.backend.run(program=program, runs=self.config.runs).counts
+        program = QuantumProgram(register=register, drive=drive)
+        program.compile_to(device=self.config.device)
+        execution_result = self.backend.run(program)[0]
+        counts = execution_result.final_bitstrings
         assert isinstance(counts, Counter)  # Not sure why mypy expects that `counts` is `Any`.
         return counts
 
