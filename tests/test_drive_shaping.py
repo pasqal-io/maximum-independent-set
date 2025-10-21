@@ -1,12 +1,11 @@
 import networkx as nx
 import pytest
 
-from mis import BackendConfig
+from mis import LocalEmulator
 from mis.solver.solver import MISInstance
 from mis.pipeline.config import SolverConfig
 from mis.pipeline.embedder import DefaultEmbedder
 from mis.pipeline.drive import DefaultDriveShaper
-from qoolqit._solvers.backends import QutipBackend
 
 
 @pytest.mark.flaky(
@@ -28,14 +27,13 @@ def test_pulse_shaping_simple_shapes(size: int) -> None:
     instance = MISInstance(graph)
 
     # Prepare embedder and pulse shaper.
-    config = SolverConfig()
-    backend = QutipBackend(BackendConfig())
+    config = SolverConfig(backend=LocalEmulator())
     embedder = DefaultEmbedder()
     shaper = DefaultDriveShaper()
 
     # Compute parameters
-    register = embedder.embed(instance, config, backend)
-    parameters = shaper._calculate_parameters(register, backend, instance)
+    register = embedder.embed(instance, config)
+    parameters = shaper._calculate_parameters(register, config.device, instance)
 
     assert len(parameters.connected) == size
     if size > 3:
