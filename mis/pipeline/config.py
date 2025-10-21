@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Callable
 
 import networkx as nx
 
-from pulser.devices import Device
 
 if TYPE_CHECKING:
     from mis.pipeline.embedder import BaseEmbedder
@@ -118,12 +117,6 @@ class SolverConfig:
     The solver will return up to `max_number_of_solutions` solutions, ranked
     from most likely to least likely. Some solvers will only return a single
     solution.
-    """
-
-    device: Device | None = None
-    """
-    Quantum device to execute the code in. If unspecified, use a
-    reasonable default device.
     """
 
     embedder: BaseEmbedder | None = None
