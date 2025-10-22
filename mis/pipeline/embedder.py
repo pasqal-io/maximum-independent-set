@@ -48,7 +48,7 @@ class DefaultEmbedder(BaseEmbedder):
         layout = Layout.from_device(data=instance, device=device._device)
 
         # Finally, prepare register.
-        conversion_factor = device.converter.factors[2]
+        conversion_factor = device.converter.factors[2] if hasattr(device.converter, "factors") else 1.0
         return Register(
             qubits={f"q{node}": pos / conversion_factor for (node, pos) in layout.coords.items()}
         )

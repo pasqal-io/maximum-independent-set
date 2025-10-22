@@ -86,13 +86,14 @@ class Layout:
             if v1 < v2
         ]
         min_distance = min(distances) if len(distances) != 0 else inf
-        if min_distance < device.min_atom_distance:
+        rydberg_blockade = device.min_atom_distance if hasattr(device, "min_atom_distance") else np.inf
+        if hasattr(device, "min_atom_distance") and min_distance < device.min_atom_distance:
             scale = SCALE_FACTOR * device.min_atom_distance / min_distance
             coords = {k: v * scale for k, v in nd_coords.items()}
         else:
             coords = nd_coords
 
-        return cls(data=coords, rydberg_blockade=device.min_atom_distance)
+        return cls(data=coords, rydberg_blockade=rydberg_blockade)
 
     def _build_graph(self) -> nx.Graph:
         node_ids = list(self.coords.keys())
