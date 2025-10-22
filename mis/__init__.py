@@ -18,6 +18,8 @@ from __future__ import annotations
 from .solver.solver import MISSolver
 from .pipeline.config import GreedyConfig, SolverConfig, LocalEmulator, RemoteEmulator, QPU
 from .shared.types import MISInstance, MethodType, Weighting, MISSolution
+from pulser_pasqal import PasqalCloud
+
 
 __all__ = [
     "MISSolver",
@@ -27,6 +29,7 @@ __all__ = [
     "LocalEmulator",
     "RemoteEmulator",
     "QPU",
+    "PasqalCloud",
     "BackendType",
     "GreedyConfig",
     "MethodType",
