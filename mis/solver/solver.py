@@ -5,7 +5,7 @@ import copy
 
 from qoolqit import Drive, Register
 from qoolqit import QuantumProgram
-from qoolqit.execution.backend import BaseBackend
+from qoolqit.execution.backends import LocalEmulator, RemoteEmulator, QPU
 
 
 from mis.shared.types import MISInstance, MISSolution, MethodType
@@ -19,10 +19,10 @@ from mis.pipeline.layout import Layout
 from mis.shared.graphs import remove_neighborhood, BaseWeightPicker
 
 
-def _extract_backend(config: SolverConfig) -> BaseBackend:
+def _extract_backend(config: SolverConfig) -> LocalEmulator | RemoteEmulator | QPU:
     if config.backend is None:
         raise ValueError("Invalid config.backend: expecting a backend to run in quantum mode")
-    elif isinstance(config.backend, BaseBackend):
+    elif isinstance(config.backend, (LocalEmulator, RemoteEmulator, QPU)):
         return config.backend
     else:
         raise ValueError("Invalid config.backend")
@@ -238,13 +238,22 @@ class MISSolverQuantum(BaseSolver):
             register: The register to be executed.
 
         Returns:
-            Result: The solution from execution.
+            Counter[str]: The solution from execution.
         """
         program = QuantumProgram(register=register, drive=drive)
         program.compile_to(device=self.config.device)
-        execution_result = self.backend.run(program)[0]
-        counts = execution_result.final_bitstrings
-        assert isinstance(counts, Counter)  # Not sure why mypy expects that `counts` is `Any`.
+        execution_result = self.backend.run(program)
+
+        if isinstance(execution_result, tuple):
+            # local emulator result
+            execution_result = execution_result[-1]
+            counter = execution_result.final_bitstrings
+        else:
+            # remote emulator result
+            execution_result = execution_result[-1]
+            counter = execution_result.bitstring_counts
+
+        counts = Counter(counter)
         return counts
 
 
