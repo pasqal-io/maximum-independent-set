@@ -156,11 +156,11 @@ class DefaultDriveShaper(BaseDriveShaper):
 
         duration_ns = self.duration or 0.0
         if duration_ns == 0.0:
-            duration_ns = device._device.max_sequence_duration
+            duration_ns = device._device.max_sequence_duration or 0.0
         if duration_ns == 0.0:
             # Last resort.
-            duration_ns = AnalogDevice.max_sequence_duration
-        assert duration_ns is not None
+            duration_ns = AnalogDevice.max_sequence_duration or 0.0
+        assert duration_ns > 0
 
         # for conversions to qoolqit
         TIME, _, _ = device.converter.factors
@@ -213,13 +213,16 @@ class DefaultDriveShaper(BaseDriveShaper):
         if config.weighting == Weighting.UNWEIGHTED:
             return None
 
+        if len(list(config.device._device.dmm_channels.keys())) == 0:
+            return None
+
         # Normalize node weights to [0, 1]
         # FIXME: We assume that weights are >= 0, but we haven't checked that anywhere.
         max_weight: float = max(
             WeightedPicker.node_weight(instance.graph, x) for x in instance.graph
         )
         norm_node_weights = {
-            register.qubit_ids[i]: 1 - WeightedPicker.node_weight(instance.graph, x) / max_weight
+            register.qubits_ids[i]: 1 - WeightedPicker.node_weight(instance.graph, x) / max_weight
             for (i, x) in enumerate(instance.graph)
         }
         waveform = InterpolatedWaveform(
