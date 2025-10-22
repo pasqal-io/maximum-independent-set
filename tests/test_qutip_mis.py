@@ -2,7 +2,7 @@ from typing import Callable
 import networkx as nx
 import pytest
 
-from mis import BackendConfig
+from mis import LocalEmulator
 from mis.solver.solver import MISInstance, MISSolver
 from mis.pipeline.config import SolverConfig
 from mis.pipeline.kernelization import Kernelization
@@ -26,7 +26,7 @@ def test_empty_qtip_mis(
     config = SolverConfig(
         method=MethodType.EAGER,
         max_iterations=1,
-        backend=BackendConfig(),
+        backend=LocalEmulator(),
         preprocessor=preprocessor,
         postprocessor=postprocessor,
         weighting=weighting,
@@ -68,7 +68,7 @@ def test_disconnected_qtip_mis(
     config = SolverConfig(
         method=MethodType.EAGER,
         max_iterations=1,
-        backend=BackendConfig(),
+        backend=LocalEmulator(),
         preprocessor=preprocessor,
         postprocessor=postprocessor,
         weighting=weighting,
@@ -125,7 +125,7 @@ def test_star_qtip_mis(
     config = SolverConfig(
         method=MethodType.EAGER,
         max_iterations=1,
-        backend=BackendConfig(),
+        backend=LocalEmulator(),
         preprocessor=preprocessor,
         postprocessor=postprocessor,
         weighting=weighting,

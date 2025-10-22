@@ -1,7 +1,6 @@
 import pytest
 import networkx as nx
-from mis import BackendConfig
-from mis.pipeline.config import SolverConfig
+from mis.pipeline.config import SolverConfig, LocalEmulator
 from mis.pipeline.embedder import DefaultEmbedder, OptimizedEmbedder
 from mis.solver.solver import MISInstance, MISSolver, MISSolverQuantum
 from conftest import simple_graph, dimacs_16nodes
@@ -14,7 +13,7 @@ from conftest import simple_graph, dimacs_16nodes
 def test_easy_embedding(graph: nx.Graph, default_embedder_fails: bool) -> None:
 
     instance = MISInstance(graph)
-    config = SolverConfig(preprocessor=None, backend=BackendConfig())
+    config = SolverConfig(preprocessor=None, backend=LocalEmulator())
     solver = MISSolver(instance, config)
     assert isinstance(solver._solver, MISSolverQuantum)
     assert isinstance(solver._solver._embedder, DefaultEmbedder)  # type: ignore[attr-defined]
@@ -28,7 +27,7 @@ def test_easy_embedding(graph: nx.Graph, default_embedder_fails: bool) -> None:
         assert solver._solver.backend.device().validate_register(register) is None
 
     opt_config = SolverConfig(
-        preprocessor=None, backend=BackendConfig(), embedder=OptimizedEmbedder()
+        preprocessor=None, backend=LocalEmulator(), embedder=OptimizedEmbedder()
     )
     opt_solver = MISSolver(instance, opt_config)
     assert isinstance(solver._solver, MISSolverQuantum)

@@ -15,9 +15,8 @@ benchmarking purposes.
 
 from __future__ import annotations
 
-from qoolqit._solvers import BackendConfig, BackendType
 from .solver.solver import MISSolver
-from .pipeline.config import GreedyConfig, SolverConfig
+from .pipeline.config import GreedyConfig, SolverConfig, LocalEmulator, RemoteEmulator, QPU
 from .shared.types import MISInstance, MethodType, Weighting, MISSolution
 
 __all__ = [
@@ -25,7 +24,9 @@ __all__ = [
     "MISInstance",
     "MISSolution",
     "SolverConfig",
-    "BackendConfig",
+    "LocalEmulator",
+    "RemoteEmulator",
+    "QPU",
     "BackendType",
     "GreedyConfig",
     "MethodType",

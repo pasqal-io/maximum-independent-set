@@ -2,9 +2,8 @@ import pytest
 import networkx as nx
 from typing import Callable
 
-from mis import BackendConfig
 from mis.solver.solver import MISInstance, MISSolver
-from mis.pipeline.config import SolverConfig, GreedyConfig
+from mis.pipeline.config import SolverConfig, GreedyConfig, LocalEmulator
 from mis.pipeline.kernelization import Kernelization
 from mis.pipeline.maximization import Maximization
 from mis.shared.types import MethodType, Weighting
@@ -26,7 +25,7 @@ def test_greedy_mis_basic(
     """
     Test Greedy MIS solver in both classical and quantum modes with default settings.
     """
-    backend = BackendConfig() if use_quantum else None
+    backend = LocalEmulator() if use_quantum else None
     config = SolverConfig(
         method=MethodType.GREEDY,
         backend=backend,
@@ -67,7 +66,7 @@ def test_greedy_solver_with_pre_post(
             for i, node in enumerate(simple_graph.nodes):
                 simple_graph.nodes[node]["pos"] = (i * 1.0, 0.0)
 
-    backend = BackendConfig() if use_quantum else None
+    backend = LocalEmulator() if use_quantum else None
 
     config = SolverConfig(
         method=MethodType.GREEDY,
@@ -97,7 +96,7 @@ def test_greedy_mis_long(complex_graph: nx.Graph, use_quantum: bool, weighting: 
     """
     Test Greedy MIS solver in both classical and quantum modes with default settings.
     """
-    backend = BackendConfig() if use_quantum else None
+    backend = LocalEmulator() if use_quantum else None
     config = SolverConfig(
         method=MethodType.GREEDY,
         backend=backend,

@@ -3,7 +3,7 @@ from enum import Enum
 import pytest
 import random
 
-from mis import MISInstance, MISSolver, BackendConfig
+from mis import MISInstance, MISSolver, LocalEmulator
 from mis.pipeline.config import SolverConfig
 import mis.pipeline.kernelization as ker
 from mis.shared.types import Weighting
@@ -331,7 +331,7 @@ def test_kernelization_does_not_eat_solutions(python_dependency_graph: MISInstan
         instance,
         config=SolverConfig(
             preprocessor=lambda config, graph: ker.Kernelization(config, graph),
-            backend=BackendConfig(),
+            backend=LocalEmulator(),
             max_number_of_solutions=10,
         ),
     )
