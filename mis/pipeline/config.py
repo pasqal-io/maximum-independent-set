@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Callable
 
 import networkx as nx
 
+from qoolqit import DigitalAnalogDevice
 from qoolqit.devices import Device
 
 if TYPE_CHECKING:
@@ -91,6 +92,12 @@ class SolverConfig:
     """
     backend (optional): Backend configuration to use. If `None`,
     use a non-quantum heuristic solver.
+    """
+
+    device: Device = DigitalAnalogDevice()
+    """
+    Quantum device to execute the code in. If unspecified, use a
+    reasonable default device.
     """
 
     weighting: Weighting = Weighting.UNWEIGHTED

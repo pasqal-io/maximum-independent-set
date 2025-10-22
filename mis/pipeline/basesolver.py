@@ -10,18 +10,15 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from mis.pipeline.config import SolverConfig
 from mis.shared.types import MISInstance, MISSolution
-from pulser import Register, Pulse
+from qoolqit import Register, Drive
 
 
 class BaseSolver(ABC):
     """
     Abstract base class for all solvers (quantum or classical).
 
-    Provides the interface for solving, embedding, pulse shaping,
+    Provides the interface for solving, embedding, drive shaping,
     and execution of MISproblems.
-
-    The BaseSolver also provides a method to execute the Pulse and
-    Register
     """
 
     def __init__(self, instance: MISInstance, config: SolverConfig):
@@ -62,14 +59,14 @@ class BaseSolver(ABC):
         pass
 
     @abstractmethod
-    def drive(self, embedding: Register) -> Pulse:
+    def drive(self, embedding: Register) -> Drive:
         """
-        Generate a pulse schedule for the quantum device based on the embedding.
+        Generate a drive for the quantum device based on the embedding.
 
         Args:
             embedding (Register): Embedding information.
 
         Returns:
-            Pulse: Pulse schedule.
+            Drive: drive for quantum program.
         """
         pass

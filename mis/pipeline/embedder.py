@@ -5,6 +5,7 @@ Tools to prepare the geometry (register) of atoms.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from pulser import Register as PulserRegister
 from qoolqit import Register
 
 from mis.shared.types import (
@@ -58,33 +59,35 @@ class OptimizedEmbedder(BaseEmbedder):
     An embedder using constrained optimization
     (via Sequential Least Squares Programming (SLSQP))
     to find coordinates that respect device constrained
-    after the DefaultEmbedder.
+    after the the coordinates found with Layout.
 
     We try at most 10 times to run the optimization to find
     a suitable embedding.
     """
 
-    def embed(self, instance: MISInstance, config: SolverConfig, backend: BaseBackend) -> Register:
+    def embed(self, instance: MISInstance, config: SolverConfig) -> Register:
         import numpy as np
         from scipy.optimize import minimize, NonlinearConstraint
 
-        device = backend.device()
-        assert device is not None
+        layout = Layout.from_device(data=instance, device=config.device)
+        pulser_device = config.device._device
 
-        register = DefaultEmbedder().embed(instance, config, backend)
+        coords = np.array(list(layout.coords.values()))
+        n = coords.shape[0]
 
         nb_tries = 0
         while nb_tries < 10:
             nb_tries += 1
-            coords = np.array(list(register.qubits.values()))
-            n = coords.shape[0]
-            x0 = coords.flatten()
 
             center = np.mean(coords, axis=0)
+
+            # initial coordinates for optimizer
+            x0 = coords.flatten()
+
             # We multiply by factors to be (reasonably) certain that we're slightly
             # within bounds.
-            min_atom_distance = 1.0000001 * device.min_atom_distance
-            max_radial_distance = 0.0000099 * device.max_radial_distance
+            min_atom_distance = 1.0000001 * pulser_device.min_atom_distance
+            max_radial_distance = 0.0000099 * pulser_device.max_radial_distance
 
             # Objective: keep positions near original
             def objective(x: np.ndarray) -> float:
@@ -120,11 +123,14 @@ class OptimizedEmbedder(BaseEmbedder):
             )
             coords = res.x.reshape((n, 2))
             qubits = {f"q{i}": coord for (i, coord) in enumerate(coords)}
-            register = Register(qubits)
+            pulser_register = PulserRegister(qubits)
             try:
-                device.validate_register(register)
+                pulser_device.validate_register(pulser_register)
                 break
             except Exception:
                 continue
         self._nb_tries = nb_tries
-        return register
+
+        # Finally, prepare register.
+        conversion_factor = config.device.converter.factors[2]
+        return Register(qubits={q: pos / conversion_factor for (q, pos) in qubits.items()})
