@@ -45,7 +45,7 @@ class DefaultEmbedder(BaseEmbedder):
         assert device is not None
 
         # Use Layout helper to get rescaled coordinates and interaction graph
-        layout = Layout.from_device(data=instance, device=device)
+        layout = Layout.from_device(data=instance, device=device._device)
 
         # Finally, prepare register.
         conversion_factor = device.converter.factors[2]
@@ -69,7 +69,7 @@ class OptimizedEmbedder(BaseEmbedder):
         import numpy as np
         from scipy.optimize import minimize, NonlinearConstraint
 
-        layout = Layout.from_device(data=instance, device=config.device)
+        layout = Layout.from_device(data=instance, device=config.device._device)
         pulser_device = config.device._device
 
         coords = np.array(list(layout.coords.values()))

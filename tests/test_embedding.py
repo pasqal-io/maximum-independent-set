@@ -1,5 +1,6 @@
 import pytest
 import networkx as nx
+from pulser import Register as PulserRegister
 from mis.pipeline.config import SolverConfig, LocalEmulator
 from mis.pipeline.embedder import DefaultEmbedder, OptimizedEmbedder
 from mis.solver.solver import MISInstance, MISSolver, MISSolverQuantum
@@ -20,11 +21,16 @@ def test_easy_embedding(graph: nx.Graph, default_embedder_fails: bool) -> None:
 
     register = solver.embedding()
     assert len(register.qubits) == len(graph)
+
+    conversion_factor = config.device.converter.factors[2]
+    pulser_register = PulserRegister(
+        {k: pos * conversion_factor for k, pos in register.qubits.items()}
+    )
     if default_embedder_fails:
         with pytest.raises(Exception):
-            solver._solver.backend.device().validate_register(register)
+            config.device._device.validate_register(pulser_register)
     else:
-        assert solver._solver.backend.device().validate_register(register) is None
+        assert config.device._device.validate_register(pulser_register) is None
 
     opt_config = SolverConfig(
         preprocessor=None, backend=LocalEmulator(), embedder=OptimizedEmbedder()
@@ -34,4 +40,10 @@ def test_easy_embedding(graph: nx.Graph, default_embedder_fails: bool) -> None:
     assert isinstance(opt_solver._solver._embedder, OptimizedEmbedder)  # type: ignore[attr-defined]
     register = opt_solver.embedding()
     assert len(register.qubits) == len(graph)
-    assert opt_solver._solver.backend.device().validate_register(register) is None  # type: ignore[attr-defined]
+
+    conversion_factor = config.device.converter.factors[2]
+    pulser_register = PulserRegister(
+        {k: pos * conversion_factor for k, pos in register.qubits.items()}
+    )
+
+    assert opt_config.device._device.validate_register(pulser_register) is None  # type: ignore[attr-defined]

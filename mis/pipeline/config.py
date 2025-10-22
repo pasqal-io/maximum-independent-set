@@ -96,8 +96,8 @@ class SolverConfig:
 
     device: Device = DigitalAnalogDevice()
     """
-    Quantum device to execute the code in. If unspecified, use a
-    reasonable default device.
+    Quantum device to execute the code in. If backend is None,
+        it is unused. Defaults to DigitalAnalogDevice.
     """
 
     weighting: Weighting = Weighting.UNWEIGHTED
