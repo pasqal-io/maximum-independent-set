@@ -120,12 +120,6 @@ class SolverConfig:
     solution.
     """
 
-    device: Device | None = None
-    """
-    Quantum device to execute the code in. If unspecified, use a
-    reasonable default device.
-    """
-
     embedder: BaseEmbedder | None = None
     """
     embedder: If specified, an embedder, i.e. a mechanism used

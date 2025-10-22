@@ -22,6 +22,38 @@ def complex_graph() -> nx.Graph:
     return nx.erdos_renyi_graph(n=30, p=0.4, seed=42)
 
 
+def dimacs_16nodes() -> nx.Graph:
+    graph = nx.Graph()
+    graph.add_nodes_from(range(1, 17))
+    graph.add_edges_from(
+        [
+            (2, 3),
+            (2, 5),
+            (3, 5),
+            (3, 9),
+            (4, 6),
+            (4, 7),
+            (4, 10),
+            (5, 9),
+            (6, 7),
+            (6, 10),
+            (6, 11),
+            (7, 10),
+            (7, 11),
+            (7, 13),
+            (8, 12),
+            (8, 14),
+            (10, 11),
+            (10, 13),
+            (11, 13),
+            (12, 14),
+            (12, 15),
+            (14, 15),
+        ]
+    )
+    return graph
+
+
 @pytest.fixture
 def python_dependency_graph() -> MISInstance:
     """
