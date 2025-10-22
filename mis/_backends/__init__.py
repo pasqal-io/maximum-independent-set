@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from importlib import import_module
-
-from .backends import *
+from .backends import *  # noqa: F403
 from .data import (
     BackendConfig,
     BaseJob,

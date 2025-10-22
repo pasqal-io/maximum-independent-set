@@ -29,7 +29,11 @@ def make_sequence(program: QuantumProgram) -> pulser.Sequence:
     """
     # Normalize and apply register.
     register = deepcopy(program.register)
-    if isinstance(program.device, Device) and program.device.requires_layout and register.layout is None:
+    if (
+        isinstance(program.device, Device)
+        and program.device.requires_layout
+        and register.layout is None
+    ):
         register = program.register.with_automatic_layout(program.device)
     sequence = Sequence(register=register, device=program.device)
 
