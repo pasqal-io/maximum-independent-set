@@ -134,10 +134,10 @@ class SolverConfig:
         device. Ignored for non-quantum backends.
     """
 
-    pulse_shaper: BaseDriveShaper | None = None
+    drive_shaper: BaseDriveShaper | None = None
     """
-    pulse_shaper: If specified, a pulse shaper, i.e. a mechanism used
-        to customize the laser pulse to which the neutral atoms are
+    drive_shaper: If specified, a drive shaper, i.e. a mechanism used
+        to customize the drive program to which the neutral atoms are
         subjected during the execution of the quantum algorithm.
         Ignored for non-quantum backends.
     """
@@ -181,12 +181,4 @@ class SolverConfig:
     """
     If specified, use this for solving the GreedyMIS.
     Needs to be specified when method is GreedyMIS
-    """
-
-    runs: int = 500
-    """
-    When using a quantum backend, how many times we repeat each quantum run.
-    Since quantum executions are non-deterministic, higher numbers increases
-    the reliability of the result, but also the duration until the results are
-    available.
     """

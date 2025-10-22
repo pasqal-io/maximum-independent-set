@@ -14,7 +14,7 @@ from mis.pipeline.drive import DefaultDriveShaper
 @pytest.mark.parametrize(
     "size", [3, 5, 6, 7]
 )  # No square, the layout produces odd results too often.
-def test_pulse_shaping_simple_shapes(size: int) -> None:
+def test_drive_shaping_simple_shapes(size: int) -> None:
     # Create a simple graph with `size` nodes, each of them connected only to the
     # previous and next node.
     graph = nx.Graph()
@@ -26,7 +26,7 @@ def test_pulse_shaping_simple_shapes(size: int) -> None:
         graph.add_edge(edges[i], edges[(i + 1) % len(edges)])
     instance = MISInstance(graph)
 
-    # Prepare embedder and pulse shaper.
+    # Prepare embedder and drive shaper.
     config = SolverConfig(backend=LocalEmulator())
     embedder = DefaultEmbedder()
     shaper = DefaultDriveShaper()

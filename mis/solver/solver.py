@@ -138,7 +138,7 @@ class MISSolverQuantum(BaseSolver):
         self._solution: MISSolution | None = None
         self._embedder = config.embedder if config.embedder is not None else DefaultEmbedder()
         self._shaper = (
-            config.pulse_shaper if config.pulse_shaper is not None else DefaultDriveShaper()
+            config.drive_shaper if config.drive_shaper is not None else DefaultDriveShaper()
         )
         self._preprocessed_instance: MISInstance | None = None
 

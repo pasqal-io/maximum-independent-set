@@ -7,7 +7,7 @@ from mis.pipeline.config import SolverConfig
 import matplotlib.pyplot as plt
 
 from mis.shared.types import MISSolution
-from pulser import Pulse, Register
+from qoolqit import Drive, Register
 
 
 class GraphColoringSolver(BaseSolver):
@@ -49,8 +49,8 @@ class GraphColoringSolver(BaseSolver):
     def embedding(self) -> Register:
         raise NotImplementedError("GraphColoringSolver produces multiple embeddings.")
 
-    def drive(self, embedding: Register) -> Pulse:
-        raise NotImplementedError("GraphColoringSolver produces multiple pulses.")
+    def drive(self, embedding: Register) -> Drive:
+        raise NotImplementedError("GraphColoringSolver produces multiple drives.")
 
     def solve(
         self, antennas: Optional[set[int]] = None, is_second_coloring: bool = False

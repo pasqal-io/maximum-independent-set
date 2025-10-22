@@ -66,7 +66,7 @@ class BaseDriveShaper(ABC):
         Generate a drive based on the problem and the provided register.
 
         Args:
-            config: The configuration for this pulse.
+            config: The configuration for this drive.
             register: The physical register layout.
             instance: MIS instance.
 
@@ -89,14 +89,14 @@ class BaseDriveShaper(ABC):
 
 class DefaultDriveShaper(BaseDriveShaper):
     """
-    A simple pulse shaper.
+    A simple drive shaper.
     """
 
     def _calculate_parameters(
         self, register: Register, device: Device, instance: MISInstance
     ) -> DriveParameters:
         """
-        Compute parameters shared between the pulse and the detunings.
+        Compute parameters of the drive with the weighted detunings.
         """
         graph = instance.graph  # Guaranteed to be consecutive integers starting from 0.
         graph = instance.graph  # Guaranteed to be consecutive integers starting from 0.
