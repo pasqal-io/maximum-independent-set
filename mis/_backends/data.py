@@ -92,7 +92,7 @@ class BackendConfig(pydantic.BaseModel):
     Otherwise, ignored.
     """
 
-    device: NamedDevice | DeviceType | None = None
+    device: NamedDevice | DeviceType | pulser.devices.Device | pulser.devices.VirtualDevice | None = None
     """
     For a backend that supports numerous devices, either:
 

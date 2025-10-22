@@ -9,7 +9,7 @@ import emu_mps
 import emu_sv
 import pulser
 from pulser import Sequence
-from pulser.devices import Device
+from pulser.devices import Device, VirtualDevice
 from pulser_simulation import QutipEmulator
 
 from mis._backends.data import (
@@ -56,7 +56,7 @@ class BaseLocalBackend(BaseBackend):
             )
         elif isinstance(device, DeviceType):
             device = device.value
-        assert isinstance(device, Device), f"Expected a device, got {device}"
+        assert isinstance(device, (Device, VirtualDevice)), f"Expected a device, got {device}"
         self._device = device
 
     def device(self) -> Device:
