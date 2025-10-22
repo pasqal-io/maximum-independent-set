@@ -314,7 +314,7 @@ class GreedyMISSolver(BaseSolver):
         if self.backend is None:
             # A default layout for the classical solver.
             return Layout(data=self.original_instance, rydberg_blockade=1.0)
-        return Layout.from_device(data=self.original_instance, device=self.backend.device())
+        return Layout.from_device(data=self.original_instance, device=self.config.device._device)
 
     def solve(self) -> list[MISSolution]:
         """
