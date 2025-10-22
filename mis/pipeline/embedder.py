@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 
 import pulser
 from pulser import Register
-from qoolqit._solvers.backends import BaseBackend
+from mis._backends.backends import BaseBackend
 
 from mis.shared.types import (
     MISInstance,
