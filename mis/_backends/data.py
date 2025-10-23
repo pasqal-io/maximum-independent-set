@@ -100,6 +100,7 @@ class BackendConfig(pydantic.BaseModel):
 
     - a type of device (e.g. `DeviceType.ANALOG_DEVICE`); or
     - the name of a specific device (e.g. `NamedDevice("FRESNEL")`).
+    - a pulser Device or VirtualDevice.
 
     If unspecified, pick a backend-appropriate device.
     """
