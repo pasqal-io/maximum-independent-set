@@ -10,7 +10,7 @@ from pasqal_cloud import SDK, EmulatorType
 from pasqal_cloud.batch import Batch
 from pulser import Sequence
 from pulser.backend.remote import BatchStatus
-from pulser.devices import Device
+from pulser.devices import Device, VirtualDevice
 from pulser.json.abstract_repr.deserializer import deserialize_device
 
 from mis._backends.data import (
@@ -120,14 +120,14 @@ class BaseRemoteBackend(BaseBackend):
         )
         self.wait = self.config.wait
         self._max_runs: int | None = None
-        self._device: Device | None = None
+        self._device: Device | VirtualDevice | None = None
 
     def _api_max_runs(self) -> int:
         # As of this writing, the API doesn't support runs longer than 500 jobs.
         # If we want to add more runs, we'll need to split them across several jobs.
         return 500
 
-    def device(self) -> Device:
+    def device(self) -> Device | VirtualDevice:
         """Make sure that we have fetched the latest specs for the device from the server."""
         if self._device is not None:
             assert self._max_runs is not None
@@ -148,8 +148,10 @@ class BaseRemoteBackend(BaseBackend):
                 )
             self._device = cast(Device, deserialize_device(specs[device_key]))
         else:
-            assert isinstance(self.config.device, DeviceType)
-            self._device = self.config.device.value
+            if isinstance(self.config.device, DeviceType):
+                self._device = self.config.device.value
+            elif isinstance(self.config.device, (Device, VirtualDevice)):
+                self._device = self.config.device
         self._max_runs = self._device.max_runs or self._api_max_runs()
         return self._device
 

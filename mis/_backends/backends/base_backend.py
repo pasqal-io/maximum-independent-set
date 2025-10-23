@@ -6,7 +6,7 @@ from copy import deepcopy
 
 import pulser
 from pulser import Sequence
-from pulser.devices import Device
+from pulser.devices import Device, VirtualDevice
 
 from mis._backends.data import BackendConfig, BaseJob, JobId, QuantumProgram, Result
 from qoolqit.exceptions import CompilationError
@@ -82,7 +82,7 @@ class BaseBackend(ABC):
         return 100
 
     @abstractmethod
-    def device(self) -> Device:
+    def device(self) -> Device | VirtualDevice:
         """
         Specifications for the device picked by `BackendConfig.device`.
 
