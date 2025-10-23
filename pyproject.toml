@@ -41,7 +41,10 @@ dependencies = [
   "pasqal-cloud",
   "pandas",
   "geopy",
-  "qoolqit[solvers]==0.2.0",
+  "qoolqit==0.2.0",
+  "pasqal-cloud>=0.20.3",
+  "requests-mock",
+  "emu_sv",
 ]
 
 [tool.hatch.metadata]
