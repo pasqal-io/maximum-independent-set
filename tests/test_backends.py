@@ -86,7 +86,7 @@ def test_local_execute(backend_kind: tuple[type[BaseBackend], BackendType], num_
         assert len(k) == 2  # Two qubits
 
 
-class MyMockServer(BaseMockServer):
+class TestMockServer(BaseMockServer):
     def __init__(self) -> None:
         super().__init__()
         self.mocker.get("http://example.com/results/my-results", json=self.my_results)
@@ -226,7 +226,7 @@ def test_remote_execute(
         project_id="my-project-id",
         device=NamedDevice("MY_DEVICE"),
     )
-    with MyMockServer():
+    with TestMockServer():
         backend = get_backend(backend_config)
         device = backend.device()
         assert device.name == "DigitalAnalogDevice"
