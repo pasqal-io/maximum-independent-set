@@ -37,7 +37,7 @@ dependencies = [
   "matplotlib",
   "pandas",
   "geopy",
-  "qoolqit[solvers]==0.2.0",
+  "qoolqit[solvers]==0.2.1",
 ]
 
 [tool.hatch.metadata]
