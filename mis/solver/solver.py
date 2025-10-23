@@ -4,8 +4,8 @@ import networkx as nx
 import copy
 
 from pulser import Pulse, Register
-from qoolqit._solvers.backends import BaseBackend, get_backend
-from qoolqit._solvers import QuantumProgram, Detuning
+from mis._backends.backends import BaseBackend, get_backend
+from mis._backends import QuantumProgram, Detuning
 
 from mis.shared.types import MISInstance, MISSolution, MethodType
 from mis.pipeline.basesolver import BaseSolver

@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 
 import pulser
 from pulser import Register
-from qoolqit._solvers.backends import BaseBackend
+from mis._backends.backends import BaseBackend
 
 from mis.shared.types import (
     MISInstance,
@@ -73,6 +73,11 @@ class OptimizedEmbedder(BaseEmbedder):
 
         device = backend.device()
         assert device is not None
+        if not (hasattr(device, "min_atom_distance") and hasattr(device, "max_radial_distance")):
+            raise ValueError(
+                "OptimizedEmbedder does not apply if device "
+                "has no min_atom_distance and max_radial_distance constraints"
+            )
 
         register = DefaultEmbedder().embed(instance, config, backend)
 

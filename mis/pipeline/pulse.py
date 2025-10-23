@@ -6,8 +6,8 @@ from abc import ABC, abstractmethod
 from networkx.classes.reportviews import DegreeView
 from pulser import AnalogDevice, InterpolatedWaveform, Pulse, Register
 
-from qoolqit._solvers.backends import BaseBackend
-from qoolqit._solvers import Detuning
+from mis._backends.backends import BaseBackend
+from mis._backends import Detuning
 from mis.shared.graphs import WeightedPicker
 from mis.shared.types import MISInstance, Weighting
 from mis.pipeline.config import SolverConfig

@@ -32,16 +32,12 @@ classifiers = [
 dependencies = [
   "networkx",
   "numpy",
-  "pulser~=1.5",
-  "rdkit",
-  "scikit-learn",
   "torch",
   "torch_geometric",
   "matplotlib",
-  "pasqal-cloud",
   "pandas",
   "geopy",
-  "qoolqit[solvers]==0.2.0",
+  "qoolqit[solvers]==0.2.1",
 ]
 
 [tool.hatch.metadata]

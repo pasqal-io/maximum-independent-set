@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from mis.pipeline.config import SolverConfig
 from mis.shared.types import MISInstance, MISSolution
 from pulser import Register, Pulse
-from qoolqit._solvers import Detuning
+from mis._backends import Detuning
 
 
 class BaseSolver(ABC):

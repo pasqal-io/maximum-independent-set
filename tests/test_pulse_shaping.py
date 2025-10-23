@@ -6,7 +6,7 @@ from mis.solver.solver import MISInstance
 from mis.pipeline.config import SolverConfig
 from mis.pipeline.embedder import DefaultEmbedder
 from mis.pipeline.pulse import DefaultPulseShaper
-from qoolqit._solvers.backends import QutipBackend
+from mis._backends.backends import QutipBackend
 
 
 @pytest.mark.flaky(
