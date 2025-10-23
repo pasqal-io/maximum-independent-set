@@ -4,7 +4,6 @@ import datetime
 import json
 import random
 from typing import Any, Counter, cast
-from uuid import uuid4
 
 import pulser
 import pulser.pulse
