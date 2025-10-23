@@ -19,7 +19,6 @@ from mis._backends import (
     QutipBackend,
     RemoteEmuFREEBackend,
     RemoteEmuMPSBackend,
-    RemoteEmuTNBackend,
     RemoteJob,
     RemoteQPUBackend,
     get_backend,
@@ -56,7 +55,6 @@ local_backends: list[tuple[type[BaseBackend], BackendType]] = [
 
 remote_backends: list[tuple[type[BaseBackend], BackendType]] = [
     (RemoteEmuMPSBackend, BackendType.REMOTE_EMUMPS),
-    (RemoteEmuTNBackend, BackendType.REMOTE_EMUTN),
     (RemoteEmuFREEBackend, BackendType.REMOTE_EMUFREE),
     (RemoteQPUBackend, BackendType.REMOTE_QPU),
 ]

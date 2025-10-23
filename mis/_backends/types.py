@@ -28,7 +28,6 @@ class BackendType(StrEnum):
     QUTIP = "qutip"
     REMOTE_QPU = "remote_qpu"
     REMOTE_EMUMPS = "remote_emumps"
-    REMOTE_EMUTN = "remote_emutn"
     REMOTE_EMUFREE = "remote_emufree"
     EMU_MPS = "emu_mps"
     EMU_SV = "emu_sv"

@@ -7,7 +7,6 @@ from .remote_backends import (
     BaseRemoteBackend,
     RemoteEmuFREEBackend,
     RemoteEmuMPSBackend,
-    RemoteEmuTNBackend,
     RemoteJob,
     RemoteQPUBackend,
 )
@@ -19,7 +18,6 @@ __all__ = [
     "QutipBackend",
     "RemoteQPUBackend",
     "RemoteEmuMPSBackend",
-    "RemoteEmuTNBackend",
     "RemoteEmuFREEBackend",
     "get_backend",
     "RemoteJob",

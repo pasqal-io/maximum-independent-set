@@ -9,7 +9,6 @@ from .local_backends import EmuMPSBackend, EmuSVBackend, QutipBackend
 from .remote_backends import (
     RemoteEmuFREEBackend,
     RemoteEmuMPSBackend,
-    RemoteEmuTNBackend,
     RemoteQPUBackend,
 )
 
@@ -20,7 +19,6 @@ backends_map: dict[BackendType, type[BaseBackend]] = {
     BackendType.REMOTE_EMUMPS: cast(type[BaseBackend], RemoteEmuMPSBackend),
     BackendType.REMOTE_QPU: cast(type[BaseBackend], RemoteQPUBackend),
     BackendType.REMOTE_EMUFREE: cast(type[BaseBackend], RemoteEmuFREEBackend),
-    BackendType.REMOTE_EMUTN: cast(type[BaseBackend], RemoteEmuTNBackend),
 }
 
 

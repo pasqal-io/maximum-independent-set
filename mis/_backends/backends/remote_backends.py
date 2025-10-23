@@ -8,7 +8,6 @@ from typing import cast
 
 from pasqal_cloud import SDK, EmulatorType
 from pasqal_cloud.batch import Batch
-from pasqal_cloud.device import EmuTNConfig
 from pulser import Sequence
 from pulser.backend.remote import BatchStatus
 from pulser.devices import Device
@@ -218,24 +217,6 @@ class RemoteEmuMPSBackend(BaseRemoteBackend):
             wait=self.wait,
             device_type=EmulatorType.EMU_MPS,
             configuration=None,
-        )
-        return JobId(batch.id)
-
-
-class RemoteEmuTNBackend(BaseRemoteBackend):
-    """
-    A backend that uses a remote high-performance emulator (EmuSV).
-
-    published on Pasqal Cloud.
-    """
-
-    def _execute_remotely(self, sequence: Sequence, runs: int) -> JobId:
-        batch = self._sdk.create_batch(
-            serialized_sequence=sequence.to_abstract_repr(),
-            jobs=[{"runs": runs}],
-            wait=self.wait,
-            device_type=EmulatorType.EMU_TN,
-            configuration=EmuTNConfig(dt=self.config.dt),
         )
         return JobId(batch.id)
 
