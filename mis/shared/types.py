@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any
+from typing import Any, TYPE_CHECKING
 import networkx
 import matplotlib.pyplot as plt
+
+if TYPE_CHECKING:
+    from qubosolver import QUBOInstance
 
 
 class MethodType(str, Enum):
@@ -83,6 +86,38 @@ class MISInstance:
             index_u = self.node_label_to_index[u]
             index_v = self.node_label_to_index[v]
             self.graph.add_edge(index_u, index_v)
+
+    def to_qubo(self, penalty: float | None = None) -> QUBOInstance:
+        """Convert a MISInstance to a QUBOInstance.
+
+        Args:
+            penalty (float, optional): Penalty factor. Defaults to None.
+
+        Raises:
+            ValueError: _description_
+
+        Returns:
+            QUBOInstance: _description_
+        """
+        import torch
+        from qubosolver import QUBOInstance
+
+        # Linear terms: -sum_i w_i x_i
+        weights = [float(self.graph.nodes[n].get("weight", 1)) for n in self.graph.nodes]
+        max_Q = max(weights)
+        if penalty is None:
+            penalty = 2.5 * max_Q
+        elif penalty <= 2.0 * max_Q:
+            raise ValueError("Penalty must be greater than max(weight).")
+
+        # Quadratic terms: penalty sum_ij x_i x_j
+        Q = (
+            torch.tensor(networkx.adjacency_matrix(self.graph, weight=None).toarray()).float()
+            * penalty
+        )
+        Q -= torch.diag(torch.tensor(weights).float())
+
+        return QUBOInstance(Q)
 
     def draw(
         self,
