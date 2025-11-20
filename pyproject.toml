@@ -49,9 +49,6 @@ extras = [
   "jupyter",
   "tqdm",
 ]
-qubo = [
-  "qubo-solver==0.4.1",
-]
 
 [project.urls]
 Documentation = "https://pasqal-io.github.io/maximum-independent-set/latest/"
