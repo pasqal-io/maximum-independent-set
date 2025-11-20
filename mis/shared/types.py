@@ -108,7 +108,7 @@ class MISInstance:
         if penalty is None:
             penalty = 2.5 * max_Q
         elif penalty < 2.0 * max_Q:
-            raise ValueError("Penalty must be greater than 2*max(weight).")
+            raise ValueError("Penalty must be greater than 2 x max(weight).")
 
         # Quadratic terms: penalty sum_ij x_i x_j
         Q = networkx.adjacency_matrix(self.graph, weight=None).toarray() * penalty
