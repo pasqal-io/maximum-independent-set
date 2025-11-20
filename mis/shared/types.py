@@ -90,14 +90,18 @@ class MISInstance:
     def to_qubo(self, penalty: float | None = None) -> QUBOInstance:
         """Convert a MISInstance to a QUBOInstance.
 
+        QUBO formulation:
+        Minimize:
+            Q(x) = -∑_{i ∈ V} w_i x_i  +  λ ∑_{(i, j) ∈ E} x_i x_j
+
         Args:
             penalty (float, optional): Penalty factor. Defaults to None.
 
         Raises:
-            ValueError: _description_
+            ValueError: When penalty is inferior to max(weight).
 
         Returns:
-            QUBOInstance: _description_
+            QUBOInstance: The QUBO formulation of MIS.
         """
         import torch
         from qubosolver import QUBOInstance
