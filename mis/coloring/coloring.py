@@ -185,6 +185,7 @@ class GraphColoringSolver(BaseSolver):
         plt.xlabel("Longitude")
         plt.ylabel("Latitude")
         plt.title("Antenna Coverage Solution")
+        plt.legend()
         plt.grid()
 
         return plt

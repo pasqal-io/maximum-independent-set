@@ -16,6 +16,7 @@ nav:
   - Advanced Tutorials:
     - "Advanced Tutorial 1 - Diving into Quantum Programming": "advanced tutorial 1 - Diving into Quantum Programming.ipynb"
     - "Advanced Tutorial 2 - Bypassing device constraints": "advanced tutorial 2 - Bypassing device constraints.ipynb"
+    - "Advanced Tutorial 3 - Solving MIS as a QUBO": "advanced tutorial 3 - Using qubo-solver.ipynb"
   - Reference: $api/mis.***
   - Open-source:
     - Licence (MIT-Derived): LICENSE.md
