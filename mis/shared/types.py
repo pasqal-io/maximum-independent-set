@@ -96,7 +96,7 @@ class MISInstance:
             penalty (float, optional): Penalty factor. Defaults to None.
 
         Raises:
-            ValueError: When penalty is inferior to max(weight).
+            ValueError: When penalty is strictly inferior to 2 x max(weight).
 
         Returns:
             np.ndarray: The QUBO matrix formulation of MIS.
