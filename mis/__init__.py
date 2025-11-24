@@ -15,7 +15,7 @@ benchmarking purposes.
 
 from __future__ import annotations
 
-from mis._backends import BackendConfig, BackendType
+from mis._backends import BackendConfig, BackendType, get_backend
 from .solver.solver import MISSolver
 from .pipeline.config import GreedyConfig, SolverConfig
 from .shared.types import MISInstance, MethodType, Weighting, MISSolution
@@ -27,6 +27,7 @@ __all__ = [
     "SolverConfig",
     "BackendConfig",
     "BackendType",
+    "get_backend",
     "GreedyConfig",
     "MethodType",
     "Weighting",
