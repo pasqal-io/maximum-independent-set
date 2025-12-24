@@ -2,6 +2,10 @@ from __future__ import annotations
 from typing import Counter, Callable
 import networkx as nx
 import copy
+import datetime
+import json
+import logging
+import time
 
 from pulser import Pulse, Register
 from mis._backends.backends import BaseBackend, get_backend
@@ -16,6 +20,23 @@ from mis.pipeline.config import BackendConfig, SolverConfig
 from mis.solver.greedymapping import GreedyMapping
 from mis.pipeline.layout import Layout
 from mis.shared.graphs import remove_neighborhood, BaseWeightPicker
+
+
+class JsonFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        return json.dumps(
+            {
+                "asctime": datetime.datetime.now().strftime("%d.%b %Y %H:%M:%S"),
+                "message": record.getMessage(),
+            }
+        )
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(JsonFormatter())
+logger.addHandler(stream_handler)
 
 
 def _extract_backend(config: SolverConfig) -> BaseBackend:
@@ -91,6 +112,7 @@ class MISSolverClassical(BaseSolver):
         """
         Solve the MIS problem and return a single optimal solution.
         """
+        start = time.time()
 
         if not self.original_instance.graph.nodes:
             return []
@@ -110,7 +132,11 @@ class MISSolverClassical(BaseSolver):
 
         solutions = self.fixtures.postprocess([partial_solution])
         solutions.sort(key=lambda sol: sol.frequency, reverse=True)
-
+        end = time.time()
+        logger.info(
+            f"Number of MIS solutions found with classical solver: {len(solutions)}. Returning up to {self.config.max_number_of_solutions} solutions."
+        )
+        logger.info(f"Completed execution of classical MIS solver in {(end-start):.4f} seconds.")
         return solutions[: self.config.max_number_of_solutions]
 
     def embedding(self) -> Register:
@@ -194,6 +220,9 @@ class MISSolverQuantum(BaseSolver):
             # case by injecting an empty solution.
             raw = [MISSolution(instance=instance, frequency=1, nodes=[])]
         else:
+            logger.info(
+                f"Number of MIS solutions found with quantum solver: {len(data)}. Returning up to {self.config.max_number_of_solutions} solutions."
+            )
             raw = [
                 MISSolution(
                     instance=instance,
@@ -219,16 +248,19 @@ class MISSolverQuantum(BaseSolver):
         Returns:
             MISSolution: Final result after execution and postprocessing.
         """
+        start = time.time()
         preprocessed_instance = self.fixtures.preprocess()
         self._preprocessed_instance = preprocessed_instance
         if len(preprocessed_instance.graph) == 0:
             # Edge case: we cannot process an empty register.
             # Luckily, the solution is trivial.
+            logger.info("The pre-processor managed to reduce the graph to 0 nodes. Skipping solver")
             return self._process(instance=preprocessed_instance, data=Counter())
         if len(preprocessed_instance.graph) == 1:
             # Edge case: we also cannot process a register with a single atom.
             # Luckily, the solution is trivial.
             nodes = list(preprocessed_instance.graph.nodes)
+            logger.info("The pre-processor managed to reduce the graph to 1 node. Skipping solver")
             return [MISSolution(preprocessed_instance, nodes, frequency=1)]
 
         register = self._embedder.embed(
@@ -252,7 +284,10 @@ class MISSolverQuantum(BaseSolver):
         )
 
         execution_result = self.execute(pulse, register, detunings)
-        return self._process(instance=preprocessed_instance, data=execution_result)
+        processed = self._process(instance=preprocessed_instance, data=execution_result)
+        end = time.time()
+        logger.info(f"Completed execution of quantum MIS solver in {(end-start):.4f} seconds.")
+        return processed
 
     def execute(self, pulse: Pulse, register: Register, detunings: list[Detuning]) -> Counter[str]:
         """
@@ -272,6 +307,7 @@ class MISSolverQuantum(BaseSolver):
         )
         counts = self.backend.run(program=program, runs=self.config.runs).counts
         assert isinstance(counts, Counter)  # Not sure why mypy expects that `counts` is `Any`.
+        logger.info(f"Executed {self.config.runs} shots.")
         return counts
 
 
@@ -363,9 +399,15 @@ class GreedyMISSolver(BaseSolver):
                 Returns:
                     Execution containing a list of optimal or near-optimal MIS solutions.
         """
-        return self._solve_recursive(self.original_instance)
+        solution, total_iterations = self._solve_recursive(self.original_instance, 0)
+        logger.info(
+            f"There were a total of {total_iterations} iterations during the Greedy MIS Solver's execution."
+        )
+        return solution
 
-    def _solve_recursive(self, instance: MISInstance) -> list[MISSolution]:
+    def _solve_recursive(
+        self, instance: MISInstance, total_iterations: int
+    ) -> tuple[list[MISSolution], int]:
         """
         Recursively solves an MISInstance:
         - Uses exact backtracking for small subgraphs.
@@ -380,7 +422,7 @@ class GreedyMISSolver(BaseSolver):
         graph = instance.graph
         if len(graph) <= self.config.greedy.default_solving_threshold:  # type: ignore[union-attr]
             solver = self.solver_factory(instance, self.config)
-            return solver.solve()
+            return solver.solve(), total_iterations + 1
 
         # these mappings from from graph nodes - to - layout nodes
         mappings = self._generate_subgraphs(graph)
@@ -405,7 +447,9 @@ class GreedyMISSolver(BaseSolver):
             for current_mis in current_mis_bag:
                 reduced_graph = remove_neighborhood(graph, current_mis)
                 remainder_instance = MISInstance(reduced_graph)
-                remainder_solutions = self._solve_recursive(remainder_instance)
+                remainder_solutions, total_iterations = self._solve_recursive(
+                    remainder_instance, total_iterations + 1
+                )
 
                 for rem_sol in remainder_solutions:
                     combined_nodes = current_mis + rem_sol.nodes
@@ -420,8 +464,8 @@ class GreedyMISSolver(BaseSolver):
                         )
 
         if best_solution is None:
-            return [MISSolution(instance=instance, nodes=[], frequency=0)]
-        return [best_solution]
+            return [MISSolution(instance=instance, nodes=[], frequency=0)], total_iterations
+        return [best_solution], total_iterations
 
     def _generate_subgraphs(self, graph: nx.Graph) -> list[dict[int, int]]:
         """
@@ -445,6 +489,12 @@ class GreedyMISSolver(BaseSolver):
             )
             mapping = mapper.generate(starting_node=node)
             mappings.append(mapping)
+        subgraphs = [[(k, v) for k, v in graph.items()] for graph in mappings][
+            : self.config.greedy.subgraph_quantity  # type: ignore[union-attr]
+        ]
+        logger.debug(
+            f"The following subgraphs were used for the Greedy Quantum MIS Solver:\n(in networkx format)\n{subgraphs}."
+        )
         return sorted(mappings, key=lambda m: len(m), reverse=True)[
             : self.config.greedy.subgraph_quantity  # type: ignore[union-attr]
         ]
